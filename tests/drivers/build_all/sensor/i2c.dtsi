@@ -843,3 +843,10 @@ test_i2c_bmi08x_gyro: bmi08x@6e {
 	gyro-hz = "1000_116";
 	gyro-fs = <1000>;
 };
+
+test_i2c_lis2dux12: lis2dux12@6f {
+	compatible = "st,lis2dux12";
+	reg = <0x6f>;
+	irq-gpios = <&test_gpio 0 0>;
+	status = "okay";
+};

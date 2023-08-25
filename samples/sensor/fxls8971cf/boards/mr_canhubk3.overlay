@@ -1,0 +1,19 @@
+/*
+ * Copyright 2023 NXP
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/spi/spi.h>
+
+&lpspi4 {
+	status = "okay";
+
+	fxls8971cf: accelerometer@0 {
+		status = "okay";
+		compatible = "nxp,fxls8971cf";
+		reg = <0>;
+		spi-max-frequency = <4000000>;
+		duplex = <SPI_FULL_DUPLEX>;
+	};
+};

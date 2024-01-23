@@ -9,6 +9,7 @@
 #include <zephyr/drivers/gnss.h>
 #include <zephyr/drivers/gnss/gnss_publish.h>
 #include <zephyr/modem/chat.h>
+#include <zephyr/modem/ubx.h>
 #include <zephyr/modem/backend/uart.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
@@ -18,6 +19,8 @@
 #include "gnss_nmea0183_match.h"
 #include "gnss_parse.h"
 
+#include "u_blox_protocol.h"
+
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
@@ -26,6 +29,9 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 #define UART_RECV_BUF_SZ 128
 #define CHAT_RECV_BUF_SZ 256
 #define CHAT_ARGV_SZ 32
+
+#define UBX_RECV_BUF_SZ 256
+#define UBX_ARGV_SZ 32
 
 struct u_blox_m10_config {
 	const struct device *uart;
@@ -46,6 +52,11 @@ struct u_blox_m10_data {
 	struct modem_chat chat;
 	uint8_t chat_receive_buf[CHAT_RECV_BUF_SZ];
 	uint8_t *chat_argv[CHAT_ARGV_SZ];
+
+	/* Modem ubx */
+	struct modem_ubx ubx;
+	uint8_t ubx_receive_buf[UBX_RECV_BUF_SZ];
+	uint8_t *ubx_argv[UBX_ARGV_SZ];
 
 	struct k_spinlock lock;
 };
@@ -75,6 +86,13 @@ static int u_blox_m10_resume(const struct device *dev)
 	}
 
 	return ret;
+}
+
+static int u_blox_m10_turn_off(const struct device *dev)
+{
+	struct u_blox_m10_data *data = dev->data;
+
+	return modem_pipe_close(data->uart_pipe);
 }
 
 static struct gnss_driver_api gnss_api = {
@@ -133,6 +151,53 @@ static int u_blox_m10_init_chat(const struct device *dev)
 	return modem_chat_init(&data->chat, &chat_config);
 }
 
+static int u_blox_m10_init_ubx(const struct device *dev)
+{
+	struct u_blox_m10_data *data = dev->data;
+
+	const struct modem_ubx_config ubx_config = {
+		.user_data = data,
+		.receive_buf = data->ubx_receive_buf,
+		.receive_buf_size = sizeof(data->ubx_receive_buf),
+		.delimiter = u_blox_m10_char_delimiter,
+		.delimiter_size = ARRAY_SIZE(u_blox_m10_char_delimiter),
+		.filter = NULL,
+		.filter_size = 0,
+		.argv = data->ubx_argv,
+		.argv_size = ARRAY_SIZE(data->ubx_argv),
+		.unsol_matches = unsol_matches,
+		.unsol_matches_size = ARRAY_SIZE(unsol_matches),
+		.process_timeout = K_MSEC(2),
+	};
+
+	return modem_ubx_init(&data->ubx, &ubx_config);
+}
+
+static int u_blox_m10_configure(const struct device *dev)
+{
+	struct u_blox_m10_data *data = dev->data;
+	int ret;
+
+	// Release chat, attach ubx.
+	modem_chat_release(&data->chat);
+	ret = modem_ubx_attach(&data->ubx, data->uart_pipe);
+	if (ret < 0) {
+		modem_pipe_close(data->uart_pipe);
+		return ret;
+	}
+
+	// Release ubx, attach chat.
+	modem_ubx_release(&data->ubx);
+	ret = modem_chat_attach(&data->chat, data->uart_pipe);
+	if (ret < 0) {
+		modem_pipe_close(data->uart_pipe);
+		return ret;
+	}
+
+	printk("u_blox_m10_configure: exited cleanly.\n");
+	return 0;
+}
+
 static int u_blox_m10_init(const struct device *dev)
 {
 	int ret;
@@ -150,7 +215,17 @@ static int u_blox_m10_init(const struct device *dev)
 		return ret;
 	}
 
+	ret = u_blox_m10_init_ubx(dev);
+	if (ret < 0) {
+		return ret;
+	}
+
 	ret = u_blox_m10_resume(dev);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = u_blox_m10_configure(dev);
 	if (ret < 0) {
 		return ret;
 	}

@@ -21,18 +21,18 @@ extern "C" {
 struct modem_ubx;
 
 /**
- * @brief Callback called when matching chat is received
+ * @brief Callback called when matching ubx is received
  *
- * @param chat Pointer to chat instance instance
+ * @param ubx Pointer to ubx instance instance
  * @param argv Pointer to array of parsed arguments
  * @param argc Number of parsed arguments, arg 0 holds the exact match
  * @param user_data Free to use user data set during modem_ubx_init()
  */
-typedef void (*modem_ubx_match_callback)(struct modem_ubx *chat, char **argv, uint16_t argc,
+typedef void (*modem_ubx_match_callback)(struct modem_ubx *ubx, char **argv, uint16_t argc,
 					  void *user_data);
 
 /**
- * @brief Modem chat match
+ * @brief Modem ubx match
  */
 struct modem_ubx_match {
 	/** Match array */
@@ -43,11 +43,11 @@ struct modem_ubx_match {
 	const uint8_t *separators;
 	/** Size of separators array */
 	uint8_t separators_size;
-	/** Set if modem chat instance shall use wildcards when matching */
+	/** Set if modem ubx instance shall use wildcards when matching */
 	uint8_t wildcards : 1;
 	/** Set if script shall not continue to next step in case of match */
 	uint8_t partial : 1;
-	/** Type of modem chat instance */
+	/** Type of modem ubx instance */
 	modem_ubx_match_callback callback;
 };
 
@@ -85,9 +85,9 @@ struct modem_ubx_match {
 	const static struct modem_ubx_match _sym[] = {__VA_ARGS__}
 
 /**
- * @brief Modem chat script chat
+ * @brief Modem ubx script ubx
  */
-struct modem_ubx_script_chat {
+struct modem_ubx_script_ubx {
 	/** Request to send to modem */
 	const uint8_t *request;
 	/** Size of request */
@@ -96,7 +96,7 @@ struct modem_ubx_script_chat {
 	const struct modem_ubx_match *response_matches;
 	/** Number of elements in expected responses */
 	uint16_t response_matches_size;
-	/** Timeout before chat script may continue to next step in milliseconds */
+	/** Timeout before ubx script may continue to next step in milliseconds */
 	uint16_t timeout;
 };
 
@@ -128,7 +128,7 @@ struct modem_ubx_script_chat {
 	}
 
 #define MODEM_UBX_SCRIPT_CMDS_DEFINE(_sym, ...)                                                   \
-	const struct modem_ubx_script_chat _sym[] = {__VA_ARGS__}
+	const struct modem_ubx_script_ubx _sym[] = {__VA_ARGS__}
 
 enum modem_ubx_script_result {
 	MODEM_UBX_SCRIPT_RESULT_SUCCESS,
@@ -137,25 +137,25 @@ enum modem_ubx_script_result {
 };
 
 /**
- * @brief Callback called when script chat is received
+ * @brief Callback called when script ubx is received
  *
- * @param chat Pointer to chat instance instance
+ * @param ubx Pointer to ubx instance instance
  * @param result Result of script execution
  * @param user_data Free to use user data set during modem_ubx_init()
  */
-typedef void (*modem_ubx_script_callback)(struct modem_ubx *chat,
+typedef void (*modem_ubx_script_callback)(struct modem_ubx *ubx,
 					   enum modem_ubx_script_result result, void *user_data);
 
 /**
- * @brief Modem chat script
+ * @brief Modem ubx script
  */
 struct modem_ubx_script {
 	/** Name of script */
 	const char *name;
-	/** Array of script chats */
-	const struct modem_ubx_script_chat *script_chats;
-	/** Elements in array of script chats */
-	uint16_t script_chats_size;
+	/** Array of script ubxs */
+	const struct modem_ubx_script_ubx *script_ubxs;
+	/** Elements in array of script ubxs */
+	uint16_t script_ubxs_size;
 	/** Array of abort matches */
 	const struct modem_ubx_match *abort_matches;
 	/** Number of elements in array of abort matches */
@@ -166,11 +166,11 @@ struct modem_ubx_script {
 	uint32_t timeout;
 };
 
-#define MODEM_UBX_SCRIPT_DEFINE(_sym, _script_chats, _abort_matches, _callback, _timeout)         \
+#define MODEM_UBX_SCRIPT_DEFINE(_sym, _script_ubxs, _abort_matches, _callback, _timeout)         \
 	const static struct modem_ubx_script _sym = {                                             \
 		.name = #_sym,                                                                     \
-		.script_chats = _script_chats,                                                     \
-		.script_chats_size = ARRAY_SIZE(_script_chats),                                    \
+		.script_ubxs = _script_ubxs,                                                     \
+		.script_ubxs_size = ARRAY_SIZE(_script_ubxs),                                    \
 		.abort_matches = _abort_matches,                                                   \
 		.abort_matches_size = ARRAY_SIZE(_abort_matches),                                  \
 		.callback = _callback,                                                             \
@@ -187,7 +187,7 @@ enum modem_ubx_script_send_state {
 };
 
 /**
- * @brief Chat instance internal context
+ * @brief Ubx instance internal context
  * @warning Do not modify any members of this struct directly
  */
 struct modem_ubx {
@@ -206,7 +206,7 @@ struct modem_ubx {
 	uint8_t work_buf[32];
 	uint16_t work_buf_len;
 
-	/* Chat delimiter */
+	/* Ubx delimiter */
 	uint8_t *delimiter;
 	uint16_t delimiter_size;
 	uint16_t delimiter_match_len;
@@ -234,7 +234,7 @@ struct modem_ubx {
 	struct k_work script_run_work;
 	struct k_work_delayable script_timeout_work;
 	struct k_work script_abort_work;
-	uint16_t script_chat_it;
+	uint16_t script_ubx_it;
 	atomic_t script_state;
 	enum modem_ubx_script_result script_result;
 	struct k_sem script_stopped_sem;
@@ -257,7 +257,7 @@ struct modem_ubx {
 };
 
 /**
- * @brief Chat configuration
+ * @brief Ubx configuration
  */
 struct modem_ubx_config {
 	/** Free to use user data passed with modem match callbacks */
@@ -287,26 +287,26 @@ struct modem_ubx_config {
 };
 
 /**
- * @brief Initialize modem pipe chat instance
- * @param chat Chat instance
- * @param config Configuration which shall be applied to Chat instance
- * @note Chat instance must be attached to pipe
+ * @brief Initialize modem pipe ubx instance
+ * @param ubx Ubx instance
+ * @param config Configuration which shall be applied to Ubx instance
+ * @note Ubx instance must be attached to pipe
  */
-int modem_ubx_init(struct modem_ubx *chat, const struct modem_ubx_config *config);
+int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config);
 
 /**
- * @brief Attach modem chat instance to pipe
- * @param chat Chat instance
- * @param pipe Pipe instance to attach Chat instance to
+ * @brief Attach modem ubx instance to pipe
+ * @param ubx Ubx instance
+ * @param pipe Pipe instance to attach Ubx instance to
  * @returns 0 if successful
  * @returns negative errno code if failure
- * @note Chat instance is enabled if successful
+ * @note Ubx instance is enabled if successful
  */
-int modem_ubx_attach(struct modem_ubx *chat, struct modem_pipe *pipe);
+int modem_ubx_attach(struct modem_ubx *ubx, struct modem_pipe *pipe);
 
 /**
  * @brief Run script asynchronously
- * @param chat Chat instance
+ * @param ubx Ubx instance
  * @param script Script to run
  * @returns 0 if script successfully started
  * @returns -EBUSY if a script is currently running
@@ -314,11 +314,11 @@ int modem_ubx_attach(struct modem_ubx *chat, struct modem_pipe *pipe);
  * @returns -EINVAL if arguments or script is invalid
  * @note Script runs asynchronously until complete or aborted.
  */
-int modem_ubx_run_script_async(struct modem_ubx *chat, const struct modem_ubx_script *script);
+int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_script *script);
 
 /**
  * @brief Run script
- * @param chat Chat instance
+ * @param ubx Ubx instance
  * @param script Script to run
  * @returns 0 if successful
  * @returns -EBUSY if a script is currently running
@@ -326,35 +326,35 @@ int modem_ubx_run_script_async(struct modem_ubx *chat, const struct modem_ubx_sc
  * @returns -EINVAL if arguments or script is invalid
  * @note Script runs until complete or aborted.
  */
-int modem_ubx_run_script(struct modem_ubx *chat, const struct modem_ubx_script *script);
+int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *script);
 
 /**
  * @brief Run script asynchronously
  * @note Function exists for backwards compatibility and should be deprecated
- * @param chat Chat instance
+ * @param ubx Ubx instance
  * @param script Script to run
  * @returns 0 if script successfully started
  * @returns -EBUSY if a script is currently running
  * @returns -EPERM if modem pipe is not attached
  * @returns -EINVAL if arguments or script is invalid
  */
-static inline int modem_ubx_script_run(struct modem_ubx *chat,
+static inline int modem_ubx_script_run(struct modem_ubx *ubx,
 					const struct modem_ubx_script *script)
 {
-	return modem_ubx_run_script_async(chat, script);
+	return modem_ubx_run_script_async(ubx, script);
 }
 
 /**
  * @brief Abort script
- * @param chat Chat instance
+ * @param ubx Ubx instance
  */
-void modem_ubx_script_abort(struct modem_ubx *chat);
+void modem_ubx_script_abort(struct modem_ubx *ubx);
 
 /**
- * @brief Release pipe from chat instance
- * @param chat Chat instance
+ * @brief Release pipe from ubx instance
+ * @param ubx Ubx instance
  */
-void modem_ubx_release(struct modem_ubx *chat);
+void modem_ubx_release(struct modem_ubx *ubx);
 
 #ifdef __cplusplus
 }

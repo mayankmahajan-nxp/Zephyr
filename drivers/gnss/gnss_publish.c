@@ -10,8 +10,35 @@
 
 static struct k_spinlock lock;
 
+#include "gnss_dump.h"
+#include <zephyr/logging/log.h>
+static char dump_buf[512];
+static void gnss_dump_data_to_log(const struct device *dev, const struct gnss_data *data)
+{
+	if (gnss_dump_info(dump_buf, sizeof(dump_buf), &data->info) < 0) {
+		return;
+	}
+
+	LOG_PRINTK("%s: %s\r\n", dev->name, dump_buf);
+
+	if (gnss_dump_nav_data(dump_buf, sizeof(dump_buf), &data->nav_data) < 0) {
+		return;
+	}
+
+	LOG_PRINTK("%s: %s\r\n", dev->name, dump_buf);
+
+	if (gnss_dump_time(dump_buf, sizeof(dump_buf), &data->utc) < 0) {
+		return;
+	}
+
+	LOG_PRINTK("%s: %s\r\n", dev->name, dump_buf);
+
+	LOG_PRINTK("\n");
+}
+
 void gnss_publish_data(const struct device *dev, const struct gnss_data *data)
 {
+	gnss_dump_data_to_log(dev, data);
 	K_SPINLOCK(&lock) {
 		STRUCT_SECTION_FOREACH(gnss_data_callback, callback) {
 			if (callback->dev == NULL || callback->dev == dev) {

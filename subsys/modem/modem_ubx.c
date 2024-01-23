@@ -122,11 +122,11 @@ static void modem_ubx_script_send(struct modem_ubx *ubx)
 
 static void modem_ubx_script_set_response_matches(struct modem_ubx *ubx)
 {
-	const struct modem_ubx_script_chat *script_chat =
-		&ubx->script->script_chats[ubx->script_chat_it];
+	const struct modem_ubx_script_ubx *script_ubx =
+		&ubx->script->script_ubxs[ubx->script_ubx_it];
 
-	ubx->matches[MODEM_UBX_MATCHES_INDEX_RESPONSE] = script_chat->response_matches;
-	ubx->matches_size[MODEM_UBX_MATCHES_INDEX_RESPONSE] = script_chat->response_matches_size;
+	ubx->matches[MODEM_UBX_MATCHES_INDEX_RESPONSE] = script_ubx->response_matches;
+	ubx->matches_size[MODEM_UBX_MATCHES_INDEX_RESPONSE] = script_ubx->response_matches_size;
 }
 
 static void modem_ubx_script_clear_response_matches(struct modem_ubx *ubx)
@@ -137,31 +137,31 @@ static void modem_ubx_script_clear_response_matches(struct modem_ubx *ubx)
 
 static void modem_ubx_script_next(struct modem_ubx *ubx, bool initial)
 {
-	const struct modem_ubx_script_chat *script_chat;
+	const struct modem_ubx_script_ubx *script_ubx;
 
 	/* Advance iterator if not initial */
 	if (initial == true) {
 		/* Reset iterator */
-		ubx->script_chat_it = 0;
+		ubx->script_ubx_it = 0;
 	} else {
 		/* Advance iterator */
-		ubx->script_chat_it++;
+		ubx->script_ubx_it++;
 	}
 
 	/* Check if end of script reached */
-	if (ubx->script_chat_it == ubx->script->script_chats_size) {
+	if (ubx->script_ubx_it == ubx->script->script_ubxs_size) {
 		modem_ubx_script_stop(ubx, MODEM_UBX_SCRIPT_RESULT_SUCCESS);
 
 		return;
 	}
 
-	LOG_DBG("%s: step: %u", ubx->script->name, ubx->script_chat_it);
+	LOG_DBG("%s: step: %u", ubx->script->name, ubx->script_ubx_it);
 
-	script_chat = &ubx->script->script_chats[ubx->script_chat_it];
+	script_ubx = &ubx->script->script_ubxs[ubx->script_ubx_it];
 
 	/* Check if request must be sent */
-	if (script_chat->request_size > 0) {
-		LOG_DBG("sending: %.*s", script_chat->request_size, script_chat->request);
+	if (script_ubx->request_size > 0) {
+		LOG_DBG("sending: %.*s", script_ubx->request_size, script_ubx->request);
 		modem_ubx_script_clear_response_matches(ubx);
 		modem_ubx_script_send(ubx);
 	} else {
@@ -221,24 +221,24 @@ static void modem_ubx_script_abort_handler(struct k_work *item)
 
 static bool modem_ubx_script_send_request(struct modem_ubx *ubx)
 {
-	const struct modem_ubx_script_chat *script_chat =
-		&ubx->script->script_chats[ubx->script_chat_it];
+	const struct modem_ubx_script_ubx *script_ubx =
+		&ubx->script->script_ubxs[ubx->script_ubx_it];
 
-	uint8_t *script_chat_request_start;
-	uint16_t script_chat_request_remaining;
+	uint8_t *script_ubx_request_start;
+	uint16_t script_ubx_request_remaining;
 	int ret;
 
 	/* Validate data to send */
-	if (script_chat->request_size == ubx->script_send_request_pos) {
+	if (script_ubx->request_size == ubx->script_send_request_pos) {
 		return true;
 	}
 
-	script_chat_request_start = (uint8_t *)&script_chat->request[ubx->script_send_request_pos];
-	script_chat_request_remaining = script_chat->request_size - ubx->script_send_request_pos;
+	script_ubx_request_start = (uint8_t *)&script_ubx->request[ubx->script_send_request_pos];
+	script_ubx_request_remaining = script_ubx->request_size - ubx->script_send_request_pos;
 
 	/* Send data through pipe */
-	ret = modem_pipe_transmit(ubx->pipe, script_chat_request_start,
-				  script_chat_request_remaining);
+	ret = modem_pipe_transmit(ubx->pipe, script_ubx_request_start,
+				  script_ubx_request_remaining);
 
 	/* Validate transmit successful */
 	if (ret < 1) {
@@ -249,7 +249,7 @@ static bool modem_ubx_script_send_request(struct modem_ubx *ubx)
 	ubx->script_send_request_pos += (uint16_t)ret;
 
 	/* Check if data remains */
-	if (ubx->script_send_request_pos < script_chat->request_size) {
+	if (ubx->script_send_request_pos < script_ubx->request_size) {
 		return false;
 	}
 
@@ -258,8 +258,8 @@ static bool modem_ubx_script_send_request(struct modem_ubx *ubx)
 
 static bool modem_ubx_script_send_delimiter(struct modem_ubx *ubx)
 {
-	uint8_t *script_chat_delimiter_start;
-	uint8_t script_chat_delimiter_remaining;
+	uint8_t *script_ubx_delimiter_start;
+	uint8_t script_ubx_delimiter_remaining;
 	int ret;
 
 	/* Validate data to send */
@@ -267,12 +267,12 @@ static bool modem_ubx_script_send_delimiter(struct modem_ubx *ubx)
 		return true;
 	}
 
-	script_chat_delimiter_start = (uint8_t *)&ubx->delimiter[ubx->script_send_delimiter_pos];
-	script_chat_delimiter_remaining = ubx->delimiter_size - ubx->script_send_delimiter_pos;
+	script_ubx_delimiter_start = (uint8_t *)&ubx->delimiter[ubx->script_send_delimiter_pos];
+	script_ubx_delimiter_remaining = ubx->delimiter_size - ubx->script_send_delimiter_pos;
 
 	/* Send data through pipe */
-	ret = modem_pipe_transmit(ubx->pipe, script_chat_delimiter_start,
-				  script_chat_delimiter_remaining);
+	ret = modem_pipe_transmit(ubx->pipe, script_ubx_delimiter_start,
+				  script_ubx_delimiter_remaining);
 
 	/* Validate transmit successful */
 	if (ret < 1) {
@@ -290,20 +290,20 @@ static bool modem_ubx_script_send_delimiter(struct modem_ubx *ubx)
 	return true;
 }
 
-static bool modem_ubx_script_chat_is_no_response(struct modem_ubx *ubx)
+static bool modem_ubx_script_ubx_is_no_response(struct modem_ubx *ubx)
 {
-	const struct modem_ubx_script_chat *script_chat =
-		&ubx->script->script_chats[ubx->script_chat_it];
+	const struct modem_ubx_script_ubx *script_ubx =
+		&ubx->script->script_ubxs[ubx->script_ubx_it];
 
-	return (script_chat->response_matches_size == 0) ? true : false;
+	return (script_ubx->response_matches_size == 0) ? true : false;
 }
 
-static uint16_t modem_ubx_script_chat_get_send_timeout(struct modem_ubx *ubx)
+static uint16_t modem_ubx_script_ubx_get_send_timeout(struct modem_ubx *ubx)
 {
-	const struct modem_ubx_script_chat *script_chat =
-		&ubx->script->script_chats[ubx->script_chat_it];
+	const struct modem_ubx_script_ubx *script_ubx =
+		&ubx->script->script_ubxs[ubx->script_ubx_it];
 
-	return script_chat->timeout;
+	return script_ubx->timeout;
 }
 
 static void modem_ubx_script_send_handler(struct k_work *item)
@@ -330,8 +330,8 @@ static void modem_ubx_script_send_handler(struct k_work *item)
 	}
 
 	/* Check if script command is no response */
-	if (modem_ubx_script_chat_is_no_response(ubx)) {
-		timeout = modem_ubx_script_chat_get_send_timeout(ubx);
+	if (modem_ubx_script_ubx_is_no_response(ubx)) {
+		timeout = modem_ubx_script_ubx_get_send_timeout(ubx);
 
 		if (timeout == 0) {
 			modem_ubx_script_next(ubx, false);
@@ -772,15 +772,15 @@ int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_scr
 	}
 
 	/* Validate script */
-	if ((script->script_chats == NULL) || (script->script_chats_size == 0) ||
+	if ((script->script_ubxs == NULL) || (script->script_ubxs_size == 0) ||
 	    ((script->abort_matches != NULL) && (script->abort_matches_size == 0))) {
 		return -EINVAL;
 	}
 
 	/* Validate script commands */
-	for (uint16_t i = 0; i < script->script_chats_size; i++) {
-		if ((script->script_chats[i].request_size == 0) &&
-		    (script->script_chats[i].response_matches_size == 0)) {
+	for (uint16_t i = 0; i < script->script_ubxs_size; i++) {
+		if ((script->script_ubxs[i].request_size == 0) &&
+		    (script->script_ubxs[i].response_matches_size == 0)) {
 			return -EINVAL;
 		}
 	}
@@ -839,7 +839,7 @@ void modem_ubx_release(struct modem_ubx *ubx)
 	ubx->work_buf_len = 0;
 	ubx->argc = 0;
 	ubx->script = NULL;
-	ubx->script_chat_it = 0;
+	ubx->script_ubx_it = 0;
 	atomic_set(&ubx->script_state, 0);
 	ubx->script_result = MODEM_UBX_SCRIPT_RESULT_ABORT;
 	k_sem_reset(&ubx->script_stopped_sem);

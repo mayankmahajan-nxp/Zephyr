@@ -176,7 +176,7 @@ static void gnss_dump_satellites_to_log(const struct device *dev,
 			return;
 		}
 
-		LOG_PRINTK("%s: %s\r\n", dev->name, dump_buf);
+		// LOG_PRINTK("%s: %s\r\n", dev->name, dump_buf);
 	}
 }
 

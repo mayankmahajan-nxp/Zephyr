@@ -34,7 +34,7 @@ static void u_blox_create_frame(uint8_t ubx_frame[],
 	ubx_frame[*ubx_frame_size - 1] = ckB;
 }
 
-static void u_blox_get_cfg_prt(uint8_t ubx_frame[],
+void u_blox_get_cfg_prt(uint8_t ubx_frame[],
 				uint8_t *ubx_frame_size, uint8_t port_id, uint32_t baudrate)
 {
 	uint8_t payload_size = 20;
@@ -76,7 +76,7 @@ static void u_blox_get_cfg_prt(uint8_t ubx_frame[],
 	u_blox_create_frame(ubx_frame, ubx_frame_size, 0x06, 0x00, payload, payload_size);
 }
 
-static void u_blox_get_cfg_rst(uint8_t ubx_frame[],
+void u_blox_get_cfg_rst(uint8_t ubx_frame[],
 				uint8_t *ubx_frame_size, uint8_t reset_mode)
 {
 	uint8_t payload_size = 4;

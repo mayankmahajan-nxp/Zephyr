@@ -26,11 +26,11 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define DT_DRV_COMPAT u_blox_m10
 
-#define UART_RECV_BUF_SZ 128
+#define UART_RECV_BUF_SZ 4096
 #define CHAT_RECV_BUF_SZ 256
 #define CHAT_ARGV_SZ 32
 
-#define UBX_RECV_BUF_SZ 256
+#define UBX_RECV_BUF_SZ 4096
 #define UBX_ARGV_SZ 32
 
 struct u_blox_m10_config {
@@ -167,11 +167,22 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 		.argv_size = ARRAY_SIZE(data->ubx_argv),
 		.unsol_matches = unsol_matches,
 		.unsol_matches_size = ARRAY_SIZE(unsol_matches),
-		.process_timeout = K_MSEC(2),
+		.process_timeout = K_MSEC(500),
 	};
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
 }
+
+void u_blox_m10_ubx_callback(struct modem_ubx *ubx, char **argv, uint16_t argc, void *user_data)
+{
+	LOG_ERR("u_blox_m10_ubx_callback: beginning!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+}
+
+const static struct modem_ubx_match u_blox_m10_ack = MODEM_UBX_MATCH_WILDCARD (
+	"\xb5\x62\x05\x01",
+	"",
+	u_blox_m10_ubx_callback
+);
 
 static int u_blox_m10_configure(const struct device *dev)
 {
@@ -185,6 +196,34 @@ static int u_blox_m10_configure(const struct device *dev)
 		modem_pipe_close(data->uart_pipe);
 		return ret;
 	}
+
+	// Send UBX_CFG_PRT to change device baudrate.
+	uint8_t ubx_frame[128];
+	uint8_t ubx_frame_size;
+	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, 115200);
+	const struct modem_ubx_script_ubx u_blox_m10_script = {
+		.request = ubx_frame,
+		.request_size = ubx_frame_size,
+		.response_matches = &u_blox_m10_ack,
+		.response_matches_size = 1,
+		.timeout = 0,
+	};
+	const struct modem_ubx_script u_blox_m10_script_hold = {
+		.name = "u_blox_m10_script_hold",
+		.script_ubxs = &u_blox_m10_script,
+		.script_ubxs_size = 1,
+		.abort_matches = NULL,
+		.abort_matches_size = 0,
+		.callback = NULL,
+		.timeout = 1,
+	};
+
+	ret = modem_ubx_run_script(&data->ubx, &u_blox_m10_script_hold);
+	printk("modem_ubx_run_script: ret = %d.\n", ret);
+	k_sleep(K_MSEC(3000));
+	ret = modem_ubx_run_script(&data->ubx, &u_blox_m10_script_hold);
+	printk("modem_ubx_run_script: ret = %d.\n", ret);
+	k_sleep(K_MSEC(3000));
 
 	// Release ubx, attach chat.
 	modem_ubx_release(&data->ubx);

@@ -677,10 +677,17 @@ static bool modem_ubx_discard_byte(struct modem_ubx *ubx, uint8_t byte)
 static void modem_ubx_process_bytes(struct modem_ubx *ubx)
 {
 	for (uint16_t i = 0; i < ubx->work_buf_len; i++) {
-		if (modem_ubx_discard_byte(ubx, ubx->work_buf[i])) {
-			continue;
-		}
+		// if (modem_ubx_discard_byte(ubx, ubx->work_buf[i])) {
+		// 	continue;
+		// }
 
+		bool rec = false;
+		if (ubx->work_buf[i] == 0xb5) {
+			rec = true;
+			printk("%x !!!!!!!!!!!!!!! ", ubx->work_buf[i]);
+		}
+		if (rec)
+			printk("%x ", ubx->work_buf[i]);
 		modem_ubx_process_byte(ubx, ubx->work_buf[i]);
 	}
 }
@@ -794,6 +801,7 @@ int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_scr
 
 	ubx->pending_script = script;
 	k_work_submit(&ubx->script_run_work);
+	printk("modem_ubx_run_script_async: exited cleanly.\n");
 	return 0;
 }
 

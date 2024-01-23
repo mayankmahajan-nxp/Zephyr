@@ -51,6 +51,7 @@ void gnss_nmea0183_match_gga_callback(struct modem_chat *chat, char **argv, uint
 				      void *user_data)
 {
 	struct gnss_nmea0183_match_data *data = user_data;
+	printk("gnss_nmea0183_match_gga_callback called.\n");
 
 	if (gnss_nmea0183_parse_gga((const char **)argv, argc, &data->data) < 0) {
 		return;
@@ -67,6 +68,7 @@ void gnss_nmea0183_match_rmc_callback(struct modem_chat *chat, char **argv, uint
 				      void *user_data)
 {
 	struct gnss_nmea0183_match_data *data = user_data;
+	printk("gnss_nmea0183_match_rmc_callback called.\n");
 
 	if (gnss_nmea0183_parse_rmc((const char **)argv, argc, &data->data) < 0) {
 		return;

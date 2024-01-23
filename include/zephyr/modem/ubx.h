@@ -329,22 +329,6 @@ int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_scr
 int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *script);
 
 /**
- * @brief Run script asynchronously
- * @note Function exists for backwards compatibility and should be deprecated
- * @param ubx Ubx instance
- * @param script Script to run
- * @returns 0 if script successfully started
- * @returns -EBUSY if a script is currently running
- * @returns -EPERM if modem pipe is not attached
- * @returns -EINVAL if arguments or script is invalid
- */
-static inline int modem_ubx_script_run(struct modem_ubx *ubx,
-					const struct modem_ubx_script *script)
-{
-	return modem_ubx_run_script_async(ubx, script);
-}
-
-/**
  * @brief Abort script
  * @param ubx Ubx instance
  */

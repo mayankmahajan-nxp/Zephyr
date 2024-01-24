@@ -1,0 +1,11 @@
+# Copyright 2024 NXP
+# SPDX-License-Identifier: Apache-2.0
+
+# Referred from the file "zephyr/dts/bindings/gnss/gnss-nmea-generic.yaml".
+
+description: U-BLOX M10 GNSS Module
+
+compatible: "u-blox,m10"
+
+include:
+  - uart-device.yaml

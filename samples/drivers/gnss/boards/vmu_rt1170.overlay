@@ -1,0 +1,28 @@
+/*
+ * Copyright 2024 NXP
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	model = "NXP VMU RT1170";
+	compatible = "nxp,mimxrt1176";
+
+	aliases {
+		led0 = &green_led;
+		led1 = &red_led;
+		watchdog0 = &wdog1;
+		sdhc0 = &usdhc1;
+		gnss = &lpuart1;
+	};
+};
+
+&lpuart1 {
+	status = "okay";
+	current-speed = <115200>;
+
+	u_blox_m10: u-blox,m10 {
+		status = "okay";
+		compatible = "u-blox,m10";
+	};
+};

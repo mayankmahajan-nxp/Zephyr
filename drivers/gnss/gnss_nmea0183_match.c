@@ -50,6 +50,7 @@ static void gnss_nmea0183_match_publish(struct gnss_nmea0183_match_data *data)
 void gnss_nmea0183_match_gga_callback(struct modem_chat *chat, char **argv, uint16_t argc,
 				      void *user_data)
 {
+	printk("gnss_nmea0183_match_gga_callback called________________________________________________________________________________________\n");
 	struct gnss_nmea0183_match_data *data = user_data;
 
 	if (gnss_nmea0183_parse_gga((const char **)argv, argc, &data->data) < 0) {
@@ -66,6 +67,7 @@ void gnss_nmea0183_match_gga_callback(struct modem_chat *chat, char **argv, uint
 void gnss_nmea0183_match_rmc_callback(struct modem_chat *chat, char **argv, uint16_t argc,
 				      void *user_data)
 {
+	printk("gnss_nmea0183_match_rmc_callback called________________________________________________________________________________________\n");
 	struct gnss_nmea0183_match_data *data = user_data;
 
 	if (gnss_nmea0183_parse_rmc((const char **)argv, argc, &data->data) < 0) {

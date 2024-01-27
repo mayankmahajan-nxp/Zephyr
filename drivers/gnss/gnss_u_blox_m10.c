@@ -316,32 +316,10 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 
 	const struct modem_ubx_config ubx_config = {
 		.user_data = data,
-		.receive_buf = data->ubx_receive_buf,
-		.receive_buf_size = sizeof(data->ubx_receive_buf),
-		.delimiter = u_blox_m10_char_delimiter,
-		.delimiter_size = ARRAY_SIZE(u_blox_m10_char_delimiter),
-		.filter = NULL,
-		.filter_size = 0,
-		.argv = data->ubx_argv,
-		.argv_size = ARRAY_SIZE(data->ubx_argv),
-		// .unsol_matches = unsol_matches,
-		// .unsol_matches_size = ARRAY_SIZE(unsol_matches),
-		.process_timeout = K_MSEC(2000),
 	};
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
 }
-
-void u_blox_m10_ubx_callback(struct modem_ubx *ubx, char **argv, uint16_t argc, void *user_data)
-{
-	LOG_ERR("u_blox_m10_ubx_callback: beginning!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-}
-
-const static struct modem_ubx_match u_blox_m10_ack = MODEM_UBX_MATCH_WILDCARD (
-	"\xb5\x62\x05\x01",
-	"",
-	u_blox_m10_ubx_callback
-);
 
 static int u_blox_m10_configure(const struct device *dev)
 {
@@ -360,26 +338,16 @@ static int u_blox_m10_configure(const struct device *dev)
 	uint8_t ubx_frame[128];
 	uint8_t ubx_frame_size;
 	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, 9600);
-	const struct modem_ubx_script_ubx u_blox_m10_script = {
-		.request = ubx_frame,
-		.request_size = ubx_frame_size,
-		.response_matches = &u_blox_m10_ack,
-		.response_matches_size = 1,
-		.timeout = 0,
+	// const struct modem_ubx_script_ubx u_blox_m10_script = {
+	// };
+	// const struct modem_ubx_script u_blox_m10_script_hold = {
+	// };
+	struct modem_ubx_script modem_ubx_script = {
+		.ubx_frame = ubx_frame,
+		.ubx_frame_size = ubx_frame_size,
 	};
-	const struct modem_ubx_script u_blox_m10_script_hold = {
-		.name = "u_blox_m10_script_hold",
-		.script_ubxs = &u_blox_m10_script,
-		.script_ubxs_size = 1,
-		.abort_matches = NULL,
-		.abort_matches_size = 0,
-		.callback = NULL,
-		.timeout = 1,
-	};
-
-	ret = modem_ubx_run_script(&data->ubx, &u_blox_m10_script_hold);
+	ret = modem_ubx_run_script(&data->ubx, &modem_ubx_script);
 	printk("modem_ubx_run_script: ret = %d.\n", ret);
-	k_sleep(K_MSEC(2000));
 
 	// Release ubx, attach chat.
 	modem_ubx_release(&data->ubx);
@@ -396,7 +364,7 @@ static int u_blox_m10_configure(const struct device *dev)
 static int u_blox_m10_init(const struct device *dev)
 {
 	int ret;
-	printk("u_blox_m10_init beginning (temp).\n");
+	printk("\n\n\nu_blox_m10_init beginning (temp).\n");
 
 	ret = u_blox_m10_init_nmea0183_match(dev);
 	if (ret < 0) {

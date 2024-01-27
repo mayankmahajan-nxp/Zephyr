@@ -63,7 +63,7 @@ static void modem_ubx_pipe_callback(struct modem_pipe *pipe, enum modem_pipe_eve
 				    void *user_data)
 {
 	struct modem_ubx *ubx = (struct modem_ubx *)user_data;
-	printk("modem_ubx_pipe_callback %d.\n", event);
+	// printk("[%d] ", event);
 
 	if (event == MODEM_PIPE_EVENT_RECEIVE_READY) {
 		k_work_submit(&ubx->process_work);
@@ -78,30 +78,40 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 	ret = modem_pipe_transmit(ubx->pipe, ubx->transmit_buf, ubx->transmit_buf_size);
 	if (ret < 0) {
-		printk("modem_pipe transaction failed.\n");
+		printk("modem_pipe transaction failed %d.\n", ret);
 		return;
 	}
 }
+
+bool received_ubx_ack = false;
 
 static void modem_ubx_process_handler(struct k_work *item)
 {
 	struct modem_ubx *ubx = CONTAINER_OF(item, struct modem_ubx, process_work);
 	int ret;
 
-	printk("modem_pipe receive transaction.\n");
 	ret = modem_pipe_receive(ubx->pipe, ubx->receive_buf, ubx->receive_buf_size);
+	printk("(%d) ", ret);
 	if (ret < 1) {
-		printk("modem_pipe transaction failed.\n");
+		// printk("modem_pipe transaction failed %d.\n", ret);
 		return;
 	}
 
 	for (int i = 0; i < ret; i++) {
 		// modem_ubx_process_received_byte(ubx, ubx->receive_buf[i]);
-		printk("%x ", ubx->receive_buf[i]);
+		ubx->work_buf[ubx->work_buf_len] = ubx->receive_buf[i];
+		++ubx->work_buf_len;
 
 		if (ubx->receive_buf[i] == 0xB5) {
+			received_ubx_ack = true;
 			printk("received start of ubx frame.\n");
 		}
+	}
+
+	if (ubx->work_buf_len == ubx->work_buf_size) {
+		for (int i = 0; i < ubx->work_buf_size; ++i)
+			printk("%x ", ubx->work_buf[i]);
+		ubx->work_buf_len = 0;
 	}
 
 	k_work_submit(&ubx->process_work);
@@ -145,6 +155,8 @@ int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config)
 	ubx->user_data = config->user_data;
 	ubx->receive_buf = config->receive_buf;
 	ubx->receive_buf_size = config->receive_buf_size;
+	ubx->work_buf = config->work_buf;
+	ubx->work_buf_size = config->work_buf_size;
 
 	atomic_set(&ubx->state, 0);
 	// ring_buf_init(&ubx->transmit_rb, ubx->buf_size, ubx->transmit_buf);

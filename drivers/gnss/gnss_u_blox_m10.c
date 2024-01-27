@@ -33,6 +33,7 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 #define CHAT_ARGV_SZ 32
 
 #define UBX_RECV_BUF_SZ 8
+#define UBX_WORK_BUF_SZ 128
 #define UBX_ARGV_SZ 32
 
 struct u_blox_m10_config {
@@ -59,6 +60,7 @@ struct u_blox_m10_data {
 	/* Modem ubx */
 	struct modem_ubx ubx;
 	uint8_t ubx_receive_buf[UBX_RECV_BUF_SZ];
+	uint8_t ubx_work_buf[UBX_WORK_BUF_SZ];
 
 	struct k_spinlock lock;
 };
@@ -317,11 +319,14 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 		.user_data = data,
 		.receive_buf = data->ubx_receive_buf,
 		.receive_buf_size = sizeof(data->ubx_receive_buf),
+		.work_buf = data->ubx_work_buf,
+		.work_buf_size = sizeof(data->ubx_work_buf),
 		.process_timeout = K_MSEC(1000),
 	};
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
 }
+extern bool received_ubx_ack;
 
 static int u_blox_m10_configure(const struct device *dev)
 {
@@ -346,6 +351,10 @@ static int u_blox_m10_configure(const struct device *dev)
 	};
 	ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
 	printk("modem_ubx_transmit: ret = %d.\n", ret);
+	while (!received_ubx_ack) {
+		printk("nothing yet.\n");
+		k_sleep(K_MSEC(500)); // temp (mayank).
+	}
 
 	// Release ubx, attach chat.
 	modem_ubx_release(&data->ubx);

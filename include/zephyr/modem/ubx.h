@@ -41,6 +41,10 @@ struct modem_ubx {
 	uint8_t *transmit_buf;
 	uint16_t transmit_buf_size;
 
+	uint8_t *work_buf;
+	uint16_t work_buf_size;
+	uint16_t work_buf_len;
+
 	/* Wrapped UBX frames are sent and received through this pipe */
 	struct modem_pipe *pipe;
 
@@ -63,6 +67,9 @@ struct modem_ubx_config {
 	uint16_t receive_buf_size;
 	/** Delay from receive ready event to pipe receive occurs */
 	k_timeout_t process_timeout;
+
+	uint8_t *work_buf;
+	uint16_t work_buf_size;
 };
 
 /**

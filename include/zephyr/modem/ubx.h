@@ -6,8 +6,8 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
-#include <zephyr/device.h>
 #include <zephyr/sys/ring_buffer.h>
+#include <zephyr/sys/atomic.h>
 
 #include <zephyr/modem/pipe.h>
 
@@ -18,83 +18,42 @@
 extern "C" {
 #endif
 
-struct modem_ubx;
-
-enum modem_ubx_script_result {
-	MODEM_UBX_SCRIPT_RESULT_SUCCESS,
-	MODEM_UBX_SCRIPT_RESULT_ABORT,
-	MODEM_UBX_SCRIPT_RESULT_TIMEOUT
-};
-
-
 /**
- * @brief Callback called when script ubx is received
- *
- * @param ubx Pointer to ubx instance instance
- * @param result Result of script execution
- * @param user_data Free to use user data set during modem_ubx_init()
+ * @brief Modem UBX
+ * @defgroup modem_ubx Modem UBX
+ * @ingroup modem
+ * @{
  */
-typedef void (*modem_ubx_script_callback)(struct modem_ubx *ubx,
-					   enum modem_ubx_script_result result, void *user_data);
 
-enum modem_ubx_script_send_state {
-	/* No data to send */
-	MODEM_UBX_SCRIPT_SEND_STATE_IDLE,
-	/* Sending request */
-	MODEM_UBX_SCRIPT_SEND_STATE_REQUEST,
-	/* Sending delimiter */
-	MODEM_UBX_SCRIPT_SEND_STATE_DELIMITER,
-};
-
-struct modem_ubx_script {
+struct modem_ubx_frame {
 	uint8_t *ubx_frame;
 	uint8_t ubx_frame_size;
 };
-
-/**
- * @brief Ubx instance internal context
- * @warning Do not modify any members of this struct directly
- */
 struct modem_ubx {
-	/* Pipe used to send and receive data */
-	struct modem_pipe *pipe;
-
 	/* User data passed with match callbacks */
 	void *user_data;
 
-	/* Receive buffer */
+	atomic_t state;
+
+	/* Buffers used for processing partial frames */
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
-	uint16_t receive_buf_len;
+	uint8_t *transmit_buf;
+	uint16_t transmit_buf_size;
 
-	/* Work buffer */
-	uint8_t work_buf[32];
-	uint16_t work_buf_len;
+	/* Wrapped UBX frames are sent and received through this pipe */
+	struct modem_pipe *pipe;
 
-	/* Script execution */
-	const struct modem_ubx_script *script;
-	const struct modem_ubx_script *pending_script;
-	struct k_work script_run_work;
-	struct k_work_delayable script_timeout_work;
-	struct k_work script_abort_work;
-	atomic_t script_state;
-	enum modem_ubx_script_result script_result;
-	struct k_sem script_stopped_sem;
+	/* Ring buffer used for transmitting partial UBX frame */
+	struct ring_buf transmit_rb;
 
-	/* Script sending */
-	uint16_t script_send_request_pos;
-	uint16_t script_send_delimiter_pos;
-	struct k_work_delayable script_send_work;
-	struct k_work_delayable script_send_timeout_work;
+	struct k_fifo tx_pkt_fifo;
 
-	/* Process received data */
-	struct k_work_delayable process_work;
-	k_timeout_t process_timeout;
+	/* Work */
+	struct k_work send_work;
+	struct k_work process_work;
 };
 
-/**
- * @brief Ubx configuration
- */
 struct modem_ubx_config {
 	/** Free to use user data passed with modem match callbacks */
 	void *user_data;
@@ -107,6 +66,21 @@ struct modem_ubx_config {
 };
 
 /**
+ * @brief Attach pipe to instance and connect
+ *
+ * @param ubx Modem UBX instance
+ * @param pipe Pipe to attach to modem UBX instance
+ */
+int modem_ubx_attach(struct modem_ubx *ubx, struct modem_pipe *pipe);
+
+/**
+ * @brief Release pipe from instance
+ *
+ * @param ubx Modem UBX instance
+ */
+void modem_ubx_release(struct modem_ubx *ubx);
+
+/**
  * @brief Initialize modem pipe ubx instance
  * @param ubx Ubx instance
  * @param config Configuration which shall be applied to Ubx instance
@@ -114,54 +88,8 @@ struct modem_ubx_config {
  */
 int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config);
 
-/**
- * @brief Attach modem ubx instance to pipe
- * @param ubx Ubx instance
- * @param pipe Pipe instance to attach Ubx instance to
- * @returns 0 if successful
- * @returns negative errno code if failure
- * @note Ubx instance is enabled if successful
- */
-int modem_ubx_attach(struct modem_ubx *ubx, struct modem_pipe *pipe);
-
-/**
- * @brief Run script asynchronously
- * @param ubx Ubx instance
- * @param script Script to run
- * @returns 0 if script successfully started
- * @returns -EBUSY if a script is currently running
- * @returns -EPERM if modem pipe is not attached
- * @returns -EINVAL if arguments or script is invalid
- * @note Script runs asynchronously until complete or aborted.
- */
-int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_script *script);
-
-/**
- * @brief Run script
- * @param ubx Ubx instance
- * @param script Script to run
- * @returns 0 if successful
- * @returns -EBUSY if a script is currently running
- * @returns -EPERM if modem pipe is not attached
- * @returns -EINVAL if arguments or script is invalid
- * @note Script runs until complete or aborted.
- */
-int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *script);
-
-/**
- * @brief Abort script
- * @param ubx Ubx instance
- */
-void modem_ubx_script_abort(struct modem_ubx *ubx);
-
-/**
- * @brief Release pipe from ubx instance
- * @param ubx Ubx instance
- */
-void modem_ubx_release(struct modem_ubx *ubx);
-
-int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_script *script);
-int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *script);
+int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_frame *frame);
+int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_frame *frame);
 
 #ifdef __cplusplus
 }

@@ -32,7 +32,7 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 #define CHAT_RECV_BUF_SZ 256
 #define CHAT_ARGV_SZ 32
 
-#define UBX_RECV_BUF_SZ 256
+#define UBX_RECV_BUF_SZ 8
 #define UBX_ARGV_SZ 32
 
 struct u_blox_m10_config {
@@ -59,7 +59,6 @@ struct u_blox_m10_data {
 	/* Modem ubx */
 	struct modem_ubx ubx;
 	uint8_t ubx_receive_buf[UBX_RECV_BUF_SZ];
-	uint8_t *ubx_argv[UBX_ARGV_SZ];
 
 	struct k_spinlock lock;
 };
@@ -316,6 +315,9 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 
 	const struct modem_ubx_config ubx_config = {
 		.user_data = data,
+		.receive_buf = data->ubx_receive_buf,
+		.receive_buf_size = sizeof(data->ubx_receive_buf),
+		.process_timeout = K_MSEC(1000),
 	};
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
@@ -338,16 +340,12 @@ static int u_blox_m10_configure(const struct device *dev)
 	uint8_t ubx_frame[128];
 	uint8_t ubx_frame_size;
 	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, 9600);
-	// const struct modem_ubx_script_ubx u_blox_m10_script = {
-	// };
-	// const struct modem_ubx_script u_blox_m10_script_hold = {
-	// };
-	struct modem_ubx_script modem_ubx_script = {
+	struct modem_ubx_frame modem_ubx_frame = {
 		.ubx_frame = ubx_frame,
 		.ubx_frame_size = ubx_frame_size,
 	};
-	ret = modem_ubx_run_script(&data->ubx, &modem_ubx_script);
-	printk("modem_ubx_run_script: ret = %d.\n", ret);
+	ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
+	printk("modem_ubx_transmit: ret = %d.\n", ret);
 
 	// Release ubx, attach chat.
 	modem_ubx_release(&data->ubx);

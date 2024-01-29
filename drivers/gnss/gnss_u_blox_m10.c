@@ -32,7 +32,7 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 #define CHAT_RECV_BUF_SZ 256
 #define CHAT_ARGV_SZ 32
 
-#define UBX_RECV_BUF_SZ 8
+#define UBX_RECV_BUF_SZ 128
 #define UBX_WORK_BUF_SZ 128
 
 struct u_blox_m10_config {
@@ -206,10 +206,11 @@ static int u_blox_m10_configure_baudrate(const struct device *dev, uint32_t baud
 {
 	struct u_blox_m10_data *data = dev->data;
 	int ret;
+	bool script_failure = true;
 
 	ret = u_blox_m10_release_chat_attach_ubx(dev);
 	if (ret < 0) {
-		return ret;
+		goto out;
 	}
 
 	// Send UBX_CFG_PRT to change device baudrate.
@@ -221,15 +222,10 @@ static int u_blox_m10_configure_baudrate(const struct device *dev, uint32_t baud
 		.ubx_frame_size = ubx_frame_size,
 	};
 
-	bool script_failure = true;
-	// for (int i = 0; i < 3; ++i) {
-		ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
-		if (ret == 0) {
-			script_failure = false;
-			// break;
-		}
-		// LOG_ERR("modem_ubx_transmit failed. retrying.");
-	// }
+	ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
+	if (ret == 0) {
+		script_failure = false;
+	}
 	if (ret < 0) {
 		LOG_ERR("modem_ubx_transmit failed. exiting.");
 		goto out;
@@ -290,10 +286,10 @@ static int u_blox_m10_configure(const struct device *dev)
 		/* Try configuring baudrate of device with all possible baudrates. */
 		for (int i = 0; i < U_BLOX_M10_BAUDRATE_COUNT; ++i) {
 			/* Set baudrate of UART pipe as u_blox_m10_baudrate[i]. */
-			ret = u_blox_m10_set_uart_baudrate(dev, u_blox_m10_baudrate[i]);
-			if (ret < 0) {
-				return ret;
-			}
+			// ret = u_blox_m10_set_uart_baudrate(dev, u_blox_m10_baudrate[i]);
+			// if (ret < 0) {
+			// 	return ret;
+			// }
 
 			/* Try setting baudrate of device as u_blox_m10_baudrate[i]. */
 			ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
@@ -312,7 +308,7 @@ static int u_blox_m10_configure(const struct device *dev)
 		return -1;
 	}
 
-	printk("u_blox_m10_configure: exited cleanly (temp) !!!!!!!!!!!!!!!!!!!!.\n");
+	LOG_ERR("u_blox_m10_configure: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
 	return ret;
 }
 

@@ -6,13 +6,12 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
-#include <zephyr/sys/ring_buffer.h>
 #include <zephyr/sys/atomic.h>
 
 #include <zephyr/modem/pipe.h>
 
-#ifndef ZEPHYR_MODEM_Ubx_
-#define ZEPHYR_MODEM_Ubx_
+#ifndef ZEPHYR_MODEM_UBX_
+#define ZEPHYR_MODEM_UBX_
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,7 +32,7 @@ struct modem_ubx_frame {
 struct modem_ubx {
 	void *user_data;
 
-	atomic_t state;
+	// atomic_t state;
 
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
@@ -50,7 +49,7 @@ struct modem_ubx {
 	struct k_work process_work;
 	struct k_sem script_stopped_sem;
 	k_timeout_t process_timeout;
-	atomic_t script_state;
+	// atomic_t script_state;
 };
 
 struct modem_ubx_config {
@@ -95,4 +94,4 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_frame
 }
 #endif
 
-#endif /* ZEPHYR_MODEM_Ubx_ */
+#endif /* ZEPHYR_MODEM_UBX_ */

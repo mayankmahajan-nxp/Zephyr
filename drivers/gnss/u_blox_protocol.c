@@ -6,6 +6,17 @@
 
 #include "u_blox_protocol.h"
 
+const uint32_t u_blox_m10_baudrate[U_BLOX_M10_BAUDRATE_COUNT] = {
+	4800,
+	9600,
+	19200,
+	38400,
+	57600,
+	115200,
+	230400,
+	460800,
+};
+
 static void u_blox_create_frame(uint8_t ubx_frame[], uint8_t *ubx_frame_size, uint8_t message_class,
 				uint8_t message_id, uint8_t payload[], uint16_t payload_size)
 {

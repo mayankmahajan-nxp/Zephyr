@@ -34,7 +34,6 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_RECV_BUF_SZ 8
 #define UBX_WORK_BUF_SZ 128
-// #define UBX_ARGV_SZ 32
 
 struct u_blox_m10_config {
 	const struct device *uart;
@@ -167,13 +166,11 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 		.receive_buf_size = sizeof(data->ubx_receive_buf),
 		.work_buf = data->ubx_work_buf,
 		.work_buf_size = sizeof(data->ubx_work_buf),
-		.process_timeout = K_MSEC(1000),
+		.process_timeout = K_MSEC(500),
 	};
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
 }
-
-extern bool received_ubx_ack_full;
 
 static int u_blox_m10_release_chat_attach_ubx(const struct device *dev)
 {
@@ -205,7 +202,7 @@ static int u_blox_m10_release_ubx_attach_chat(const struct device *dev)
 	return ret;
 }
 
-static int u_blox_m10_configure(const struct device *dev)
+static int u_blox_m10_configure_baudrate(const struct device *dev, uint32_t baudrate)
 {
 	struct u_blox_m10_data *data = dev->data;
 	int ret;
@@ -218,23 +215,105 @@ static int u_blox_m10_configure(const struct device *dev)
 	// Send UBX_CFG_PRT to change device baudrate.
 	uint8_t ubx_frame[128];
 	uint8_t ubx_frame_size;
-	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, 9600);
+	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, baudrate);
 	struct modem_ubx_frame modem_ubx_frame = {
 		.ubx_frame = ubx_frame,
 		.ubx_frame_size = ubx_frame_size,
 	};
-	ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
+
+	bool script_failure = true;
+	// for (int i = 0; i < 3; ++i) {
+		ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
+		if (ret == 0) {
+			script_failure = false;
+			// break;
+		}
+		// LOG_ERR("modem_ubx_transmit failed. retrying.");
+	// }
 	if (ret < 0) {
-		return ret;
+		LOG_ERR("modem_ubx_transmit failed. exiting.");
+		goto out;
 	}
 
+out:
 	ret = u_blox_m10_release_ubx_attach_chat(dev);
 	if (ret < 0) {
 		return ret;
 	}
+	if (script_failure) {
+		return -1;
+	}
 
-	printk("u_blox_m10_configure: exited cleanly.\n");
 	return 0;
+}
+
+static int u_blox_m10_get_uart_baudrate(const struct device *dev) {
+	const struct u_blox_m10_config *cfg = dev->config;
+
+	const struct uart_driver_api *uart_api = cfg->uart->api;
+	struct uart_config uart_config;
+
+	uart_api->config_get(cfg->uart, &uart_config);
+	uint32_t baudrate = uart_config.baudrate;
+
+	return baudrate;
+}
+
+static int u_blox_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate) {
+	const struct u_blox_m10_config *cfg = dev->config;
+
+	const struct uart_driver_api *uart_api = cfg->uart->api;
+	struct uart_config uart_config;
+
+	u_blox_m10_turn_off(dev);
+
+	uart_api->config_get(cfg->uart, &uart_config);
+	uart_config.baudrate = baudrate;
+
+	int ret = uart_api->configure(cfg->uart, &uart_config);
+
+	u_blox_m10_init_pipe(dev);
+	u_blox_m10_resume(dev);
+
+	return ret;
+}
+
+static int u_blox_m10_configure(const struct device *dev)
+{
+	int ret = -1, retry_count = 3;
+
+	int target_baudrate = u_blox_m10_get_uart_baudrate(dev);
+
+	bool configuration_failed = true;
+	/* Retry in case of failure. */
+	for (int j = 0; j < retry_count && ret != 0; ++j) {
+		/* Try configuring baudrate of device with all possible baudrates. */
+		for (int i = 0; i < U_BLOX_M10_BAUDRATE_COUNT; ++i) {
+			/* Set baudrate of UART pipe as u_blox_m10_baudrate[i]. */
+			ret = u_blox_m10_set_uart_baudrate(dev, u_blox_m10_baudrate[i]);
+			if (ret < 0) {
+				return ret;
+			}
+
+			/* Try setting baudrate of device as u_blox_m10_baudrate[i]. */
+			ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
+			if (ret == 0) {
+				configuration_failed = false;
+				break;
+			}
+		}
+	}
+
+	ret = u_blox_m10_set_uart_baudrate(dev, target_baudrate);
+	if (ret < 0) {
+		return ret;
+	}
+	if (configuration_failed) {
+		return -1;
+	}
+
+	printk("u_blox_m10_configure: exited cleanly (temp) !!!!!!!!!!!!!!!!!!!!.\n");
+	return ret;
 }
 
 static int u_blox_m10_init(const struct device *dev)

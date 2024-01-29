@@ -50,6 +50,7 @@ struct modem_ubx {
 	struct k_work process_work;
 	struct k_sem script_stopped_sem;
 	k_timeout_t process_timeout;
+	atomic_t script_state;
 };
 
 struct modem_ubx_config {

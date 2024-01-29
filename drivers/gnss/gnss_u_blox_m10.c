@@ -240,6 +240,7 @@ out:
 		return -1;
 	}
 
+	LOG_ERR("modem_ubx_transmit: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
 	return 0;
 }
 
@@ -276,34 +277,52 @@ static int u_blox_m10_set_uart_baudrate(const struct device *dev, uint32_t baudr
 
 static int u_blox_m10_configure(const struct device *dev)
 {
-	int ret = -1, retry_count = 3;
+	int ret, retry_count = 5;
 
 	int target_baudrate = u_blox_m10_get_uart_baudrate(dev);
 
 	bool configuration_failed = true;
-	/* Retry in case of failure. */
-	for (int j = 0; j < retry_count && ret != 0; ++j) {
-		/* Try configuring baudrate of device with all possible baudrates. */
-		for (int i = 0; i < U_BLOX_M10_BAUDRATE_COUNT; ++i) {
-			/* Set baudrate of UART pipe as u_blox_m10_baudrate[i]. */
-			// ret = u_blox_m10_set_uart_baudrate(dev, u_blox_m10_baudrate[i]);
-			// if (ret < 0) {
-			// 	return ret;
-			// }
+	/* Try configuring baudrate of device with all possible baudrates. */
+	for (int i = 0; i < U_BLOX_M10_BAUDRATE_COUNT; ++i) {
+		/* Set baudrate of UART pipe as u_blox_m10_baudrate[i]. */
+		ret = u_blox_m10_set_uart_baudrate(dev, u_blox_m10_baudrate[i]);
+		if (ret < 0) {
+			return ret;
+		}
 
-			/* Try setting baudrate of device as u_blox_m10_baudrate[i]. */
-			ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
-			if (ret == 0) {
-				configuration_failed = false;
-				break;
-			}
+		/* Try setting baudrate of device as target_baudrate. */
+		ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
+		if (ret == 0) {
+			configuration_failed = false;
+			break;
 		}
 	}
 
+	/* Reset baudrate of UART pipe as target_baudrate. */
 	ret = u_blox_m10_set_uart_baudrate(dev, target_baudrate);
 	if (ret < 0) {
 		return ret;
 	}
+
+	/* Retry in case didn't receive acknowledgement in previous attempts. */
+	for (int j = 0; j < retry_count && configuration_failed; ++j) {
+		ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
+		if (ret == 0) {
+			configuration_failed = false;
+			break;
+		}
+	}
+
+	/* Benchmarking (temp). */
+	int total_count = 10, success_count = 0;
+	for (int j = 0; j < total_count; ++j) {
+		ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
+		if (ret == 0) {
+			++success_count;
+		}
+	}
+	LOG_ERR("success rate = %d/%d.", success_count,total_count);
+
 	if (configuration_failed) {
 		return -1;
 	}

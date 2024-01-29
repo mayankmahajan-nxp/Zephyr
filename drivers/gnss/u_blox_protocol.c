@@ -6,9 +6,8 @@
 
 #include "u_blox_protocol.h"
 
-static void u_blox_create_frame(uint8_t ubx_frame[],
-			       uint8_t *ubx_frame_size, uint8_t message_class,
-			       uint8_t message_id, uint8_t payload[], uint16_t payload_size)
+static void u_blox_create_frame(uint8_t ubx_frame[], uint8_t *ubx_frame_size, uint8_t message_class,
+				uint8_t message_id, uint8_t payload[], uint16_t payload_size)
 {
 	uint8_t frame_length_without_payload = 8;
 
@@ -34,8 +33,8 @@ static void u_blox_create_frame(uint8_t ubx_frame[],
 	ubx_frame[*ubx_frame_size - 1] = ckB;
 }
 
-void u_blox_get_cfg_prt(uint8_t ubx_frame[],
-				uint8_t *ubx_frame_size, uint8_t port_id, uint32_t baudrate)
+void u_blox_get_cfg_prt(uint8_t ubx_frame[], uint8_t *ubx_frame_size, uint8_t port_id,
+			uint32_t baudrate)
 {
 	uint8_t payload_size = 20;
 	uint8_t payload[payload_size];
@@ -76,8 +75,7 @@ void u_blox_get_cfg_prt(uint8_t ubx_frame[],
 	u_blox_create_frame(ubx_frame, ubx_frame_size, 0x06, 0x00, payload, payload_size);
 }
 
-void u_blox_get_cfg_rst(uint8_t ubx_frame[],
-				uint8_t *ubx_frame_size, uint8_t reset_mode)
+void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint8_t *ubx_frame_size, uint8_t reset_mode)
 {
 	uint8_t payload_size = 4;
 	uint8_t payload[payload_size];

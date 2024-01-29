@@ -34,7 +34,7 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_RECV_BUF_SZ 8
 #define UBX_WORK_BUF_SZ 128
-#define UBX_ARGV_SZ 32
+// #define UBX_ARGV_SZ 32
 
 struct u_blox_m10_config {
 	const struct device *uart;
@@ -72,160 +72,6 @@ MODEM_CHAT_MATCHES_DEFINE(unsol_matches,
 	MODEM_CHAT_MATCH_WILDCARD("$??GSV,", ",*", gnss_nmea0183_match_gsv_callback),
 #endif
 );
-
-// static int u_blox_m10_send_ublox_m8_message(const struct device *dev, uint8_t *ubx_frame,
-// 					      uint8_t ubx_frame_len)
-// {
-// 	struct u_blox_m10_data *data = dev->data;
-
-// 	int ret;
-
-// 	u_blox_m10_chat_parse_reset(&data->chat_ubx);
-
-// 	// ret = modem_pipe_transmit(data->chat.pipe, ubx_frame, ubx_frame_len);
-
-// 	// MODEM_CHAT_SCRIPT_CMDS_DEFINE(
-// 	// 	ublox_m8_script_chat,
-// 	// 	MODEM_CHAT_SCRIPT_CMD_RESP(ubx_frame, ublox_m8_ack),
-// 	// ); // temp (mayank): could use this, but we will have to change size of ubx_frame to 28.
-// 	const struct modem_chat_script_chat ublox_m8_script_chat = {
-// 		.request = ubx_frame,
-// 		.request_size = ubx_frame_len,
-// 		.response_matches = &ublox_m8_ack,
-// 		.response_matches_size = 1,
-// 		.timeout = 0,
-// 	};
-// 	const struct modem_chat_script ublox_m8_script = {
-// 		.name = "ublox_m8_script",
-// 		.script_chats = &ublox_m8_script_chat,
-// 		.script_chats_size = 1,
-// 		.abort_matches = NULL,
-// 		.abort_matches_size = 0,
-// 		.callback = NULL,
-// 		.timeout = 1,
-// 	};
-
-//   u_blox_m10_uart_flush(dev);
-// 	ret = modem_chat_run_script(&data->chat_ubx, &ublox_m8_script);
-// 	modem_chat_release(&data->chat_ubx);
-//   u_blox_m10_turn_off(dev);
-//   u_blox_m10_uart_read_reg(dev);
-// 	k_sleep(K_MSEC(100)); // temp (mayank): check if this is necessary.
-// 	printk("ret for modem_chat_run_script = %d.\n", ret);
-
-// 	return ret;
-// }
-
-// static int u_blox_m10_get_uart_baudrate(const struct device *dev) {
-// 	const struct u_blox_m10_config *cfg = dev->config;
-
-// 	const struct uart_driver_api *uart_api = cfg->uart->api;
-// 	struct uart_config uart_config;
-
-// 	uart_api->config_get(cfg->uart, &uart_config);
-// 	uint32_t baudrate = uart_config.baudrate;
-
-// 	return baudrate;
-// }
-
-// static int u_blox_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate) {
-// 	const struct u_blox_m10_config *cfg = dev->config;
-
-// 	const struct uart_driver_api *uart_api = cfg->uart->api;
-// 	struct uart_config uart_config;
-
-// 	// temp (mayank): check which things need to be re-initialized here.
-// 	u_blox_m10_turn_off(dev);
-
-// 	uart_api->config_get(cfg->uart, &uart_config);
-// 	uart_config.baudrate = baudrate;
-
-// 	// temp (mayank): check which of the following are necessary here.
-// 	int ret = uart_api->configure(cfg->uart, &uart_config);
-// 	uart_configure(cfg->uart, &uart_config);
-
-// 	// u_blox_m10_init_nmea0183_match(dev);
-// 	u_blox_m10_init_pipe(dev);
-// 	// u_blox_m10_init_chat(dev);
-// 	u_blox_m10_resume(dev);
-// 	printk("u_blox_m10_set_uart_baudrate completed %d.\n\n", baudrate);
-
-// 	return ret;
-// }
-
-// static int u_blox_m10_set_device_baudrate(const struct device *dev, uint32_t baudrate) {
-// 	struct u_blox_m10_data *data = dev->data;
-// 	k_spinlock_key_t key;
-
-// 	int ret;
-
-// 	key = k_spin_lock(&data->lock);
-
-// 	u_blox_m10_turn_off(dev);
-// 	u_blox_m10_resume_ubx(dev);
-
-// 	uint8_t ubx_frame[256], ubx_frame_len;
-
-// 	ublox_m8_get_cfg_rst_msg(dev, ubx_frame, &ubx_frame_len, 0x08);
-// 	ret = u_blox_m10_send_ublox_m8_message(dev, ubx_frame, ubx_frame_len);
-
-// 	ublox_m8_get_cfg_prt_msg(dev, ubx_frame, &ubx_frame_len, 0x01, baudrate);
-// 	int success_count = 0, total_count = 3;
-// 	for (int i = 0; i < total_count; ++i) {
-// 		ret = u_blox_m10_send_ublox_m8_message(dev, ubx_frame, ubx_frame_len);
-// 		if (ret == 0)
-// 			++success_count;
-// 	}
-// 	printk("success_count = %d.\n", success_count);
-// 		// note: our delimeter is not the end of the message. so following bytes roll over.
-// 			// if and only if we are not using the filter array to filter other stuff.
-// 		// that's why the following call returns -11. solution: clear the receive buffer.
-
-// 	ublox_m8_get_cfg_rst_msg(dev, ubx_frame, &ubx_frame_len, 0x09);
-// 	ret = u_blox_m10_send_ublox_m8_message(dev, ubx_frame, ubx_frame_len);
-
-// 	if (ret < 0) {
-// 		goto unlock_return;
-// 	}
-
-// unlock_return:
-// 	k_spin_unlock(&data->lock, key);
-
-// 	u_blox_m10_turn_off(dev);
-// 	u_blox_m10_resume(dev);
-
-// 	return ret;
-// }
-
-// static int u_blox_m10_configure_baudrate(const struct device *dev) {
-// 	uint32_t target_baudrate = u_blox_m10_get_uart_baudrate(dev);
-
-// 	int ret;
-
-// 	/* Try to comply the baudrate of UART with the preset baudrate of dev,
-// 		by writing to dev with UART baudrate as all possible baudrates. */
-// 	for (int i = 0; i < U_BLOX_M10_BAUDRATES_COUNT; ++i) {
-// 		LOG_ERR("%d %d !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", i, u_blox_m10_baudrates[i]);
-// 		ret = u_blox_m10_set_uart_baudrate(dev, u_blox_m10_baudrates[i]);
-// 		if (ret < 0) {
-// 			return ret;
-// 		}
-
-// 		// k_sleep(K_MSEC(100));
-// 		for (int j = 0; j < 1; ++j)
-// 			ret = u_blox_m10_set_device_baudrate(dev, target_baudrate);
-// 		// if (ret == 0) { // temp (mayank): commenting, as right now we can't detect ack.
-// 		// 	break;
-// 		// }
-// 	}
-
-// 	ret = u_blox_m10_set_uart_baudrate(dev, target_baudrate);
-// 	if (ret < 0) {
-// 		return ret;
-// 	}
-
-// 	return ret;
-// }
 
 static int u_blox_m10_resume(const struct device *dev)
 {
@@ -326,9 +172,10 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
 }
-extern bool received_ubx_ack;
 
-static int u_blox_m10_configure(const struct device *dev)
+extern bool received_ubx_ack_full;
+
+static int u_blox_m10_release_chat_attach_ubx(const struct device *dev)
 {
 	struct u_blox_m10_data *data = dev->data;
 	int ret;
@@ -338,6 +185,33 @@ static int u_blox_m10_configure(const struct device *dev)
 	ret = modem_ubx_attach(&data->ubx, data->uart_pipe);
 	if (ret < 0) {
 		modem_pipe_close(data->uart_pipe);
+	}
+
+	return ret;
+}
+
+static int u_blox_m10_release_ubx_attach_chat(const struct device *dev)
+{
+	struct u_blox_m10_data *data = dev->data;
+	int ret;
+
+	// Release ubx, attach chat.
+	modem_ubx_release(&data->ubx);
+	ret = modem_chat_attach(&data->chat, data->uart_pipe);
+	if (ret < 0) {
+		modem_pipe_close(data->uart_pipe);
+	}
+
+	return ret;
+}
+
+static int u_blox_m10_configure(const struct device *dev)
+{
+	struct u_blox_m10_data *data = dev->data;
+	int ret;
+
+	ret = u_blox_m10_release_chat_attach_ubx(dev);
+	if (ret < 0) {
 		return ret;
 	}
 
@@ -350,17 +224,12 @@ static int u_blox_m10_configure(const struct device *dev)
 		.ubx_frame_size = ubx_frame_size,
 	};
 	ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
-	printk("modem_ubx_transmit: ret = %d.\n", ret);
-	while (!received_ubx_ack) {
-		printk("nothing yet.\n");
-		k_sleep(K_MSEC(500)); // temp (mayank).
+	if (ret < 0) {
+		return ret;
 	}
 
-	// Release ubx, attach chat.
-	modem_ubx_release(&data->ubx);
-	ret = modem_chat_attach(&data->chat, data->uart_pipe);
+	ret = u_blox_m10_release_ubx_attach_chat(dev);
 	if (ret < 0) {
-		modem_pipe_close(data->uart_pipe);
 		return ret;
 	}
 

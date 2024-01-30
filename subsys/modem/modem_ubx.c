@@ -17,13 +17,16 @@ LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 static bool received_ubx_ack_start_1 = false;
 static bool received_ubx_ack_start_2 = false;
 
-int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_frame *frame)
+int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_script_ubx *frame)
 {
+	int ret;
 	// bool script_is_running;
 
 	if (ubx->pipe == NULL) {
 		return -EPERM;
 	}
+
+	k_sem_reset(&ubx->script_stopped_sem);
 
 	ubx->transmit_buf = frame->ubx_frame;
 	ubx->transmit_buf_size = frame->ubx_frame_size;
@@ -40,10 +43,18 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_frame
 	// }
 
 	k_work_submit(&ubx->send_work);
-	return 0;
+
+	ret = k_sem_take(&ubx->script_stopped_sem, ubx->process_timeout);
+	if (ret < 0) {
+		return ret;
+	} else if (ubx->work_buf[3] == 0) {
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
-int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_frame *frame)
+int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script_ubx *frame)
 {
 	int ret;
 
@@ -56,25 +67,23 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_frame *fram
 		return -EPERM;
 	}
 
-	k_sem_reset(&ubx->script_stopped_sem);
-
-	ret = modem_ubx_transmit_async(ubx, frame);
-	if (ret < 0) {
-		return ret;
+	for (int i = 0; i < frame->retry_count; ++i) {
+		ret = modem_ubx_transmit_async(ubx, frame);
+		if (ret == 0) {
+			break;
+		}
 	}
-
-	ret = k_sem_take(&ubx->script_stopped_sem, ubx->process_timeout);
-	k_sem_give(&ubx->script_running_sem);
 	if (ret < 0) {
-		return ret;
-	} else if (ubx->work_buf[3] == 0) {
-		return -1;
-	} else {
-		return 0;
+		goto out;
 	}
 
 	// return ubx->script_result == MODEM_UBX_SCRIPT_RESULT_SUCCESS ? 0 : -EAGAIN;
 	// return 0;
+
+out:
+	k_sem_give(&ubx->script_running_sem);
+
+	return ret;
 }
 
 static void modem_ubx_pipe_callback(struct modem_pipe *pipe, enum modem_pipe_event event,

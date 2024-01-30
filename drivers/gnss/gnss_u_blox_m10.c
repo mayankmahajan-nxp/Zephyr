@@ -37,6 +37,11 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_MESSAGE_TIMEOUT_MS	500
 
+enum modem_module {
+	modem_module_chat = 0,
+	modem_module_ubx = 1,
+};
+
 struct u_blox_m10_config {
 	const struct device *uart;
 };
@@ -204,45 +209,50 @@ static int u_blox_m10_release_ubx_attach_chat(const struct device *dev)
 	return ret;
 }
 
-static int u_blox_m10_configure_baudrate(const struct device *dev, uint32_t baudrate)
-{
+static int u_blox_m10_modem_ubx_script_send(const struct device *dev,
+					   struct modem_ubx_script_ubx *modem_ubx_script_ubx_tx) {
 	struct u_blox_m10_data *data = dev->data;
 	int ret;
-	bool script_failure = true;
 
 	ret = u_blox_m10_release_chat_attach_ubx(dev);
 	if (ret < 0) {
 		goto out;
 	}
 
-	// Send UBX_CFG_PRT to change device baudrate.
-	uint8_t ubx_frame[128];
-	uint8_t ubx_frame_size;
-	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, baudrate);
-	struct modem_ubx_frame modem_ubx_frame = {
-		.ubx_frame = ubx_frame,
-		.ubx_frame_size = ubx_frame_size,
-	};
-
-	ret = modem_ubx_transmit(&data->ubx, &modem_ubx_frame);
-	if (ret == 0) {
-		script_failure = false;
-	}
+	ret = modem_ubx_transmit(&data->ubx, modem_ubx_script_ubx_tx);
 	if (ret < 0) {
-		LOG_ERR("modem_ubx_transmit failed. exiting.");
 		goto out;
 	}
 
 out:
-	ret = u_blox_m10_release_ubx_attach_chat(dev);
+	ret |= u_blox_m10_release_ubx_attach_chat(dev);
+	if (ret < 0) {
+		LOG_ERR("u_blox_m10_modem_ubx_script_send: failed (temp). ret = %d.", ret);
+		return ret;
+	}
+
+	LOG_ERR("u_blox_m10_modem_ubx_script_send: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
+	return 0;
+}
+
+static int u_blox_m10_ubx_cfg_prt_send(const struct device *dev, uint32_t baudrate, uint16_t retry_count)
+{
+	int ret;
+
+	// Send UBX_CFG_PRT to change device baudrate.
+	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
+	uint16_t ubx_frame_size;
+	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, baudrate);
+	struct modem_ubx_script_ubx modem_ubx_script_ubx_cfg_prt = {
+		.ubx_frame = ubx_frame,
+		.ubx_frame_size = ubx_frame_size,
+		.retry_count = retry_count,
+	};
+	ret = u_blox_m10_modem_ubx_script_send(dev, &modem_ubx_script_ubx_cfg_prt);
 	if (ret < 0) {
 		return ret;
 	}
-	if (script_failure) {
-		return -1;
-	}
 
-	LOG_ERR("modem_ubx_transmit: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
 	return 0;
 }
 
@@ -279,7 +289,7 @@ static int u_blox_m10_set_uart_baudrate(const struct device *dev, uint32_t baudr
 
 static int u_blox_m10_configure(const struct device *dev)
 {
-	int ret, retry_count = 10;
+	int ret;
 
 	int target_baudrate = u_blox_m10_get_uart_baudrate(dev);
 
@@ -291,9 +301,10 @@ static int u_blox_m10_configure(const struct device *dev)
 		if (ret < 0) {
 			return ret;
 		}
+		printk("%d\n", u_blox_baudrate[i]);
 
 		/* Try setting baudrate of device as target_baudrate. */
-		ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
+		ret = u_blox_m10_ubx_cfg_prt_send(dev, target_baudrate, 2);
 		if (ret == 0) {
 			configuration_failed = false;
 			break;
@@ -306,28 +317,38 @@ static int u_blox_m10_configure(const struct device *dev)
 		return ret;
 	}
 
-	/* Retry in case didn't receive acknowledgement in previous attempts. */
-	for (int j = 0; j < retry_count && configuration_failed; ++j) {
-		ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
-		if (ret == 0) {
-			configuration_failed = false;
-			break;
-		}
+	/* Retry in case didn't receive acknowledgement in previous attempt. */
+	ret = u_blox_m10_ubx_cfg_prt_send(dev, target_baudrate, 5);
+	if (ret < 0) {
+		LOG_ERR("u_blox_m10_modem_ubx_script_send cfg_prt failed. exiting.");
+		return ret;
 	}
 
-	/* Benchmarking (temp). */
-	int total_count = 10, success_count = 0;
-	for (int j = 0; j < total_count; ++j) {
-		ret = u_blox_m10_configure_baudrate(dev, target_baudrate);
-		if (ret == 0) {
-			++success_count;
-		}
+	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
+	uint16_t ubx_frame_size;
+	struct modem_ubx_script_ubx modem_ubx_script_ubx_cfg_msg;
+	u_blox_get_cfg_msg(ubx_frame, &ubx_frame_size, NMEA_DTM, 0);
+	modem_ubx_script_ubx_cfg_msg.ubx_frame = ubx_frame;
+	modem_ubx_script_ubx_cfg_msg.ubx_frame_size = ubx_frame_size;
+	modem_ubx_script_ubx_cfg_msg.retry_count = 5;
+	ret = u_blox_m10_modem_ubx_script_send(dev, &modem_ubx_script_ubx_cfg_msg);
+	if (ret < 0) {
+		LOG_ERR("u_blox_m10_modem_ubx_script_send cfg_msg failed. exiting.");
+		return ret;
 	}
-	LOG_ERR("success rate = %d/%d.", success_count,total_count);
 
-	if (configuration_failed) {
-		return -1;
-	}
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_DTM, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GBS, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GLL, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GNS, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GRS, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GSA, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GST, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GSV, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_RMC, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_VLW, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_VTG, 0);
+	// ret &= neo_api->cfg_msg(neo_dev, NMEA_ZDA, 0);
 
 	LOG_ERR("u_blox_m10_configure: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
 	return ret;

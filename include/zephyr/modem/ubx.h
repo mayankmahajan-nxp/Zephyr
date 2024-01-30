@@ -24,9 +24,17 @@ extern "C" {
  * @{
  */
 
-struct modem_ubx_frame {
+struct modem_ubx_script_ubx {
 	uint8_t *ubx_frame;
 	uint16_t ubx_frame_size;
+	uint16_t retry_count;
+	uint16_t timeout;
+};
+
+struct modem_ubx_script {
+	struct modem_ubx_script_ubx *script_ubxs;
+	uint16_t script_ubxs_size;
+	uint32_t timeout;
 };
 
 struct modem_ubx {
@@ -88,8 +96,8 @@ void modem_ubx_release(struct modem_ubx *ubx);
  */
 int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config);
 
-int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_frame *frame);
-int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_frame *frame);
+int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script_ubx *frame);
+int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_script_ubx *frame);
 
 #ifdef __cplusplus
 }

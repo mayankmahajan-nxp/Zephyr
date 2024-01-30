@@ -48,7 +48,7 @@ static void u_blox_create_frame(uint8_t ubx_frame[], uint16_t *ubx_frame_size,
 void u_blox_get_cfg_prt(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t port_id,
 			uint32_t baudrate)
 {
-	uint8_t payload_size = 20;
+	uint16_t payload_size = 20;
 	uint8_t payload[payload_size];
 
 	payload[0] = port_id;
@@ -89,7 +89,7 @@ void u_blox_get_cfg_prt(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t p
 
 void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t reset_mode)
 {
-	uint8_t payload_size = 4;
+	uint16_t payload_size = 4;
 	uint8_t payload[payload_size];
 
 	/* navBbrMask. */
@@ -104,3 +104,108 @@ void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t r
 
 	u_blox_create_frame(ubx_frame, ubx_frame_size, 0x06, 0x04, payload, payload_size);
 }
+
+void u_blox_get_cfg_nav5(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum gnss_mode g_mode,
+			 enum fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
+			 int8_t min_elev, uint16_t p_dop, uint16_t t_dop, uint16_t p_acc,
+			 uint16_t t_acc, uint8_t static_hold_thresh, uint8_t dgnss_timeout,
+			 uint8_t cno_thresh_num_svs, uint8_t cno_thresh,
+			 uint16_t static_hold_max_dist, enum utc_standard utc_strd)
+{
+	uint16_t payload_size = 36;
+	uint8_t payload[payload_size];
+	int8_t fixed_alt_le[4] = { 0 };
+	uint8_t fixed_alt_var_le[4] = { 0 };
+	uint8_t p_dop_le[2] = { 0 };
+	uint8_t t_dop_le[2] = { 0 };
+	uint8_t p_acc_le[2] = { 0 };
+	uint8_t t_acc_le[2] = { 0 };
+	uint8_t static_hold_max_dist_le[2] = { 0 };
+
+	TO_LITTLE_ENDIAN(fixed_alt, fixed_alt_le);
+	TO_LITTLE_ENDIAN(fixed_alt_var, fixed_alt_var_le);
+	TO_LITTLE_ENDIAN(p_dop, p_dop_le);
+	TO_LITTLE_ENDIAN(t_dop, t_dop_le);
+	TO_LITTLE_ENDIAN(p_acc, p_acc_le);
+	TO_LITTLE_ENDIAN(t_acc, t_acc_le);
+	TO_LITTLE_ENDIAN(static_hold_max_dist, static_hold_max_dist_le);
+
+	payload[0] = 0xff;
+	payload[1] = 0x05;
+	payload[2] = g_mode;
+	payload[3] = f_mode;
+	payload[4] = fixed_alt_le[0];
+	payload[5] = fixed_alt_le[1];
+	payload[6] = fixed_alt_le[2];
+	payload[7] = fixed_alt_le[3];
+	payload[8] = fixed_alt_var_le[0];
+	payload[9] = fixed_alt_var_le[1];
+	payload[10] = fixed_alt_var_le[2];
+	payload[11] = fixed_alt_var_le[3];
+	payload[12] = min_elev;
+	payload[14] = p_dop_le[0];
+	payload[15] = p_dop_le[1];
+	payload[16] = t_dop_le[0];
+	payload[17] = t_dop_le[1];
+	payload[18] = p_acc_le[0];
+	payload[19] = p_acc_le[1];
+	payload[20] = t_acc_le[0];
+	payload[21] = t_acc_le[1];
+	payload[22] = static_hold_thresh;
+	payload[23] = dgnss_timeout;
+	payload[24] = cno_thresh_num_svs;
+	payload[25] = cno_thresh;
+	payload[28] = static_hold_max_dist_le[0];
+	payload[29] = static_hold_max_dist_le[1];
+	payload[30] = utc_strd;
+
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, payload, payload_size);
+}
+
+void u_blox_get_cfg_gnss(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_ver,
+			 uint8_t num_trk_ch_use, uint8_t num_config_blocks, ...)
+{
+	uint8_t payload[MAX_PAYLOAD_SIZE];
+	uint8_t flags_le[4] = { 0 };
+	uint32_t flags;
+	va_list ap;
+
+	va_start(ap, num_config_blocks);
+
+	payload[0] = msg_ver;
+	payload[2] = num_trk_ch_use;
+	payload[3] = num_config_blocks;
+
+	for (int i = 0; i < num_config_blocks; i++) {
+		payload[4 + (8 * i)] = (uint8_t)va_arg(ap, int);
+		payload[5 + (8 * i)] = (uint8_t)va_arg(ap, int);
+		payload[6 + (8 * i)] = (uint8_t)va_arg(ap, int);
+		payload[7 + (8 * i)] = (uint8_t)va_arg(ap, int);
+
+		flags = (uint32_t)va_arg(ap, int);
+		TO_LITTLE_ENDIAN(flags, flags_le);
+		payload[8 + (8 * i)] = flags_le[0];
+		payload[9 + (8 * i)] = flags_le[1];
+		payload[10 + (8 * i)] = flags_le[2];
+		payload[11 + (8 * i)] = flags_le[3];
+	}
+
+	va_end(ap);
+
+	uint16_t payload_size = (4 + (8 * num_config_blocks));
+
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, payload, payload_size);
+}
+
+void u_blox_get_cfg_msg(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_id, uint8_t rate)
+{
+	uint16_t payload_size = 3;
+	uint8_t payload[payload_size];
+
+	payload[0] = UBX_CLASS_NMEA;
+	payload[1] = msg_id;
+	payload[2] = rate;
+
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_MSG, payload, payload_size);
+}
+

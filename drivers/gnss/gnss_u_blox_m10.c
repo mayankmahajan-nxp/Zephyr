@@ -19,7 +19,7 @@
 #include "gnss_nmea0183_match.h"
 #include "gnss_parse.h"
 
-#include "u_blox_protocol.h"
+#include "u_blox_protocol/u_blox_protocol.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
@@ -37,10 +37,9 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_MESSAGE_TIMEOUT_MS	500
 
-#define U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_name, ubx_frame, ubx_frame_size, retry_count)	\
+#define U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_name, ubx_frame, retry_count)	\
 	struct modem_ubx_script script_name = {							\
 		.ubx_frame = ubx_frame,								\
-		.ubx_frame_size = &ubx_frame_size,						\
 		.retry_count = retry_count,							\
 	};
 
@@ -107,7 +106,58 @@ static int u_blox_m10_turn_off(const struct device *dev)
 	return modem_pipe_close(data->uart_pipe);
 }
 
+static int u_blox_m10_set_fix_rate(const struct device *dev, uint32_t fix_interval_ms)
+{
+	return 0;
+}
+static int u_blox_m10_get_fix_rate(const struct device *dev, uint32_t *fix_interval_ms)
+{
+	return 0;
+}
+static int u_blox_m10_set_periodic_config(const struct device *dev,
+					  const struct gnss_periodic_config *periodic_config)
+{
+	return 0;
+}
+static int u_blox_m10_get_periodic_config(const struct device *dev,
+					  struct gnss_periodic_config *periodic_config)
+{
+	return 0;
+}
+static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_navigation_mode mode)
+{
+	return 0;
+}
+static int u_blox_m10_get_navigation_mode(const struct device *dev, enum gnss_navigation_mode *mode)
+{
+	return 0;
+}
+static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems_t systems)
+{
+	return 0;
+}
+static int u_blox_m10_get_enabled_systems(const struct device *dev, gnss_systems_t *systems)
+{
+	return 0;
+}
+
+static int u_blox_m10_get_supported_systems(const struct device *dev, gnss_systems_t *systems)
+{
+	*systems = (GNSS_SYSTEM_GPS | GNSS_SYSTEM_GLONASS | GNSS_SYSTEM_GALILEO |
+		    GNSS_SYSTEM_BEIDOU | GNSS_SYSTEM_SBAS | GNSS_SYSTEM_QZSS | GNSS_SYSTEM_IMES);
+	return 0;
+}
+
 static struct gnss_driver_api gnss_api = {
+	.set_fix_rate = u_blox_m10_set_fix_rate,
+	.get_fix_rate = u_blox_m10_get_fix_rate,
+	.set_periodic_config = u_blox_m10_set_periodic_config,
+	.get_periodic_config = u_blox_m10_get_periodic_config,
+	.set_navigation_mode = u_blox_m10_set_navigation_mode,
+	.get_navigation_mode = u_blox_m10_get_navigation_mode,
+	.set_enabled_systems = u_blox_m10_set_enabled_systems,
+	.get_enabled_systems = u_blox_m10_get_enabled_systems,
+	.get_supported_systems = u_blox_m10_get_supported_systems,
 };
 
 static int u_blox_m10_init_nmea0183_match(const struct device *dev)
@@ -237,20 +287,16 @@ out:
 	return 0;
 }
 
-static int u_blox_m10_ubx_cfg_prt_send(const struct device *dev, uint32_t baudrate, uint16_t retry_count)
+static int u_blox_m10_ubx_cfg_prt_send(const struct device *dev, uint32_t baudrate,
+				       uint16_t retry_count)
 {
 	int ret;
 
 	// Send UBX_CFG_PRT to change device baudrate.
 	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
-	uint16_t ubx_frame_size;
-	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, baudrate);
-	struct modem_ubx_script modem_ubx_script_cfg_prt = {
-		.ubx_frame = ubx_frame,
-		.ubx_frame_size = &ubx_frame_size,
-		.retry_count = retry_count,
-	};
-	ret = u_blox_m10_modem_ubx_script_send(dev, &modem_ubx_script_cfg_prt);
+	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, retry_count);
+	u_blox_get_cfg_prt(script_inst.ubx_frame, &script_inst.ubx_frame_size, 0x01, baudrate);
+	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
 	}
@@ -335,46 +381,45 @@ static int u_blox_m10_configure_messages(const struct device *dev) {
 	int ret = 0, retry_count = 5;
 
 	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
-	uint16_t ubx_frame_size;
-	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_size, retry_count);
+	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, retry_count);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GGA, 1);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GGA, 1);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_RMC, 1);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_RMC, 1);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_DTM, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_DTM, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GBS, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GBS, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GLL, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GLL, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GNS, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GNS, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GRS, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GRS, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSA, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GSA, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GST, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GST, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSV, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_GSV, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VLW, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_VLW, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VTG, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_VTG, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_ZDA, 0);
+	u_blox_get_cfg_msg(script_inst.ubx_frame, &script_inst.ubx_frame_size, NMEA_ZDA, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	if (ret < 0) {

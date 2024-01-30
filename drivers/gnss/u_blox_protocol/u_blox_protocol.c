@@ -63,7 +63,7 @@ void u_blox_get_cfg_prt(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t p
 	payload[6] = 0x0;
 	payload[7] = 0x0;
 
-	/* Baud Rate*/
+	/* Baud Rate */
 	payload[8] = baudrate;
 	payload[9] = baudrate >> 8;
 	payload[10] = baudrate >> 16;
@@ -173,6 +173,7 @@ void u_blox_get_cfg_gnss(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t 
 	va_start(ap, num_config_blocks);
 
 	payload[0] = msg_ver;
+	// payload[1]; /* Number of tracking channels available in hardware (read only) */
 	payload[2] = num_trk_ch_use;
 	payload[3] = num_config_blocks;
 

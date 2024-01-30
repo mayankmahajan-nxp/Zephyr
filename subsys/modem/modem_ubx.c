@@ -29,7 +29,7 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 	k_sem_reset(&ubx->script_stopped_sem);
 
 	ubx->transmit_buf = script->ubx_frame;
-	ubx->transmit_buf_size = *script->ubx_frame_size;
+	ubx->transmit_buf_size = script->ubx_frame_size;
 
 	received_ubx_ack_start_1 = false; // temp.
 	received_ubx_ack_start_2 = false; // temp.

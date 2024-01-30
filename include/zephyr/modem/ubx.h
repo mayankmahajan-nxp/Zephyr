@@ -26,13 +26,13 @@ extern "C" {
 
 struct modem_ubx_frame {
 	uint8_t *ubx_frame;
-	uint8_t ubx_frame_size;
+	uint16_t ubx_frame_size;
 };
 
 struct modem_ubx {
 	void *user_data;
 
-	// atomic_t state;
+	atomic_t state;
 
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
@@ -48,6 +48,7 @@ struct modem_ubx {
 	struct k_work send_work;
 	struct k_work process_work;
 	struct k_sem script_stopped_sem;
+	struct k_sem script_running_sem;
 	k_timeout_t process_timeout;
 	// atomic_t script_state;
 };

@@ -26,14 +26,16 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define DT_DRV_COMPAT u_blox_m10
 
-#define UART_RECV_BUF_SZ 128
-#define UART_TRNF_BUF_SZ 128
+#define UART_RECV_BUF_SZ	128
+#define UART_TRNF_BUF_SZ	128
 
-#define CHAT_RECV_BUF_SZ 256
-#define CHAT_ARGV_SZ 32
+#define CHAT_RECV_BUF_SZ	256
+#define CHAT_ARGV_SZ		32
 
-#define UBX_RECV_BUF_SZ 128
-#define UBX_WORK_BUF_SZ 128
+#define UBX_RECV_BUF_SZ		128
+#define UBX_WORK_BUF_SZ		128
+
+#define UBX_MESSAGE_TIMEOUT_MS	500
 
 struct u_blox_m10_config {
 	const struct device *uart;
@@ -125,8 +127,8 @@ static void u_blox_m10_init_pipe(const struct device *dev)
 		.uart = cfg->uart,
 		.receive_buf = data->uart_backend_receive_buf,
 		.receive_buf_size = sizeof(data->uart_backend_receive_buf),
-		.transmit_buf = data->uart_backend_transmit_buf, // temp: check whether this is needed.
-		.transmit_buf_size = ARRAY_SIZE(data->uart_backend_transmit_buf), // temp: check whether this is needed.
+		.transmit_buf = data->uart_backend_transmit_buf,
+		.transmit_buf_size = ARRAY_SIZE(data->uart_backend_transmit_buf),
 	};
 
 	data->uart_pipe = modem_backend_uart_init(&data->uart_backend, &uart_backend_config);
@@ -166,7 +168,7 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 		.receive_buf_size = sizeof(data->ubx_receive_buf),
 		.work_buf = data->ubx_work_buf,
 		.work_buf_size = sizeof(data->ubx_work_buf),
-		.process_timeout = K_MSEC(500),
+		.process_timeout = K_MSEC(UBX_MESSAGE_TIMEOUT_MS),
 	};
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
@@ -277,15 +279,15 @@ static int u_blox_m10_set_uart_baudrate(const struct device *dev, uint32_t baudr
 
 static int u_blox_m10_configure(const struct device *dev)
 {
-	int ret, retry_count = 5;
+	int ret, retry_count = 10;
 
 	int target_baudrate = u_blox_m10_get_uart_baudrate(dev);
 
 	bool configuration_failed = true;
 	/* Try configuring baudrate of device with all possible baudrates. */
-	for (int i = 0; i < U_BLOX_M10_BAUDRATE_COUNT; ++i) {
-		/* Set baudrate of UART pipe as u_blox_m10_baudrate[i]. */
-		ret = u_blox_m10_set_uart_baudrate(dev, u_blox_m10_baudrate[i]);
+	for (int i = 0; i < U_BLOX_BAUDRATE_COUNT; ++i) {
+		/* Set baudrate of UART pipe as u_blox_baudrate[i]. */
+		ret = u_blox_m10_set_uart_baudrate(dev, u_blox_baudrate[i]);
 		if (ret < 0) {
 			return ret;
 		}

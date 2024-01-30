@@ -11,7 +11,7 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 
-// #define MODEM_UBX_STATE_ATTACHED_BIT		(0)
+#define MODEM_UBX_STATE_ATTACHED_BIT		(0)
 // #define MODEM_UBX_SCRIPT_STATE_RUNNING_BIT	(0)
 
 static bool received_ubx_ack_start_1 = false;
@@ -24,6 +24,13 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_frame
 	if (ubx->pipe == NULL) {
 		return -EPERM;
 	}
+
+	ubx->transmit_buf = frame->ubx_frame;
+	ubx->transmit_buf_size = frame->ubx_frame_size;
+
+	received_ubx_ack_start_1 = false; // temp.
+	received_ubx_ack_start_2 = false; // temp.
+	ubx->work_buf_len = 0; // temp.
 
 	// script_is_running =
 	// 	atomic_test_and_set_bit(&ubx->script_state, MODEM_UBX_SCRIPT_STATE_RUNNING_BIT);
@@ -40,18 +47,16 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_frame *fram
 {
 	int ret;
 
-	// if (atomic_test_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == false) {
-	// 	return -EPERM;
-	// }
+	ret = k_sem_take(&ubx->script_running_sem, K_FOREVER);
+	if (ret < 0) {
+		return ret;
+	}
+
+	if (atomic_test_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == false) {
+		return -EPERM;
+	}
 
 	k_sem_reset(&ubx->script_stopped_sem);
-
-	ubx->transmit_buf = frame->ubx_frame;
-	ubx->transmit_buf_size = frame->ubx_frame_size;
-
-	received_ubx_ack_start_1 = false; // temp.
-	received_ubx_ack_start_2 = false; // temp.
-	ubx->work_buf_len = 0; // temp.
 
 	ret = modem_ubx_transmit_async(ubx, frame);
 	if (ret < 0) {
@@ -59,6 +64,7 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_frame *fram
 	}
 
 	ret = k_sem_take(&ubx->script_stopped_sem, ubx->process_timeout);
+	k_sem_give(&ubx->script_running_sem);
 	if (ret < 0) {
 		return ret;
 	} else if (ubx->work_buf[3] == 0) {
@@ -139,9 +145,9 @@ static void modem_ubx_process_handler(struct k_work *item)
 
 int modem_ubx_attach(struct modem_ubx *ubx, struct modem_pipe *pipe)
 {
-	// if (atomic_test_and_set_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == true) {
-	// 	return 0;
-	// }
+	if (atomic_test_and_set_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == true) {
+		return 0;
+	}
 
 	ubx->pipe = pipe;
 	modem_pipe_attach(ubx->pipe, modem_ubx_pipe_callback, ubx);
@@ -152,14 +158,15 @@ void modem_ubx_release(struct modem_ubx *ubx)
 {
 	struct k_work_sync sync;
 
-	// if (atomic_test_and_clear_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == false) {
-	// 	return;
-	// }
+	if (atomic_test_and_clear_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == false) {
+		return;
+	}
 
 	modem_pipe_release(ubx->pipe);
 	k_work_cancel_sync(&ubx->send_work, &sync);
 	k_work_cancel_sync(&ubx->process_work, &sync);
 	k_sem_reset(&ubx->script_stopped_sem);
+	// k_sem_reset(&ubx->script_running_sem); it resets the sem count to zero.
 	ubx->work_buf_len = 0;
 	ubx->pipe = NULL;
 }
@@ -187,6 +194,7 @@ int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config)
 	k_work_init(&ubx->send_work, modem_ubx_send_handler);
 	k_work_init(&ubx->process_work, modem_ubx_process_handler);
 	k_sem_init(&ubx->script_stopped_sem, 0, 1);
+	k_sem_init(&ubx->script_running_sem, 1, 1);
 	ubx->process_timeout = config->process_timeout;
 
 	return 0;

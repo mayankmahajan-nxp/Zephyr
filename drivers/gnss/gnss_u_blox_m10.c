@@ -37,10 +37,12 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_MESSAGE_TIMEOUT_MS	500
 
-enum modem_module {
-	modem_module_chat = 0,
-	modem_module_ubx = 1,
-};
+#define U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_name, ubx_frame, ubx_frame_size, retry_count)	\
+	struct modem_ubx_script script_name = {							\
+		.ubx_frame = ubx_frame,								\
+		.ubx_frame_size = &ubx_frame_size,						\
+		.retry_count = retry_count,							\
+	};
 
 struct u_blox_m10_config {
 	const struct device *uart;
@@ -210,7 +212,7 @@ static int u_blox_m10_release_ubx_attach_chat(const struct device *dev)
 }
 
 static int u_blox_m10_modem_ubx_script_send(const struct device *dev,
-					   struct modem_ubx_script_ubx *modem_ubx_script_ubx_tx) {
+					   struct modem_ubx_script *modem_ubx_script_tx) {
 	struct u_blox_m10_data *data = dev->data;
 	int ret;
 
@@ -219,7 +221,7 @@ static int u_blox_m10_modem_ubx_script_send(const struct device *dev,
 		goto out;
 	}
 
-	ret = modem_ubx_transmit(&data->ubx, modem_ubx_script_ubx_tx);
+	ret = modem_ubx_transmit(&data->ubx, modem_ubx_script_tx);
 	if (ret < 0) {
 		goto out;
 	}
@@ -243,12 +245,12 @@ static int u_blox_m10_ubx_cfg_prt_send(const struct device *dev, uint32_t baudra
 	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
 	uint16_t ubx_frame_size;
 	u_blox_get_cfg_prt(ubx_frame, &ubx_frame_size, 0x01, baudrate);
-	struct modem_ubx_script_ubx modem_ubx_script_ubx_cfg_prt = {
+	struct modem_ubx_script modem_ubx_script_cfg_prt = {
 		.ubx_frame = ubx_frame,
-		.ubx_frame_size = ubx_frame_size,
+		.ubx_frame_size = &ubx_frame_size,
 		.retry_count = retry_count,
 	};
-	ret = u_blox_m10_modem_ubx_script_send(dev, &modem_ubx_script_ubx_cfg_prt);
+	ret = u_blox_m10_modem_ubx_script_send(dev, &modem_ubx_script_cfg_prt);
 	if (ret < 0) {
 		return ret;
 	}
@@ -282,13 +284,15 @@ static int u_blox_m10_set_uart_baudrate(const struct device *dev, uint32_t baudr
 	int ret = uart_api->configure(cfg->uart, &uart_config);
 
 	u_blox_m10_init_pipe(dev);
-	u_blox_m10_resume(dev);
+	ret = u_blox_m10_resume(dev);
+	if (ret < 0) {
+		return ret;
+	}
 
-	return ret;
+	return 0;
 }
 
-static int u_blox_m10_configure(const struct device *dev)
-{
+static int u_blox_m10_configure_baudrate(const struct device *dev) {
 	int ret;
 
 	int target_baudrate = u_blox_m10_get_uart_baudrate(dev);
@@ -301,7 +305,6 @@ static int u_blox_m10_configure(const struct device *dev)
 		if (ret < 0) {
 			return ret;
 		}
-		printk("%d\n", u_blox_baudrate[i]);
 
 		/* Try setting baudrate of device as target_baudrate. */
 		ret = u_blox_m10_ubx_cfg_prt_send(dev, target_baudrate, 2);
@@ -318,40 +321,86 @@ static int u_blox_m10_configure(const struct device *dev)
 	}
 
 	/* Retry in case didn't receive acknowledgement in previous attempt. */
-	ret = u_blox_m10_ubx_cfg_prt_send(dev, target_baudrate, 5);
-	if (ret < 0) {
-		LOG_ERR("u_blox_m10_modem_ubx_script_send cfg_prt failed. exiting.");
-		return ret;
+	if (configuration_failed) {
+		ret = u_blox_m10_ubx_cfg_prt_send(dev, target_baudrate, 5);
+		if (ret < 0) {
+			return ret;
+		}
 	}
+
+	return 0;
+}
+
+static int u_blox_m10_configure_messages(const struct device *dev) {
+	int ret = 0, retry_count = 5;
 
 	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
 	uint16_t ubx_frame_size;
-	struct modem_ubx_script_ubx modem_ubx_script_ubx_cfg_msg;
-	u_blox_get_cfg_msg(ubx_frame, &ubx_frame_size, NMEA_DTM, 0);
-	modem_ubx_script_ubx_cfg_msg.ubx_frame = ubx_frame;
-	modem_ubx_script_ubx_cfg_msg.ubx_frame_size = ubx_frame_size;
-	modem_ubx_script_ubx_cfg_msg.retry_count = 5;
-	ret = u_blox_m10_modem_ubx_script_send(dev, &modem_ubx_script_ubx_cfg_msg);
+	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_size, retry_count);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GGA, 1);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_RMC, 1);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_DTM, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GBS, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GLL, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GNS, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GRS, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSA, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GST, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSV, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VLW, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VTG, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
+	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_ZDA, 0);
+	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+
 	if (ret < 0) {
-		LOG_ERR("u_blox_m10_modem_ubx_script_send cfg_msg failed. exiting.");
+		LOG_ERR("u_blox_m10_modem_ubx_script_send config messages failed. exiting.");
 		return ret;
 	}
 
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_DTM, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GBS, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GLL, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GNS, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GRS, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GSA, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GST, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_GSV, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_RMC, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_VLW, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_VTG, 0);
-	// ret &= neo_api->cfg_msg(neo_dev, NMEA_ZDA, 0);
+	return 0;
+}
+
+static int u_blox_m10_configure(const struct device *dev)
+{
+	int ret;
+
+	ret = u_blox_m10_configure_baudrate(dev);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = u_blox_m10_configure_messages(dev);
+	if (ret < 0) {
+		return ret;
+	}
 
 	LOG_ERR("u_blox_m10_configure: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
-	return ret;
+	return 0;
 }
 
 static int u_blox_m10_init(const struct device *dev)

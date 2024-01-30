@@ -17,7 +17,7 @@ LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 static bool received_ubx_ack_start_1 = false;
 static bool received_ubx_ack_start_2 = false;
 
-int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_script_ubx *frame)
+int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_script *script)
 {
 	int ret;
 	// bool script_is_running;
@@ -28,8 +28,8 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 
 	k_sem_reset(&ubx->script_stopped_sem);
 
-	ubx->transmit_buf = frame->ubx_frame;
-	ubx->transmit_buf_size = frame->ubx_frame_size;
+	ubx->transmit_buf = script->ubx_frame;
+	ubx->transmit_buf_size = *script->ubx_frame_size;
 
 	received_ubx_ack_start_1 = false; // temp.
 	received_ubx_ack_start_2 = false; // temp.
@@ -54,11 +54,11 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 	}
 }
 
-int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script_ubx *frame)
+int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *script)
 {
 	int ret;
 
-	ret = k_sem_take(&ubx->script_running_sem, K_FOREVER);
+	ret = k_sem_take(&ubx->script_running_sem, K_FOREVER); // temp. could add a reasonable timeout here.
 	if (ret < 0) {
 		return ret;
 	}
@@ -67,8 +67,8 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script_ubx 
 		return -EPERM;
 	}
 
-	for (int i = 0; i < frame->retry_count; ++i) {
-		ret = modem_ubx_transmit_async(ubx, frame);
+	for (int i = 0; i < script->retry_count; ++i) {
+		ret = modem_ubx_transmit_async(ubx, script);
 		if (ret == 0) {
 			break;
 		}
@@ -122,8 +122,6 @@ static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 	}
 
 	if (ubx->work_buf_len == 10) {
-		// for (int i = 0; i < ubx->work_buf_len; ++i)
-		// 	printk("%x ", ubx->work_buf[i]);
 		k_sem_give(&ubx->script_stopped_sem);
 		return 0;
 	}
@@ -142,7 +140,6 @@ static void modem_ubx_process_handler(struct k_work *item)
 	}
 
 	for (int i = 0; i < ret; i++) {
-		// printk("%x ", ubx->receive_buf[i]);
 		ret = modem_ubx_process_received_byte(ubx, ubx->receive_buf[i]);
 		if (ret == 0) {
 			break;
@@ -160,6 +157,8 @@ int modem_ubx_attach(struct modem_ubx *ubx, struct modem_pipe *pipe)
 
 	ubx->pipe = pipe;
 	modem_pipe_attach(ubx->pipe, modem_ubx_pipe_callback, ubx);
+	k_sem_give(&ubx->script_running_sem);
+
 	return 0;
 }
 
@@ -175,7 +174,7 @@ void modem_ubx_release(struct modem_ubx *ubx)
 	k_work_cancel_sync(&ubx->send_work, &sync);
 	k_work_cancel_sync(&ubx->process_work, &sync);
 	k_sem_reset(&ubx->script_stopped_sem);
-	// k_sem_reset(&ubx->script_running_sem); it resets the sem count to zero.
+	k_sem_reset(&ubx->script_running_sem);
 	ubx->work_buf_len = 0;
 	ubx->pipe = NULL;
 }

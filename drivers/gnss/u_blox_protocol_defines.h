@@ -262,7 +262,7 @@ enum ubx_timing_messages {
 	UBX_TIM_VRFY = 0x06,
 };
 
-enum nmea_message_ids { // temp. might not need this anymore as we don't parse nmea.
+enum nmea_message_ids {
 	NMEA_DTM = 0x0A,
 	NMEA_GBQ = 0x44,
 	NMEA_GBS = 0x09,

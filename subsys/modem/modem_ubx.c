@@ -77,7 +77,7 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *scr
 	for (int i = 0; i < script->retry_count; ++i) {
 		ret = modem_ubx_transmit_async(ubx, script);
 		if (ret == 0) {
-			printk("success attempt: %d.\n", i);
+			printk("success on attempt: %d.\n", i);
 			break;
 		}
 	}
@@ -111,7 +111,8 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 	ret = modem_pipe_transmit(ubx->pipe, ubx->transmit_buf, ubx->transmit_buf_size);
 	if (ret < ubx->transmit_buf_size) {
-		LOG_ERR("modem_pipe_transmit failed %d.", ubx->transmit_buf_size);
+		LOG_ERR("modem_pipe_transmit failed %d.", ret);
+		return;
 	}
 }
 
@@ -156,10 +157,6 @@ static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 		}
 
 		if (ubx->work_buf_len == received_ubx_msg_len) {
-			// for (int i = 0; i < received_ubx_msg_len; ++i)
-			// 	printk("%x ", ubx->work_buf[i]);
-			// printk("\n");
-
 			return modem_ubx_process_received_ubx(ubx);
 		}
 	}

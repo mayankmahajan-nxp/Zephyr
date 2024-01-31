@@ -110,60 +110,6 @@ static int u_blox_m10_turn_off(const struct device *dev)
 	return modem_pipe_close(data->uart_pipe);
 }
 
-static int u_blox_m10_set_fix_rate(const struct device *dev, uint32_t fix_interval_ms)
-{
-	return 0;
-}
-static int u_blox_m10_get_fix_rate(const struct device *dev, uint32_t *fix_interval_ms)
-{
-	return 0;
-}
-static int u_blox_m10_set_periodic_config(const struct device *dev,
-					  const struct gnss_periodic_config *periodic_config)
-{
-	return 0;
-}
-static int u_blox_m10_get_periodic_config(const struct device *dev,
-					  struct gnss_periodic_config *periodic_config)
-{
-	return 0;
-}
-static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_navigation_mode mode)
-{
-	return 0;
-}
-static int u_blox_m10_get_navigation_mode(const struct device *dev, enum gnss_navigation_mode *mode)
-{
-	return 0;
-}
-static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems_t systems)
-{
-	return 0;
-}
-static int u_blox_m10_get_enabled_systems(const struct device *dev, gnss_systems_t *systems)
-{
-	return 0;
-}
-
-static int u_blox_m10_get_supported_systems(const struct device *dev, gnss_systems_t *systems)
-{
-	*systems = (GNSS_SYSTEM_GPS | GNSS_SYSTEM_GLONASS | GNSS_SYSTEM_GALILEO |
-		    GNSS_SYSTEM_BEIDOU | GNSS_SYSTEM_SBAS | GNSS_SYSTEM_QZSS | GNSS_SYSTEM_IMES);
-	return 0;
-}
-
-static struct gnss_driver_api gnss_api = {
-	.set_fix_rate = u_blox_m10_set_fix_rate,
-	.get_fix_rate = u_blox_m10_get_fix_rate,
-	.set_periodic_config = u_blox_m10_set_periodic_config,
-	.get_periodic_config = u_blox_m10_get_periodic_config,
-	.set_navigation_mode = u_blox_m10_set_navigation_mode,
-	.get_navigation_mode = u_blox_m10_get_navigation_mode,
-	.set_enabled_systems = u_blox_m10_set_enabled_systems,
-	.get_enabled_systems = u_blox_m10_get_enabled_systems,
-	.get_supported_systems = u_blox_m10_get_supported_systems,
-};
-
 static int u_blox_m10_init_nmea0183_match(const struct device *dev)
 {
 	struct u_blox_m10_data *data = dev->data;
@@ -285,7 +231,7 @@ static int u_blox_m10_modem_ubx_script_send(const struct device *dev,
 out:
 	ret |= u_blox_m10_release_ubx_attach_chat(dev);
 	if (ret < 0) {
-		LOG_ERR("u_blox_m10_modem_ubx_script_send: failed (temp). ret = %d.", ret);
+		LOG_ERR("u_blox_m10_modem_ubx_script_send: failed %d.", ret);
 		return ret;
 	}
 
@@ -304,10 +250,6 @@ static int u_blox_m10_ubx_cfg_prt_get_send(const struct device *dev, uint16_t re
 	if (ret < 0) {
 		return ret;
 	}
-
-	for (int i = 0; i < *script_inst.ubx_frame_size; ++i)
-		printk("%x ", script_inst.ubx_frame[i]);
-	printk("\n");
 
 	return 0;
 }
@@ -330,14 +272,14 @@ static int u_blox_m10_ubx_cfg_prt_set_send(const struct device *dev, uint32_t ba
 	return 0;
 }
 
-static int u_blox_m10_ubx_cfg_rst_send(const struct device *dev, uint8_t reset_mode)
+static int u_blox_m10_ubx_cfg_rst_set_send(const struct device *dev, uint8_t reset_mode)
 {
-	int ret, retry_count = 1;
+	int ret, retry_count = 2;
 
 	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
 	uint16_t ubx_frame_len;
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	u_blox_get_cfg_rst(script_inst.ubx_frame, script_inst.ubx_frame_size, reset_mode);
+	u_blox_get_cfg_rst_set(script_inst.ubx_frame, script_inst.ubx_frame_size, reset_mode);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -431,43 +373,43 @@ static int u_blox_m10_configure_messages(const struct device *dev) {
 	uint16_t ubx_frame_len;
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GGA, 1);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GGA, 1);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_RMC, 1);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_RMC, 1);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSV, 1);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSV, 1);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_DTM, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_DTM, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GBS, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GBS, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GLL, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GLL, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GNS, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GNS, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GRS, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GRS, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSA, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GSA, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GST, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_GST, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VLW, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VLW, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VTG, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_VTG, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	u_blox_get_cfg_msg(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_ZDA, 0);
+	u_blox_get_cfg_msg_set(script_inst.ubx_frame, script_inst.ubx_frame_size, NMEA_ZDA, 0);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	if (ret < 0) {
@@ -477,35 +419,175 @@ static int u_blox_m10_configure_messages(const struct device *dev) {
 	return 0;
 }
 
+static int u_blox_m10_set_fix_rate(const struct device *dev, uint32_t fix_interval_ms)
+{
+	return 0;
+}
+
+static int u_blox_m10_get_fix_rate(const struct device *dev, uint32_t *fix_interval_ms)
+{
+	return 0;
+}
+
+static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_navigation_mode mode)
+{
+	return 0;
+}
+
+static int u_blox_m10_get_navigation_mode(const struct device *dev, enum gnss_navigation_mode *mode)
+{
+	return 0;
+}
+
+static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems_t systems)
+{
+	uint16_t config_size_max = 7 * 8, config_len = 0;
+	uint8_t config_gnss[config_size_max];
+
+	for (int i = 0; i < 8; ++i) {
+		if (systems & (1 << i)) {
+			uint64_t val = 0;
+			switch (systems & (1 << i)) {
+				case GNSS_SYSTEM_GPS:
+					val = 0x0101000100160800;
+					break;
+				case GNSS_SYSTEM_GLONASS:
+					val = 0x0101000100140806;
+					break;
+				case GNSS_SYSTEM_GALILEO:
+					val = 0x0101000100030002;
+					break;
+				case GNSS_SYSTEM_BEIDOU:
+					val = 0x0101000000160803;
+					break;
+				case GNSS_SYSTEM_QZSS:
+					val = 0x0101000100030005;
+					break;
+				case GNSS_SYSTEM_SBAS:
+					val = 0x0101000100030101;
+					break;
+				default:
+					break;
+			};
+
+			memcpy(config_gnss + config_len, &val, 8);
+			config_len += 8;
+		}
+	}
+
+	int ret, retry_count = 7;
+
+	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
+	uint16_t ubx_frame_len;
+	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
+	u_blox_get_cfg_gnss_set(script_inst.ubx_frame, script_inst.ubx_frame_size, 0, 32,
+				config_gnss, config_len);
+	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+	if (ret < 0) {
+		return ret;
+	}
+
+	return 0;
+}
+
+static int u_blox_m10_get_enabled_systems(const struct device *dev, gnss_systems_t *systems)
+{
+	int ret, retry_count = 7;
+
+	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
+	uint16_t ubx_frame_len;
+	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
+	u_blox_get_cfg_gnss_get(script_inst.ubx_frame, script_inst.ubx_frame_size);
+	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+	if (ret < 0) {
+		return ret;
+	}
+
+	for (int i = 10; i < *script_inst.ubx_frame_size - 2; i += 8) {
+		switch (script_inst.ubx_frame[i]) {
+			case UBX_GNSS_ID_GPS:
+				*systems |= GNSS_SYSTEM_GPS;
+				break;
+			case UBX_GNSS_ID_SBAS:
+				*systems |= GNSS_SYSTEM_SBAS;
+				break;
+			case UBX_GNSS_ID_Galileo:
+				*systems |= GNSS_SYSTEM_GALILEO;
+				break;
+			case UBX_GNSS_ID_BeiDou:
+				*systems |= GNSS_SYSTEM_BEIDOU;
+				break;
+			case UBX_GNSS_ID_QZSS:
+				*systems |= GNSS_SYSTEM_QZSS;
+				break;
+			case UBX_GNSS_ID_GLONAS:
+				*systems |= GNSS_SYSTEM_GLONASS;
+				break;
+			default:
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int u_blox_m10_get_supported_systems(const struct device *dev, gnss_systems_t *systems)
+{
+	*systems = (GNSS_SYSTEM_GPS | GNSS_SYSTEM_GLONASS | GNSS_SYSTEM_GALILEO |
+		    GNSS_SYSTEM_BEIDOU | GNSS_SYSTEM_SBAS | GNSS_SYSTEM_QZSS);
+	return 0;
+}
+
+static struct gnss_driver_api gnss_api = {
+	.set_fix_rate = u_blox_m10_set_fix_rate,
+	.get_fix_rate = u_blox_m10_get_fix_rate,
+	.set_navigation_mode = u_blox_m10_set_navigation_mode,
+	.get_navigation_mode = u_blox_m10_get_navigation_mode,
+	.set_enabled_systems = u_blox_m10_set_enabled_systems,
+	.get_enabled_systems = u_blox_m10_get_enabled_systems,
+	.get_supported_systems = u_blox_m10_get_supported_systems,
+};
+
 static int u_blox_m10_configure(const struct device *dev)
 {
 	int ret;
 
 	u_blox_m10_configure_baudrate_prerequisite(dev);
 
-	u_blox_m10_ubx_cfg_rst_send(dev, 0x08);
+	u_blox_m10_ubx_cfg_rst_set_send(dev, 0x08);
 	k_sleep(K_MSEC(U_BLOX_CFG_RST_WAIT_MS));
 
 	ret = u_blox_m10_configure_baudrate(dev);
 	if (ret < 0) {
-		LOG_ERR("u_blox_m10_configure_baudrate failed. exiting.");
+		LOG_ERR("u_blox_m10_configure_baudrate failed %d. exiting.", ret);
 		goto out;
 	}
 
 	ret = u_blox_m10_configure_messages(dev);
 	if (ret < 0) {
-		LOG_ERR("u_blox_m10_configure_messages failed. exiting.");
+		LOG_ERR("u_blox_m10_configure_messages failed %d. exiting.", ret);
 		goto out;
 	}
 
 	ret = u_blox_m10_ubx_cfg_prt_get_send(dev, 7);
 	if (ret < 0) {
-		LOG_ERR("u_blox_m10_ubx_cfg_prt_get_send failed. exiting.");
+		LOG_ERR("u_blox_m10_ubx_cfg_prt_get_send failed %d. exiting.", ret);
 		goto out;
 	}
 
 out:
-	u_blox_m10_ubx_cfg_rst_send(dev, 0x09);
+	u_blox_m10_ubx_cfg_rst_set_send(dev, 0x09);
+
+	gnss_systems_t systems = 0;
+	printk("u_blox_m10_get_enabled_systems.\n");
+	u_blox_m10_get_enabled_systems(dev, &systems);
+	systems = GNSS_SYSTEM_GPS | GNSS_SYSTEM_BEIDOU | GNSS_SYSTEM_GALILEO
+		| GNSS_SYSTEM_GLONASS | GNSS_SYSTEM_SBAS | GNSS_SYSTEM_QZSS;
+	printk("u_blox_m10_set_enabled_systems.\n");
+	u_blox_m10_set_enabled_systems(dev, systems);
+	systems = 0;
+	printk("u_blox_m10_get_enabled_systems.\n");
+	u_blox_m10_get_enabled_systems(dev, &systems);
 
 	if (ret < 0) {
 		return ret;

@@ -57,7 +57,7 @@ void u_blox_get_cfg_prt_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum 
 }
 
 void u_blox_get_cfg_prt_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum port_number port_id,
-			uint32_t baudrate)
+			    uint32_t baudrate)
 {
 	uint16_t payload_size = 20;
 	uint8_t payload[payload_size];
@@ -98,7 +98,7 @@ void u_blox_get_cfg_prt_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum 
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload, payload_size);
 }
 
-void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t reset_mode)
+void u_blox_get_cfg_rst_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t reset_mode)
 {
 	uint16_t payload_size = 4;
 	uint8_t payload[payload_size];
@@ -115,13 +115,17 @@ void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t r
 
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_RST, payload, payload_size);
 }
+void u_blox_get_cfg_nav5_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size)
+{
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, 0);
+}
 
-void u_blox_get_cfg_nav5(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum gnss_mode g_mode,
-			 enum fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
-			 int8_t min_elev, uint16_t p_dop, uint16_t t_dop, uint16_t p_acc,
-			 uint16_t t_acc, uint8_t static_hold_thresh, uint8_t dgnss_timeout,
-			 uint8_t cno_thresh_num_svs, uint8_t cno_thresh,
-			 uint16_t static_hold_max_dist, enum utc_standard utc_strd)
+void u_blox_get_cfg_nav5_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum gnss_mode g_mode,
+			     enum fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
+			     int8_t min_elev, uint16_t p_dop, uint16_t t_dop, uint16_t p_acc,
+			     uint16_t t_acc, uint8_t static_hold_thresh, uint8_t dgnss_timeout,
+			     uint8_t cno_thresh_num_svs, uint8_t cno_thresh,
+			     uint16_t static_hold_max_dist, enum utc_standard utc_strd)
 {
 	uint16_t payload_size = 36;
 	uint8_t payload[payload_size];
@@ -173,43 +177,28 @@ void u_blox_get_cfg_nav5(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum gns
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, payload, payload_size);
 }
 
-void u_blox_get_cfg_gnss(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_ver,
-			 uint8_t num_trk_ch_use, uint8_t num_config_blocks, ...)
+void u_blox_get_cfg_gnss_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size)
 {
-	uint8_t payload[MAX_PAYLOAD_SIZE];
-	uint8_t flags_le[4] = { 0 };
-	uint32_t flags;
-	va_list ap;
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, 0);
+}
 
-	va_start(ap, num_config_blocks);
+void u_blox_get_cfg_gnss_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_ver,
+			     uint8_t num_trk_ch_use, uint8_t *config_gnss, uint16_t config_size)
+{
+	uint16_t payload_size = (4 + (config_size));
+	uint8_t payload[payload_size];
 
 	payload[0] = msg_ver;
 	// payload[1]; /* Number of tracking channels available in hardware (read only) */
 	payload[2] = num_trk_ch_use;
-	payload[3] = num_config_blocks;
+	payload[3] = config_size / 8;
 
-	for (int i = 0; i < num_config_blocks; i++) {
-		payload[4 + (8 * i)] = (uint8_t)va_arg(ap, int);
-		payload[5 + (8 * i)] = (uint8_t)va_arg(ap, int);
-		payload[6 + (8 * i)] = (uint8_t)va_arg(ap, int);
-		payload[7 + (8 * i)] = (uint8_t)va_arg(ap, int);
-
-		flags = (uint32_t)va_arg(ap, int);
-		TO_LITTLE_ENDIAN(flags, flags_le);
-		payload[8 + (8 * i)] = flags_le[0];
-		payload[9 + (8 * i)] = flags_le[1];
-		payload[10 + (8 * i)] = flags_le[2];
-		payload[11 + (8 * i)] = flags_le[3];
-	}
-
-	va_end(ap);
-
-	uint16_t payload_size = (4 + (8 * num_config_blocks));
+	memcpy(payload + 4, config_gnss, config_size);
 
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, payload, payload_size);
 }
 
-void u_blox_get_cfg_msg(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_id, uint8_t rate)
+void u_blox_get_cfg_msg_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_id, uint8_t rate)
 {
 	uint16_t payload_size = 3;
 	uint8_t payload[payload_size];

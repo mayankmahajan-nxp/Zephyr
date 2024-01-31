@@ -7,6 +7,13 @@
 #ifndef ZEPHYR_U_BLOX_PROTOCOL_DEFINES_
 #define ZEPHYR_U_BLOX_PROTOCOL_DEFINES_
 
+enum port_number {
+	PORT_NUMBER_DDC = 0,
+	PORT_NUMBER_UART,
+	PORT_NUMBER_USB,
+	PORT_NUMBER_SPI,
+};
+
 enum gnss_mode {
 	Portable = 0,
 	Stationary = 2,

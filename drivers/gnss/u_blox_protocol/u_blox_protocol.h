@@ -23,7 +23,8 @@ extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 		b[j] = (data >> (j * 8)) & 0xFF;	\
 	}
 
-void u_blox_get_cfg_prt(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t port_id,
+void u_blox_get_cfg_prt_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum port_number port_id);
+void u_blox_get_cfg_prt_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum port_number port_id,
 			uint32_t baudrate);
 void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t reset_mode);
 void u_blox_get_cfg_nav5(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum gnss_mode g_mode,

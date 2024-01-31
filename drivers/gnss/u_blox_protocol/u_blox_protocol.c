@@ -45,7 +45,17 @@ static void u_blox_create_frame(uint8_t ubx_frame[], uint16_t *ubx_frame_size,
 	ubx_frame[*ubx_frame_size - 1] = ckB;
 }
 
-void u_blox_get_cfg_prt(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t port_id,
+void u_blox_get_cfg_prt_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum port_number port_id)
+{
+	uint16_t payload_size = 1;
+	uint8_t payload[payload_size];
+
+	payload[0] = port_id;
+
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload, payload_size);
+}
+
+void u_blox_get_cfg_prt_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum port_number port_id,
 			uint32_t baudrate)
 {
 	uint16_t payload_size = 20;
@@ -84,7 +94,7 @@ void u_blox_get_cfg_prt(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t p
 	payload[18] = 0x0;
 	payload[19] = 0x0;
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, 0x06, 0x00, payload, payload_size);
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload, payload_size);
 }
 
 void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t reset_mode)
@@ -102,7 +112,7 @@ void u_blox_get_cfg_rst(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t r
 	/* reserved1. */
 	payload[3] = 0x00;
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, 0x06, 0x04, payload, payload_size);
+	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_RST, payload, payload_size);
 }
 
 void u_blox_get_cfg_nav5(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum gnss_mode g_mode,

@@ -34,8 +34,9 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_RECV_BUF_SZ		128
 #define UBX_WORK_BUF_SZ		128
+#define UBX_SUPP_BUF_SZ		128
 
-#define UBX_MESSAGE_TIMEOUT_MS	500
+#define UBX_MESSAGE_TIMEOUT_MS	1000
 
 #define U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_name, ubx_frame, retry_count)	\
 	struct modem_ubx_script script_name = {							\
@@ -68,6 +69,7 @@ struct u_blox_m10_data {
 	struct modem_ubx ubx;
 	uint8_t ubx_receive_buf[UBX_RECV_BUF_SZ];
 	uint8_t ubx_work_buf[UBX_WORK_BUF_SZ];
+	uint8_t ubx_supp_buf[UBX_SUPP_BUF_SZ];
 
 	struct k_spinlock lock;
 };
@@ -225,6 +227,8 @@ static int u_blox_m10_init_ubx(const struct device *dev)
 		.receive_buf_size = sizeof(data->ubx_receive_buf),
 		.work_buf = data->ubx_work_buf,
 		.work_buf_size = sizeof(data->ubx_work_buf),
+		.supplementary_buf = data->ubx_supp_buf,
+		.supplementary_buf_size = sizeof(data->ubx_supp_buf),
 		.process_timeout = K_MSEC(UBX_MESSAGE_TIMEOUT_MS),
 	};
 
@@ -283,19 +287,35 @@ out:
 		return ret;
 	}
 
-	LOG_ERR("u_blox_m10_modem_ubx_script_send: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
+	// LOG_ERR("u_blox_m10_modem_ubx_script_send: exited cleanly (temp) &&&&&&&&&&&&&&&&&&&&&.");
 	return 0;
 }
 
-static int u_blox_m10_ubx_cfg_prt_send(const struct device *dev, uint32_t baudrate,
-				       uint16_t retry_count)
+
+static int u_blox_m10_ubx_cfg_prt_get_send(const struct device *dev, uint16_t retry_count)
+{
+	int ret;
+
+	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
+	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, retry_count);
+	u_blox_get_cfg_prt_get(script_inst.ubx_frame, &script_inst.ubx_frame_size, PORT_NUMBER_UART);
+	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
+	if (ret < 0) {
+		return ret;
+	}
+
+	return 0;
+}
+
+static int u_blox_m10_ubx_cfg_prt_set_send(const struct device *dev, uint32_t baudrate,
+					   uint16_t retry_count)
 {
 	int ret;
 
 	// Send UBX_CFG_PRT to change device baudrate.
 	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, retry_count);
-	u_blox_get_cfg_prt(script_inst.ubx_frame, &script_inst.ubx_frame_size, 0x01, baudrate);
+	u_blox_get_cfg_prt_set(script_inst.ubx_frame, &script_inst.ubx_frame_size, PORT_NUMBER_UART, baudrate);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -353,7 +373,7 @@ static int u_blox_m10_configure_baudrate(const struct device *dev) {
 		}
 
 		/* Try setting baudrate of device as target_baudrate. */
-		ret = u_blox_m10_ubx_cfg_prt_send(dev, target_baudrate, 2);
+		ret = u_blox_m10_ubx_cfg_prt_set_send(dev, target_baudrate, 2);
 		if (ret == 0) {
 			configuration_failed = false;
 			break;
@@ -368,7 +388,7 @@ static int u_blox_m10_configure_baudrate(const struct device *dev) {
 
 	/* Retry in case didn't receive acknowledgement in previous attempt. */
 	if (configuration_failed) {
-		ret = u_blox_m10_ubx_cfg_prt_send(dev, target_baudrate, 5);
+		ret = u_blox_m10_ubx_cfg_prt_set_send(dev, target_baudrate, 7);
 		if (ret < 0) {
 			return ret;
 		}
@@ -378,7 +398,7 @@ static int u_blox_m10_configure_baudrate(const struct device *dev) {
 }
 
 static int u_blox_m10_configure_messages(const struct device *dev) {
-	int ret = 0, retry_count = 5;
+	int ret = 0, retry_count = 7;
 
 	uint8_t ubx_frame[U_BLOX_MESSAGE_LEN_MAX];
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, retry_count);
@@ -440,6 +460,11 @@ static int u_blox_m10_configure(const struct device *dev)
 	}
 
 	ret = u_blox_m10_configure_messages(dev);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = u_blox_m10_ubx_cfg_prt_get_send(dev, 7);
 	if (ret < 0) {
 		return ret;
 	}

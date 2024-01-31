@@ -43,6 +43,9 @@ struct modem_ubx {
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
 	uint16_t work_buf_len;
+	uint8_t *supplementary_buf;
+	uint16_t supplementary_buf_size;
+	uint16_t supplementary_buf_len;
 
 	struct modem_pipe *pipe;
 
@@ -61,6 +64,8 @@ struct modem_ubx_config {
 	k_timeout_t process_timeout;
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
+	uint8_t *supplementary_buf;
+	uint16_t supplementary_buf_size;
 };
 
 /**

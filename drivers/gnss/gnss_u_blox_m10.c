@@ -2,6 +2,7 @@
  * Copyright (c) 2023 Trackunit Corporation
  * Copyright (c) 2023 Bjarki Arge Andreasen
  * Copyright 2023 Google LLC
+ * Copyright 2024 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */

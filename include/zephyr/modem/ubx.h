@@ -26,7 +26,7 @@ extern "C" {
 
 struct modem_ubx_script {
 	uint8_t *ubx_frame;
-	uint16_t ubx_frame_size;
+	uint16_t *ubx_frame_size;
 	uint16_t retry_count;
 };
 

@@ -16,6 +16,9 @@
 #define U_BLOX_MESSAGE_LEN_MAX	264
 #define U_BLOX_PAYLOAD_LEN_MAX	256
 
+#define U_BLOX_CFG_PRT_WAIT_MS	4000
+#define U_BLOX_CFG_RST_WAIT_MS	8000
+
 extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 
 #define TO_LITTLE_ENDIAN(data, b)			\

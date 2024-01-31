@@ -29,7 +29,7 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 	k_sem_reset(&ubx->script_stopped_sem);
 
 	ubx->transmit_buf = script->ubx_frame;
-	ubx->transmit_buf_size = script->ubx_frame_size;
+	ubx->transmit_buf_size = *script->ubx_frame_size;
 
 	received_ubx_ack_start_1 = false; // temp.
 	received_ubx_ack_start_2 = false; // temp.
@@ -46,12 +46,12 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 	k_work_submit(&ubx->send_work);
 
 	ret = k_sem_take(&ubx->script_stopped_sem, ubx->process_timeout);
-	for (int i = 0; i < ubx->work_buf_len; ++i)
-		printk("%x ", ubx->work_buf[i]);
-	printk("\n");
-	for (int i = 0; i < ubx->supplementary_buf_len; ++i)
-		printk("%x ", ubx->supplementary_buf[i]);
-	printk("\n");
+
+	if (ubx->supplementary_buf != 0) {
+		memcpy(script->ubx_frame, ubx->supplementary_buf, ubx->supplementary_buf_len);
+		*script->ubx_frame_size = ubx->supplementary_buf_len;
+	}
+
 	if (ret < 0) {
 		return ret;
 	} else if (ubx->work_buf[3] == 0) {
@@ -77,6 +77,7 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *scr
 	for (int i = 0; i < script->retry_count; ++i) {
 		ret = modem_ubx_transmit_async(ubx, script);
 		if (ret == 0) {
+			printk("success attempt: %d.\n", i);
 			break;
 		}
 	}

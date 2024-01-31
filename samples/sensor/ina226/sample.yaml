@@ -1,0 +1,14 @@
+# Copyright 2024 NXP
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Based on the file "zephyr/samples/sensor/ina219/sample.yaml".
+
+sample:
+  name: TI INA226 power/current monitor
+  description: Demonstration of the INA226 I2C power/current monitor
+tests:
+  sample.drivers.ina226:
+    build_only: true
+    platform_allow: mr_canhubk3
+    tags: sensors

@@ -54,6 +54,10 @@ static int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 	return ubx_frame_len;
 }
 
+void u_blox_cfg_prt_get_data_default(struct u_blox_cfg_prt_get_data *data) {
+	data->port_id = UBX_PORT_NUMBER_UART;
+}
+
 int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_get_data *data)
 {
 	uint16_t payload_size = 1;
@@ -67,7 +71,7 @@ int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blo
 
 void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data) {
 	data->port_id = UBX_PORT_NUMBER_UART;
-	data->tx_ready_pin_conf = 0U;
+	data->tx_ready_pin_conf = 0x0000;
 	data->port_mode = UBX_CFG_PRT_PORT_MODE_CHAR_LEN_8 | UBX_CFG_PRT_PORT_MODE_PARITY_NONE |
 			  UBX_CFG_PRT_PORT_MODE_STOP_BITS_1;
 	data->baudrate = u_blox_baudrate[3];
@@ -75,17 +79,13 @@ void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data) {
 			      UBX_CFG_PRT_IN_PROTO_RTCM;
 	data->out_proto_mask = UBX_CFG_PRT_OUT_PROTO_UBX | UBX_CFG_PRT_OUT_PROTO_NMEA |
 			       UBX_CFG_PRT_OUT_PROTO_RTCM3;
-	data->flags = 0U;
+	data->flags = 0x0000;
 }
 
 int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_set_data *data)
 {
 	uint16_t payload_size = 20;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
-
-	uint32_t port_mode = UBX_CFG_PRT_PORT_MODE_CHAR_LEN_8 |
-			     UBX_CFG_PRT_PORT_MODE_PARITY_NONE |
-			     UBX_CFG_PRT_PORT_MODE_STOP_BITS_1;
 
 	/* Port identifier number */
 	payload[0] = data->port_id;
@@ -94,52 +94,45 @@ int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blo
 	payload[1] = 0x00;
 
 	/* TX ready PIN conﬁguration */
-	payload[2] = data->tx_ready_pin_conf;
-	payload[3] = data->tx_ready_pin_conf >> 8;
+	memcpy(payload + 2, &(data->tx_ready_pin_conf), 2);
 
 	/* Port mode */
-	memcpy(payload + 4, (uint8_t *) &port_mode, 4);
+	memcpy(payload + 4, &(data->port_mode), 4);
 
 	/* Baud Rate */
-	payload[8] = data->baudrate;
-	payload[9] = data->baudrate >> 8;
-	payload[10] = data->baudrate >> 16;
-	payload[11] = data->baudrate >> 24;
-	for (int i = 0; i < 4; ++i) {
-		printk("%d %d\n", payload[8 + i], data->baudrate >> (8 * i));
-	}
+	memcpy(payload + 8, &(data->baudrate), 4);
 
 	/* In Proto Mask = All proto enable */
-	payload[12] = data->in_proto_mask;
-	payload[13] = data->in_proto_mask >> 8;
+	memcpy(payload + 12, &(data->in_proto_mask), 2);
 
 	/* Out Proto Mask = All proto enable */
-	payload[14] = data->out_proto_mask;
-	payload[15] = data->out_proto_mask >> 8;
+	memcpy(payload + 14, &(data->out_proto_mask), 2);
 
 	/* Flags */
-	payload[16] = data->flags;
-	payload[17] = data->flags >> 8;
+	memcpy(payload + 16, &(data->flags), 2);
 
 	/* Reserved1 */
 	payload[18] = 0x00;
 	payload[19] = 0x00;
 
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT,
-			    payload_size);
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload_size);
 }
 
-int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t reset_mode)
+void u_blox_cfg_rst_set_data_default(struct u_blox_cfg_rst_set_data *data) {
+	data->nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
+	data->reset_mode = UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET;
+}
+
+int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_rst_set_data *data)
 {
 	uint16_t payload_size = 4;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
-	/* navBbrMask (0x0000 for Hot start). */
-	payload[0] = 0x00;
-	payload[1] = 0x00;
+	/* navBbrMask. */
+	memcpy(payload, &(data->nav_bbr_mask), 2);
 
 	/* resetMode. */
-	payload[2] = reset_mode;
+	payload[2] = data->reset_mode;
 
 	/* reserved1. */
 	payload[3] = 0x00;
@@ -153,51 +146,55 @@ int u_blox_cfg_nav5_get(uint8_t *ubx_frame, uint16_t ubx_frame_size)
 	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, 0);
 }
 
-int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, enum ubx_dynamic_model dyn_model,
-			     enum ubx_fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
-			     int8_t min_elev, uint16_t p_dop, uint16_t t_dop, uint16_t p_acc,
-			     uint16_t t_acc, uint8_t static_hold_thresh, uint8_t dgnss_timeout,
-			     uint8_t cno_thresh_num_svs, uint8_t cno_thresh,
-			     uint16_t static_hold_max_dist, enum ubx_utc_standard utc_strd)
+void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *data) {
+	data->mask = 0x05FF;
+	data->dyn_model = UBX_DYN_MODEL_Portable;
+
+	data->fix_mode = UBX_FIX_AutoFix;
+
+	data->fixed_alt = 0;
+	data->fixed_alt_var = 1;
+
+	data->min_elev = 5;
+	data->dr_limit = 3;
+
+	data->p_dop = 100;
+	data->t_dop = 100;
+	data->p_acc = 100;
+	data->t_acc = 350;
+
+	data->static_hold_threshold = 0;
+	data->dgnss_timeout = 60;
+	data->cno_threshold_num_svs = 0;
+	data->cno_threshold = 0;
+
+	data->static_hold_dist_threshold = 0;
+	data->utc_standard = UBX_UTC_AutoUTC;
+}
+
+int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_nav5_set_data *data)
 {
 	uint16_t payload_size = 36;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
-	int8_t fixed_alt_le[4] = { 0 };
-	uint8_t fixed_alt_var_le[4] = { 0 };
-	uint8_t p_dop_le[2] = { 0 };
-	uint8_t t_dop_le[2] = { 0 };
-	uint8_t p_acc_le[2] = { 0 };
-	uint8_t t_acc_le[2] = { 0 };
-	uint8_t static_hold_max_dist_le[2] = { 0 };
+	memcpy(payload, &(data->mask), 2);
 
-	TO_LITTLE_ENDIAN(fixed_alt, fixed_alt_le);
-	TO_LITTLE_ENDIAN(fixed_alt_var, fixed_alt_var_le);
-	TO_LITTLE_ENDIAN(p_dop, p_dop_le);
-	TO_LITTLE_ENDIAN(t_dop, t_dop_le);
-	TO_LITTLE_ENDIAN(p_acc, p_acc_le);
-	TO_LITTLE_ENDIAN(t_acc, t_acc_le);
-	TO_LITTLE_ENDIAN(static_hold_max_dist, static_hold_max_dist_le);
+	memcpy(payload + 2, &(data->dyn_model), 1);
+	memcpy(payload + 3, &(data->fix_mode), 1);
 
-	/* Parameters bitmask (0xFF05 for selecting all parameters) */
-	payload[0] = 0xFF;
-	payload[1] = 0x05;
-
-	payload[2] = dyn_model;
-	payload[3] = f_mode;
-	memcpy(payload + 4, fixed_alt_le, 4);
-	memcpy(payload + 8, fixed_alt_var_le, 4);
-	payload[12] = min_elev;
-	memcpy(payload + 14, p_dop_le, 2);
-	memcpy(payload + 16, t_dop_le, 2);
-	memcpy(payload + 18, p_acc_le, 2);
-	memcpy(payload + 20, t_acc_le, 2);
-	payload[22] = static_hold_thresh;
-	payload[23] = dgnss_timeout;
-	payload[24] = cno_thresh_num_svs;
-	payload[25] = cno_thresh;
-	memcpy(payload + 28, static_hold_max_dist_le, 2);
-	payload[30] = utc_strd;
+	memcpy(payload + 4, &(data->fixed_alt), 4);
+	memcpy(payload + 8, &(data->fixed_alt_var), 4);
+	payload[12] = data->min_elev;
+	memcpy(payload + 14, &(data->p_dop), 2);
+	memcpy(payload + 16, &(data->t_dop), 2);
+	memcpy(payload + 18, &(data->p_acc), 2);
+	memcpy(payload + 20, &(data->t_acc), 2);
+	payload[22] = data->static_hold_threshold;
+	payload[23] = data->dgnss_timeout;
+	payload[24] = data->cno_threshold_num_svs;
+	payload[25] = data->cno_threshold;
+	memcpy(payload + 28, &(data->static_hold_dist_threshold), 2);
+	payload[30] = data->utc_standard;
 
 	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5,
 			    payload_size);

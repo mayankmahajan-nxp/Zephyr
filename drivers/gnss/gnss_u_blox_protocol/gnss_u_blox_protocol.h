@@ -67,6 +67,8 @@ extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 struct u_blox_cfg_prt_get_data {
 	uint8_t port_id;
 };
+void u_blox_cfg_prt_get_data_default(struct u_blox_cfg_prt_get_data *data);
+int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_get_data *data);
 
 struct u_blox_cfg_prt_set_data {
 	uint8_t port_id;
@@ -77,20 +79,55 @@ struct u_blox_cfg_prt_set_data {
 	uint16_t out_proto_mask;
 	uint16_t flags;
 };
-
-int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_get_data *data);
 void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data);
 int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_set_data *data);
 
-int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t reset_mode);
+#define UBX_CFG_RST_NAV_BBR_MASK_HOT_START		0x0000
+#define UBX_CFG_RST_NAV_BBR_MASK_WARM_START		0x0001
+#define UBX_CFG_RST_NAV_BBR_MASK_COLD_START		0xFFFF
+#define UBX_CFG_RST_RESET_MODE_HARD_RESET				0x00
+#define UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET			0x01
+#define UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET_GNSS_ONLY		0x02
+#define UBX_CFG_RST_RESET_MODE_HARD_RESET_AFTER_SHUTDOWN		0x04
+#define UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP			0x08
+#define UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START			0x09
+
+struct u_blox_cfg_rst_set_data {
+	uint16_t nav_bbr_mask;
+	uint8_t reset_mode;
+};
+void u_blox_cfg_rst_set_data_default(struct u_blox_cfg_rst_set_data *data);
+int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_rst_set_data *data);
 
 int u_blox_cfg_nav5_get(uint8_t *ubx_frame, uint16_t ubx_frame_size);
-int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, enum ubx_dynamic_model dyn_model,
-			     enum ubx_fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
-			     int8_t min_elev, uint16_t p_dop, uint16_t t_dop, uint16_t p_acc,
-			     uint16_t t_acc, uint8_t static_hold_thresh, uint8_t dgnss_timeout,
-			     uint8_t cno_thresh_num_svs, uint8_t cno_thresh,
-			     uint16_t static_hold_max_dist, enum ubx_utc_standard utc_strd);
+
+struct u_blox_cfg_nav5_set_data {
+	uint16_t mask;
+	uint8_t dyn_model;
+
+	uint8_t fix_mode;
+
+	int32_t fixed_alt;
+	uint32_t fixed_alt_var;
+
+	int8_t min_elev;
+	uint8_t dr_limit;
+
+	uint16_t p_dop;
+	uint16_t t_dop;
+	uint16_t p_acc;
+	uint16_t t_acc;
+
+	uint8_t static_hold_threshold;
+	uint8_t dgnss_timeout;
+	uint8_t cno_threshold_num_svs;
+	uint8_t cno_threshold;
+
+	uint16_t static_hold_dist_threshold;
+	uint8_t utc_standard;
+};
+void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *data);
+int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_nav5_set_data *data);
 
 int u_blox_cfg_gnss_get(uint8_t *ubx_frame, uint16_t ubx_frame_size);
 int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_ver,

@@ -286,7 +286,11 @@ static int u_blox_m10_ubx_cfg_rst_set_send(const struct device *dev, uint8_t res
 	uint16_t ubx_frame_len;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	ubx_frame_len = u_blox_cfg_rst_set(script_inst.ubx_frame, ubx_frame_size, reset_mode);
+	struct u_blox_cfg_rst_set_data data = {
+		. nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START,
+		.reset_mode = reset_mode
+	};
+	ubx_frame_len = u_blox_cfg_rst_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -445,25 +449,23 @@ static int u_blox_m10_get_fix_rate(const struct device *dev, uint32_t *fix_inter
 
 static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_navigation_mode mode)
 {
-	enum ubx_dynamic_model dyn_model = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
+	enum ubx_dynamic_model d_model = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
 	switch (mode) {
 	case GNSS_NAVIGATION_MODE_ZERO_DYNAMICS:
-		dyn_model = UBX_DYN_MODEL_Stationary;
+		d_model = UBX_DYN_MODEL_Stationary;
 		break;
 	case GNSS_NAVIGATION_MODE_LOW_DYNAMICS:
-		dyn_model = UBX_DYN_MODEL_Portable;
+		d_model = UBX_DYN_MODEL_Portable;
 		break;
 	case GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS:
-		dyn_model = UBX_DYN_MODEL_Airbone1G;
+		d_model = UBX_DYN_MODEL_Airbone1G;
 		break;
 	case GNSS_NAVIGATION_MODE_HIGH_DYNAMICS:
-		dyn_model = UBX_DYN_MODEL_Airbone4G;
+		d_model = UBX_DYN_MODEL_Airbone4G;
 		break;
 	default:
 		break;
 	}
-
-	enum ubx_fix_mode f_mode = UBX_FIX_AutoFix;
 
 	int ret, retry_count = 7;
 
@@ -472,8 +474,10 @@ static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_na
 	uint16_t ubx_frame_len;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	ubx_frame_len = u_blox_cfg_nav5_set(script_inst.ubx_frame, ubx_frame_size,dyn_model,
-		f_mode, 0, 1, 5, 100, 100, 100, 350, 0, 60, 0, 0, 0, UBX_UTC_AutoUTC);
+	struct u_blox_cfg_nav5_set_data data;
+	u_blox_cfg_nav5_set_data_default(&data);
+	data.dyn_model = d_model;
+	ubx_frame_len = u_blox_cfg_nav5_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -637,7 +641,7 @@ static int u_blox_m10_configure(const struct device *dev)
 
 	u_blox_m10_configure_baudrate_prerequisite(dev);
 
-	u_blox_m10_ubx_cfg_rst_set_send(dev, 0x08);
+	u_blox_m10_ubx_cfg_rst_set_send(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
 	k_sleep(K_MSEC(U_BLOX_CFG_RST_WAIT_MS));
 
 	ret = u_blox_m10_configure_baudrate(dev);
@@ -659,7 +663,7 @@ static int u_blox_m10_configure(const struct device *dev)
 	}
 
 out:
-	u_blox_m10_ubx_cfg_rst_set_send(dev, 0x09);
+	u_blox_m10_ubx_cfg_rst_set_send(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
 
 	gnss_systems_t systems = 0;
 

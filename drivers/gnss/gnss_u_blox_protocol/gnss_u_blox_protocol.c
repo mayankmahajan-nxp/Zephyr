@@ -213,27 +213,22 @@ static struct u_blox_cfg_gnss_set_data_config_block u_blox_cfg_gnss_set_data_con
 	.flags = 0x00000000,
 };
 
-void u_blox_cfg_gnss_set_data_config_blocks_default(struct u_blox_cfg_gnss_set_data_config_block *config_blocks, uint8_t num_config_blocks)
-{
-	for (int i = 0; i < num_config_blocks; ++i) {
-		config_blocks[i] = u_blox_cfg_gnss_set_data_config_block_default;
-	}
-}
-
-void u_blox_cfg_gnss_set_data_default(struct u_blox_cfg_gnss_set_data *data, struct u_blox_cfg_gnss_set_data_config_block *config_blocks, uint8_t num_config_blocks)
+void u_blox_cfg_gnss_set_data_default(struct u_blox_cfg_gnss_set_data *data, struct u_blox_cfg_gnss_set_data_config_block *cfg_blocks, uint8_t num_cfg_blocks)
 {
 	data->msg_ver = 0x00;
-	data->num_trk_ch_hw = 0x31;
-	data->num_trk_ch_use = 0x31;
-	data->num_config_blocks = num_config_blocks;
-	data->config_blocks = config_blocks;
+	data->num_trk_ch_hw = 0x20;
+	data->num_trk_ch_use = 0x20;
+	data->num_config_blocks = num_cfg_blocks;
+	data->config_blocks = cfg_blocks;
 
-	u_blox_cfg_gnss_set_data_config_blocks_default(config_blocks, num_config_blocks);
+	for (int i = 0; i < num_cfg_blocks; ++i) {
+		data->config_blocks[i] = u_blox_cfg_gnss_set_data_config_block_default;
+	}
 }
 
 int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_gnss_set_data *data)
 {
-	uint16_t payload_size = (4 + (data->num_config_blocks));
+	uint16_t payload_size = (4 + (data->num_config_blocks * sizeof(struct u_blox_cfg_gnss_set_data_config_block)));
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
 	payload[0] = data->msg_ver;

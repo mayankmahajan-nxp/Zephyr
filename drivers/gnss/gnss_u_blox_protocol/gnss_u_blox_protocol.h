@@ -133,7 +133,12 @@ int u_blox_cfg_gnss_get(uint8_t *ubx_frame, uint16_t ubx_frame_size);
 int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_ver,
 			     uint8_t num_trk_ch_use, uint8_t *config, uint16_t config_size);
 
-int u_blox_cfg_msg_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_id,
-			    uint8_t rate);
+struct u_blox_cfg_msg_set_data {
+	uint8_t message_class;
+	uint8_t message_id;
+	uint8_t rate;
+};
+void u_blox_cfg_msg_set_data_default(struct u_blox_cfg_msg_set_data *data);
+int u_blox_cfg_msg_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_msg_set_data *data);
 
 #endif /* ZEPHYR_U_BLOX_PROTOCOL_ */

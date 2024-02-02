@@ -389,45 +389,74 @@ static int u_blox_m10_configure_messages(const struct device *dev)
 	uint8_t ubx_frame[ubx_frame_size];
 	uint16_t ubx_frame_len;
 
+	struct u_blox_cfg_msg_set_data data;
+	u_blox_cfg_msg_set_data_default(&data);
+
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GGA, 1);
+	data.message_id = UBX_NMEA_GGA;
+	data.rate = 1;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_RMC, 1);
+	data.message_id = UBX_NMEA_RMC;
+	data.rate = 1;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GSV, 1);
+	data.message_id = UBX_NMEA_GSV;
+	data.rate = 1;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_DTM, 0);
+	data.message_id = UBX_NMEA_DTM;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GBS, 0);
+	data.message_id = UBX_NMEA_GBS;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GLL, 0);
+	data.message_id = UBX_NMEA_GLL;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GNS, 0);
+	data.message_id = UBX_NMEA_GNS;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GRS, 0);
+	data.message_id = UBX_NMEA_GRS;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GSA, 0);
+	data.message_id = UBX_NMEA_GSA;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_GST, 0);
+	data.message_id = UBX_NMEA_GST;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_VLW, 0);
+	data.message_id = UBX_NMEA_VLW;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_VTG, 0);
+	data.message_id = UBX_NMEA_VTG;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, UBX_NMEA_ZDA, 0);
+	data.message_id = UBX_NMEA_ZDA;
+	data.rate = 0;
+	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	if (ret < 0) {

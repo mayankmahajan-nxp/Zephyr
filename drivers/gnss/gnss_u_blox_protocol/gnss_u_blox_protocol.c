@@ -221,15 +221,21 @@ int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg
 			    payload_size);
 }
 
-int u_blox_cfg_msg_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_id,
-			    uint8_t rate)
+void u_blox_cfg_msg_set_data_default(struct u_blox_cfg_msg_set_data *data)
+{
+	data->message_class = UBX_CLASS_NMEA;
+	data->message_id = UBX_NMEA_GGA;
+	data->rate = 1;
+}
+
+int u_blox_cfg_msg_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_msg_set_data *data)
 {
 	uint16_t payload_size = 3;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
-	payload[0] = UBX_CLASS_NMEA;
-	payload[1] = msg_id;
-	payload[2] = rate;
+	payload[0] = data->message_class;
+	payload[1] = data->message_id;
+	payload[2] = data->rate;
 
 	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_MSG,
 			    payload_size);

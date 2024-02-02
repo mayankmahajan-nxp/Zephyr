@@ -68,8 +68,8 @@ extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 #define UBX_CFG_GNSS_SET_PAYLOAD_CFG_BLOCK_SIZE		8
 
 int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
-				uint8_t message_class, uint8_t message_id,
-				void *data, uint16_t payload_size);
+			uint8_t message_class, uint8_t message_id,
+			const void *const data, uint16_t payload_size);
 
 struct u_blox_cfg_prt_get_data {
 	uint8_t port_id;

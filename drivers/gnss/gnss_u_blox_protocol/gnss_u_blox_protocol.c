@@ -11,17 +11,17 @@
 #include "gnss_u_blox_protocol.h"
 
 static int u_blox_cfg_prt_get(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_prt_get_data *data);
+			      const struct u_blox_cfg_prt_get_data *const data);
 static int u_blox_cfg_prt_set(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_prt_set_data *data);
+			      const struct u_blox_cfg_prt_set_data *const data);
 static int u_blox_cfg_rst_set(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_rst_set_data *data);
+			      const struct u_blox_cfg_rst_set_data *const data);
 static int u_blox_cfg_nav5_set(uint8_t *payload, uint16_t ubx_frame_size,
-			       struct u_blox_cfg_nav5_set_data *data);
+			       const struct u_blox_cfg_nav5_set_data *const data);
 static int u_blox_cfg_gnss_set(uint8_t *payload, uint16_t ubx_frame_size,
-			       struct u_blox_cfg_gnss_set_data *data);
+			       const struct u_blox_cfg_gnss_set_data *const data);
 static int u_blox_cfg_msg_set(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_msg_set_data *data);
+			      const struct u_blox_cfg_msg_set_data *const data);
 
 const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 	4800,
@@ -36,7 +36,7 @@ const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 
 int u_blox_create_payload(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 			  uint8_t message_class, uint8_t message_id,
-			  void *data, uint16_t payload_size)
+			  const void *const data, uint16_t payload_size)
 {
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
@@ -76,8 +76,8 @@ int u_blox_create_payload(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 }
 
 int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
-				uint8_t message_class, uint8_t message_id,
-				void *data, uint16_t payload_size)
+			uint8_t message_class, uint8_t message_id,
+			const void *const data, uint16_t payload_size)
 {
 	int payload_len;
 	uint8_t ckA = 0;
@@ -116,12 +116,12 @@ int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 	return ubx_frame_len;
 }
 
-void u_blox_cfg_prt_get_data_default(struct u_blox_cfg_prt_get_data *data) {
+void u_blox_cfg_prt_get_data_default(struct u_blox_cfg_prt_get_data *const data) {
 	data->port_id = UBX_PORT_NUMBER_UART;
 }
 
 static int u_blox_cfg_prt_get(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_prt_get_data *data)
+			      const struct u_blox_cfg_prt_get_data *const data)
 {
 	uint16_t payload_size = UBX_CFG_PRT_GET_PAYLOAD_SIZE;
 
@@ -134,7 +134,7 @@ static int u_blox_cfg_prt_get(uint8_t *payload, uint16_t ubx_frame_size,
 	return payload_size;
 }
 
-void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data) {
+void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *const data) {
 	data->port_id = UBX_PORT_NUMBER_UART;
 	data->tx_ready_pin_conf = 0x0000;
 	data->port_mode = UBX_CFG_PRT_PORT_MODE_CHAR_LEN_8 | UBX_CFG_PRT_PORT_MODE_PARITY_NONE |
@@ -148,7 +148,7 @@ void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data) {
 }
 
 static int u_blox_cfg_prt_set(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_prt_set_data *data)
+			      const struct u_blox_cfg_prt_set_data *const data)
 {
 	uint16_t payload_size = UBX_CFG_PRT_SET_PAYLOAD_SIZE;
 
@@ -187,13 +187,13 @@ static int u_blox_cfg_prt_set(uint8_t *payload, uint16_t ubx_frame_size,
 	return payload_size;
 }
 
-void u_blox_cfg_rst_set_data_default(struct u_blox_cfg_rst_set_data *data) {
+void u_blox_cfg_rst_set_data_default(struct u_blox_cfg_rst_set_data *const data) {
 	data->nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
 	data->reset_mode = UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET;
 }
 
 static int u_blox_cfg_rst_set(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_rst_set_data *data)
+			      const struct u_blox_cfg_rst_set_data *const data)
 {
 	uint16_t payload_size = UBX_CFG_RST_SET_PAYLOAD_SIZE;
 
@@ -213,11 +213,11 @@ static int u_blox_cfg_rst_set(uint8_t *payload, uint16_t ubx_frame_size,
 	return payload_size;
 }
 
-void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *data) {
+void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *const data) {
 	data->mask = 0x05FF;
-	data->dyn_model = UBX_DYN_MODEL_Portable;
+	data->dyn_model = UBX_DYN_MODEL_PORTABLE;
 
-	data->fix_mode = UBX_FIX_AutoFix;
+	data->fix_mode = UBX_FIX_AUTO_FIX;
 
 	data->fixed_alt = 0;
 	data->fixed_alt_var = 1;
@@ -240,7 +240,7 @@ void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *data) {
 }
 
 static int u_blox_cfg_nav5_set(uint8_t *payload, uint16_t ubx_frame_size,
-			       struct u_blox_cfg_nav5_set_data *data)
+			       const struct u_blox_cfg_nav5_set_data *const data)
 {
 	uint16_t payload_size = UBX_CFG_NAV5_SET_PAYLOAD_SIZE;
 	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
@@ -292,7 +292,8 @@ void u_blox_cfg_gnss_set_data_default(struct u_blox_cfg_gnss_set_data *data,
 	}
 }
 
-static int u_blox_cfg_gnss_set(uint8_t *payload, uint16_t ubx_frame_size, struct u_blox_cfg_gnss_set_data *data)
+static int u_blox_cfg_gnss_set(uint8_t *payload, uint16_t ubx_frame_size,
+			       const struct u_blox_cfg_gnss_set_data *const data)
 {
 	uint16_t payload_size = UBX_CFG_GNSS_SET_PAYLOAD_INIT_SIZE +
 				(data->num_config_blocks * UBX_CFG_GNSS_SET_PAYLOAD_CFG_BLOCK_SIZE);
@@ -312,7 +313,7 @@ static int u_blox_cfg_gnss_set(uint8_t *payload, uint16_t ubx_frame_size, struct
 	return payload_size;
 }
 
-void u_blox_cfg_msg_set_data_default(struct u_blox_cfg_msg_set_data *data)
+void u_blox_cfg_msg_set_data_default(struct u_blox_cfg_msg_set_data *const data)
 {
 	data->message_class = UBX_CLASS_NMEA;
 	data->message_id = UBX_NMEA_GGA;
@@ -320,7 +321,7 @@ void u_blox_cfg_msg_set_data_default(struct u_blox_cfg_msg_set_data *data)
 }
 
 static int u_blox_cfg_msg_set(uint8_t *payload, uint16_t ubx_frame_size,
-			      struct u_blox_cfg_msg_set_data *data)
+			      const struct u_blox_cfg_msg_set_data *const data)
 {
 	uint16_t payload_size = UBX_CFG_MSG_SET_PAYLOAD_SIZE;
 

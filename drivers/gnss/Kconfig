@@ -60,11 +60,10 @@ config GNSS_INIT_PRIORITY
 	help
 	  Driver initialization priority for GNSS drivers.
 
-config U_BLOX_PROTOCOL
-	bool "U-BLOX protocol"
-	default n
+config GNSS_U_BLOX_PROTOCOL
+	bool "GNSS U-BLOX protocol"
 	help
-	  Enable u-blox protocol.
+	  Enable gnss u-blox protocol.
 
 module = GNSS
 module-str = gnss

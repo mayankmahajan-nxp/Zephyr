@@ -1,8 +1,11 @@
 /*
- * Copyright (c) 2022 Trackunit Corporation
  * Copyright 2024 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Referred from the files:
+ * "zephyr/subsys/modem/modem_chat.c" and "zephyr/subsys/modem/modem_ppp.c".
  */
 
 #include <zephyr/modem/ubx.h>

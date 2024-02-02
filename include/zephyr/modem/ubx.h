@@ -1,8 +1,11 @@
 /*
- * Copyright (c) 2022 Trackunit Corporation
  * Copyright 2024 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Referred from the files:
+ * "zephyr/include/zephyr/modem/chat.h" and "zephyr/include/zephyr/modem/ppp.h".
  */
 
 #include <zephyr/kernel.h>

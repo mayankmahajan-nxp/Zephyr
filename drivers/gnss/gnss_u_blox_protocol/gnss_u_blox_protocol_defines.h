@@ -1,14 +1,17 @@
 /*
  * Copyright 2024 NXP
- * Copyright (c) 2022 Abel Sensors
  *
  * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Based on the file "include/zephyr/drivers/gnss/ublox_neo_m8_defines.h" from pull request #46447
+ * (https://github.com/zephyrproject-rtos/zephyr/pull/46447).
  */
 
 #ifndef ZEPHYR_U_BLOX_PROTOCOL_DEFINES_
 #define ZEPHYR_U_BLOX_PROTOCOL_DEFINES_
 
-enum UBX_GNSS_ID {
+enum ubx_gnss_id {
 	UBX_GNSS_ID_GPS = 0,
 	UBX_GNSS_ID_SBAS,
 	UBX_GNSS_ID_Galileo,
@@ -18,67 +21,41 @@ enum UBX_GNSS_ID {
 	UBX_GNSS_ID_GLONAS,
 };
 
-enum port_number {
-	PORT_NUMBER_DDC = 0,
-	PORT_NUMBER_UART,
-	PORT_NUMBER_USB,
-	PORT_NUMBER_SPI,
+enum ubx_port_number {
+	UBX_PORT_NUMBER_DDC = 0,
+	UBX_PORT_NUMBER_UART,
+	UBX_PORT_NUMBER_USB,
+	UBX_PORT_NUMBER_SPI,
 };
 
-enum gnss_mode {
-	Portable = 0,
-	Stationary = 2,
-	Pedestrian,
-	Automotiv,
-	Sea,
-	Airbone1G,
-	Airbone2G,
-	Airbone4G,
-	Wirst,
-	Bike,
-	LawnMower,
-	KickScooter,
+enum ubx_dynamic_model {
+	UBX_DYN_MODEL_Portable = 0,
+	UBX_DYN_MODEL_Stationary = 2,
+	UBX_DYN_MODEL_Pedestrian,
+	UBX_DYN_MODEL_Automotiv,
+	UBX_DYN_MODEL_Sea,
+	UBX_DYN_MODEL_Airbone1G,
+	UBX_DYN_MODEL_Airbone2G,
+	UBX_DYN_MODEL_Airbone4G,
+	UBX_DYN_MODEL_Wirst,
+	UBX_DYN_MODEL_Bike,
+	UBX_DYN_MODEL_LawnMower,
+	UBX_DYN_MODEL_KickScooter,
 };
 
-enum fix_mode {
-	P_2D = 1,
-	P_3D,
-	AutoFix,
+enum ubx_fix_mode {
+	UBX_FIX_P_2D = 1,
+	UBX_FIX_P_3D,
+	UBX_FIX_AutoFix,
 };
 
-enum utc_standard {
-	AutoUTC = 0,
-	GPS = 3,
-	GALILEO = 5,
-	GLONASS,
-	BEIDOU,
-	NAVIC,
-};
-
-enum message_id {
-	INVALID = -1,
-	UNKNOWN,
-	MESSAGE_RMC,
-	MESSAGE_GGA,
-	MESSAGE_GSA,
-	MESSAGE_GLL,
-	MESSAGE_GST,
-	MESSAGE_GSV,
-	MESSAGE_VTG,
-	MESSAGE_ZDA,
-};
-
-enum interface_description {
-	NBYTES_HIGH_ADDR = 0xFD,
-	NBYTES_LOW_ADDR = 0xFE,
-	DATA_STREAM_ADDR = 0xFF,
-
-	MAX_NMEA_SIZE = 83,
-	MAX_PAYLOAD_SIZE = 256,
-
-	UBX_SEC_UNIQID = 0x03,
-
-	UBX_UPD_SOS = 0x14,
+enum ubx_utc_standard {
+	UBX_UTC_AutoUTC = 0,
+	UBX_UTC_GPS = 3,
+	UBX_UTC_GALILEO = 5,
+	UBX_UTC_GLONASS,
+	UBX_UTC_BEIDOU,
+	UBX_UTC_NAVIC,
 };
 
 enum ubx_class_ids {
@@ -280,26 +257,26 @@ enum ubx_timing_messages {
 	UBX_TIM_VRFY = 0x06,
 };
 
-enum nmea_message_ids {
-	NMEA_DTM = 0x0A,
-	NMEA_GBQ = 0x44,
-	NMEA_GBS = 0x09,
-	NMEA_GGA = 0x00,
-	NMEA_GLL = 0x01,
-	NMEA_GLQ = 0x43,
-	NMEA_GNQ = 0x42,
-	NMEA_GNS = 0x0D,
-	NMEA_GPQ = 0x40,
-	NMEA_GRS = 0x06,
-	NMEA_GSA = 0x02,
-	NMEA_GST = 0x07,
-	NMEA_GSV = 0x03,
-	NMEA_RMC = 0x04,
-	NMEA_THS = 0x0E,
-	NMEA_TXT = 0x41,
-	NMEA_VLW = 0x0F,
-	NMEA_VTG = 0x05,
-	NMEA_ZDA = 0x08,
+enum ubx_nmea_message_ids {
+	UBX_NMEA_DTM = 0x0A,
+	UBX_NMEA_GBQ = 0x44,
+	UBX_NMEA_GBS = 0x09,
+	UBX_NMEA_GGA = 0x00,
+	UBX_NMEA_GLL = 0x01,
+	UBX_NMEA_GLQ = 0x43,
+	UBX_NMEA_GNQ = 0x42,
+	UBX_NMEA_GNS = 0x0D,
+	UBX_NMEA_GPQ = 0x40,
+	UBX_NMEA_GRS = 0x06,
+	UBX_NMEA_GSA = 0x02,
+	UBX_NMEA_GST = 0x07,
+	UBX_NMEA_GSV = 0x03,
+	UBX_NMEA_RMC = 0x04,
+	UBX_NMEA_THS = 0x0E,
+	UBX_NMEA_TXT = 0x41,
+	UBX_NMEA_VLW = 0x0F,
+	UBX_NMEA_VTG = 0x05,
+	UBX_NMEA_ZDA = 0x08,
 };
 
 #endif /* ZEPHYR_U_BLOX_PROTOCOL_DEFINES_ */

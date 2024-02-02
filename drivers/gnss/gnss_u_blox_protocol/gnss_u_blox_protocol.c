@@ -1,11 +1,14 @@
 /*
  * Copyright 2024 NXP
- * Copyright (c) 2022 Abel Sensors
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "u_blox_protocol.h"
+/* Based on the file "drivers/gnss/ublox-neo-m8/ublox_neo_m8.c" from pull request #46447
+ * (https://github.com/zephyrproject-rtos/zephyr/pull/46447).
+ */
+
+#include "gnss_u_blox_protocol.h"
 
 const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 	4800,
@@ -18,9 +21,9 @@ const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 	460800,
 };
 
-static void u_blox_create_frame(uint8_t ubx_frame[], uint16_t *ubx_frame_size,
+static void u_blox_create_frame(uint8_t *ubx_frame, uint16_t *ubx_frame_size,
 				uint8_t message_class, uint8_t message_id,
-				uint8_t payload[], uint16_t payload_size)
+				const uint8_t *payload, uint16_t payload_size)
 {
 	uint8_t frame_length_without_payload = 8;
 
@@ -46,7 +49,7 @@ static void u_blox_create_frame(uint8_t ubx_frame[], uint16_t *ubx_frame_size,
 	ubx_frame[*ubx_frame_size - 1] = ckB;
 }
 
-void u_blox_get_cfg_prt_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum port_number port_id)
+void u_blox_get_cfg_prt_get(uint8_t *ubx_frame, uint16_t *ubx_frame_size, enum ubx_port_number port_id)
 {
 	uint16_t payload_size = 1;
 	uint8_t payload[payload_size];
@@ -57,23 +60,29 @@ void u_blox_get_cfg_prt_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum 
 			    payload_size);
 }
 
-void u_blox_get_cfg_prt_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum port_number port_id,
-			    uint32_t baudrate)
+void u_blox_get_cfg_prt_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size,
+			    enum ubx_port_number port_id, uint32_t baudrate, uint16_t in_proto_mask,
+			    uint16_t out_proto_mask)
 {
 	uint16_t payload_size = 20;
 	uint8_t payload[payload_size];
 
+	uint32_t port_mode = UBX_CFG_PRT_PORT_MODE_CHAR_LEN_8 |
+			     UBX_CFG_PRT_PORT_MODE_PARITY_NONE |
+			     UBX_CFG_PRT_PORT_MODE_STOP_BITS_1;
+
+	/* Port identifier number */
 	payload[0] = port_id;
+
+	/* Reserved0 */
 	payload[1] = 0x0;
 
+	/* TX ready PIN conﬁguration */
 	payload[2] = 0x0;
 	payload[3] = 0x0;
 
-	/* Mode = 0x8D0 */
-	payload[4] = 0xD0;
-	payload[5] = 0x08;
-	payload[6] = 0x0;
-	payload[7] = 0x0;
+	/* Port mode */
+	memcpy(payload + 4, (uint8_t *) &port_mode, 4);
 
 	/* Baud Rate */
 	payload[8] = baudrate;
@@ -81,15 +90,15 @@ void u_blox_get_cfg_prt_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum 
 	payload[10] = baudrate >> 16;
 	payload[11] = baudrate >> 24;
 
-	/* in_proto_mask = All proto enable */
-	payload[12] = 0x7;
-	payload[13] = 0x0;
+	/* In Proto Mask = All proto enable */
+	payload[12] = in_proto_mask;
+	payload[13] = in_proto_mask >> 8;
 
 	/* Out Proto Mask = All proto enable */
-	payload[14] = 0x23;
-	payload[15] = 0x0;
+	payload[14] = out_proto_mask;
+	payload[15] = out_proto_mask >> 8;
 
-	/* flags */
+	/* Flags */
 	payload[16] = 0x0;
 	payload[17] = 0x0;
 
@@ -100,12 +109,12 @@ void u_blox_get_cfg_prt_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum 
 			    payload_size);
 }
 
-void u_blox_get_cfg_rst_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t reset_mode)
+void u_blox_get_cfg_rst_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_t reset_mode)
 {
 	uint16_t payload_size = 4;
 	uint8_t payload[payload_size];
 
-	/* navBbrMask. */
+	/* navBbrMask (0x0000 for Hot start). */
 	payload[0] = 0x00;
 	payload[1] = 0x00;
 
@@ -118,20 +127,22 @@ void u_blox_get_cfg_rst_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_RST, payload,
 			    payload_size);
 }
-void u_blox_get_cfg_nav5_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size)
+
+void u_blox_get_cfg_nav5_get(uint8_t *ubx_frame, uint16_t *ubx_frame_size)
 {
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, 0);
 }
 
-void u_blox_get_cfg_nav5_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum gnss_mode g_mode,
-			     enum fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
+void u_blox_get_cfg_nav5_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, enum ubx_dynamic_model dyn_model,
+			     enum ubx_fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
 			     int8_t min_elev, uint16_t p_dop, uint16_t t_dop, uint16_t p_acc,
 			     uint16_t t_acc, uint8_t static_hold_thresh, uint8_t dgnss_timeout,
 			     uint8_t cno_thresh_num_svs, uint8_t cno_thresh,
-			     uint16_t static_hold_max_dist, enum utc_standard utc_strd)
+			     uint16_t static_hold_max_dist, enum ubx_utc_standard utc_strd)
 {
 	uint16_t payload_size = 36;
 	uint8_t payload[payload_size];
+
 	int8_t fixed_alt_le[4] = { 0 };
 	uint8_t fixed_alt_var_le[4] = { 0 };
 	uint8_t p_dop_le[2] = { 0 };
@@ -148,45 +159,36 @@ void u_blox_get_cfg_nav5_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, enum
 	TO_LITTLE_ENDIAN(t_acc, t_acc_le);
 	TO_LITTLE_ENDIAN(static_hold_max_dist, static_hold_max_dist_le);
 
-	payload[0] = 0xff;
+	/* Parameters bitmask (0xFF05 for selecting all parameters) */
+	payload[0] = 0xFF;
 	payload[1] = 0x05;
-	payload[2] = g_mode;
+
+	payload[2] = dyn_model;
 	payload[3] = f_mode;
-	payload[4] = fixed_alt_le[0];
-	payload[5] = fixed_alt_le[1];
-	payload[6] = fixed_alt_le[2];
-	payload[7] = fixed_alt_le[3];
-	payload[8] = fixed_alt_var_le[0];
-	payload[9] = fixed_alt_var_le[1];
-	payload[10] = fixed_alt_var_le[2];
-	payload[11] = fixed_alt_var_le[3];
+	memcpy(payload + 4, fixed_alt_le, 4);
+	memcpy(payload + 8, fixed_alt_var_le, 4);
 	payload[12] = min_elev;
-	payload[14] = p_dop_le[0];
-	payload[15] = p_dop_le[1];
-	payload[16] = t_dop_le[0];
-	payload[17] = t_dop_le[1];
-	payload[18] = p_acc_le[0];
-	payload[19] = p_acc_le[1];
-	payload[20] = t_acc_le[0];
-	payload[21] = t_acc_le[1];
+	memcpy(payload + 14, p_dop_le, 2);
+	memcpy(payload + 16, t_dop_le, 2);
+	memcpy(payload + 18, p_acc_le, 2);
+	memcpy(payload + 20, t_acc_le, 2);
 	payload[22] = static_hold_thresh;
 	payload[23] = dgnss_timeout;
 	payload[24] = cno_thresh_num_svs;
 	payload[25] = cno_thresh;
-	payload[28] = static_hold_max_dist_le[0];
-	payload[29] = static_hold_max_dist_le[1];
+	memcpy(payload + 28, static_hold_max_dist_le, 2);
 	payload[30] = utc_strd;
 
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, payload,
 			    payload_size);
 }
 
-void u_blox_get_cfg_gnss_get(uint8_t ubx_frame[], uint16_t *ubx_frame_size)
+void u_blox_get_cfg_gnss_get(uint8_t *ubx_frame, uint16_t *ubx_frame_size)
 {
 	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, 0);
 }
 
-void u_blox_get_cfg_gnss_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_ver,
+void u_blox_get_cfg_gnss_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_t msg_ver,
 			     uint8_t num_trk_ch_use, uint8_t *config_gnss, uint16_t config_size)
 {
 	uint16_t payload_size = (4 + (config_size));
@@ -202,7 +204,7 @@ void u_blox_get_cfg_gnss_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint
 			    payload_size);
 }
 
-void u_blox_get_cfg_msg_set(uint8_t ubx_frame[], uint16_t *ubx_frame_size, uint8_t msg_id,
+void u_blox_get_cfg_msg_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_t msg_id,
 			    uint8_t rate)
 {
 	uint16_t payload_size = 3;

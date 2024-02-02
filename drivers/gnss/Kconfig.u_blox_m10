@@ -1,12 +1,13 @@
 # Copyright 2024 NXP
 # SPDX-License-Identifier: Apache-2.0
 
+# Referred from the file "zephyr/drivers/gnss/Kconfig.generic".
+
 config GNSS_U_BLOX_M10
 	bool "U-BLOX M10 GNSS Module"
 	default y
 	depends on GNSS
 	depends on DT_HAS_U_BLOX_M10_ENABLED
-	select UART_INTERRUPT_DRIVEN
 	select MODEM_MODULES
 	select MODEM_BACKEND_UART
 	select MODEM_CHAT
@@ -14,7 +15,7 @@ config GNSS_U_BLOX_M10
 	select GNSS_PARSE
 	select GNSS_NMEA0183
 	select GNSS_NMEA0183_MATCH
-	select U_BLOX_PROTOCOL
+	select GNSS_U_BLOX_PROTOCOL
 	select UART_USE_RUNTIME_CONFIGURE
 	help
 		Enable U-BLOX M10 GNSS modem driver.

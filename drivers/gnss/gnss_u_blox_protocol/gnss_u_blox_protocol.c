@@ -205,17 +205,43 @@ int u_blox_cfg_gnss_get(uint8_t *ubx_frame, uint16_t ubx_frame_size)
 	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, 0);
 }
 
-int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_ver,
-			     uint8_t num_trk_ch_use, uint8_t *config_gnss, uint16_t config_size)
+static struct u_blox_cfg_gnss_set_data_config_block u_blox_cfg_gnss_set_data_config_block_default = {
+	.gnssId = 0x00,
+	.num_res_trk_ch = 0x08,
+	.max_num_trk_ch = 0x16,
+	.reserved0 = 0x00,
+	.flags = 0x00000000,
+};
+
+void u_blox_cfg_gnss_set_data_config_blocks_default(struct u_blox_cfg_gnss_set_data_config_block *config_blocks, uint8_t num_config_blocks)
 {
-	uint16_t payload_size = (4 + (config_size));
+	for (int i = 0; i < num_config_blocks; ++i) {
+		config_blocks[i] = u_blox_cfg_gnss_set_data_config_block_default;
+	}
+}
+
+void u_blox_cfg_gnss_set_data_default(struct u_blox_cfg_gnss_set_data *data, struct u_blox_cfg_gnss_set_data_config_block *config_blocks, uint8_t num_config_blocks)
+{
+	data->msg_ver = 0x00;
+	data->num_trk_ch_hw = 0x31;
+	data->num_trk_ch_use = 0x31;
+	data->num_config_blocks = num_config_blocks;
+	data->config_blocks = config_blocks;
+
+	u_blox_cfg_gnss_set_data_config_blocks_default(config_blocks, num_config_blocks);
+}
+
+int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_gnss_set_data *data)
+{
+	uint16_t payload_size = (4 + (data->num_config_blocks));
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
-	payload[0] = msg_ver;
-	payload[2] = num_trk_ch_use;
-	payload[3] = config_size / 8;
+	payload[0] = data->msg_ver;
+	payload[1] = data->num_trk_ch_hw;
+	payload[2] = data->num_trk_ch_use;
+	payload[3] = data->num_config_blocks;
 
-	memcpy(payload + 4, config_gnss, config_size);
+	memcpy(payload + 4, data->config_blocks, data->num_config_blocks * sizeof(struct u_blox_cfg_gnss_set_data_config_block));
 
 	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS,
 			    payload_size);

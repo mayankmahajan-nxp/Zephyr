@@ -130,8 +130,50 @@ void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *data);
 int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_nav5_set_data *data);
 
 int u_blox_cfg_gnss_get(uint8_t *ubx_frame, uint16_t ubx_frame_size);
-int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_ver,
-			     uint8_t num_trk_ch_use, uint8_t *config, uint16_t config_size);
+
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_ENABLE			BIT(0)
+#define UBX_SGN_CNF_SHIFT						16
+/* When gnssId is 0 (GPS) */
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L1C_A	0x01 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L2C	0x10 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L5	0x20 << UBX_SGN_CNF_SHIFT
+/* When gnssId is 1 (SBAS) */
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_SBAS_L1C_A	0x01 << UBX_SGN_CNF_SHIFT
+/* When gnssId is 2 (Galileo) */
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_Galileo_E1	0x01 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_Galileo_E5A	0x10 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_Galileo_E5B	0x20 << UBX_SGN_CNF_SHIFT
+/* When gnssId is 3 (BeiDou) */
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_BeiDou_B1I	0x01 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_BeiDou_B2I	0x10 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_BeiDou_B2A	0x80 << UBX_SGN_CNF_SHIFT
+/* When gnssId is 4 (IMES) */
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_IMES_L1	0x01 << UBX_SGN_CNF_SHIFT
+/* When gnssId is 5 (QZSS) */
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_QZSS_L1C_A	0x01 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_QZSS_L1S	0x04 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_QZSS_L2C	0x10 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_QZSS_L5	0x20 << UBX_SGN_CNF_SHIFT
+/* When gnssId is 6 (GLONASS) */
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GLONASS_L1	0x01 << UBX_SGN_CNF_SHIFT
+#define U_BLOX_CFG_GNSS_SET_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GLONASS_L2	0x10 << UBX_SGN_CNF_SHIFT
+
+struct u_blox_cfg_gnss_set_data_config_block {
+	uint8_t gnssId;
+	uint8_t num_res_trk_ch;
+	uint8_t max_num_trk_ch;
+	uint8_t reserved0;
+	uint32_t flags;
+};
+struct u_blox_cfg_gnss_set_data {
+	uint8_t msg_ver;
+	uint8_t num_trk_ch_hw;
+	uint8_t num_trk_ch_use;
+	uint8_t num_config_blocks;
+	struct u_blox_cfg_gnss_set_data_config_block *config_blocks;
+};
+void u_blox_cfg_gnss_set_data_default(struct u_blox_cfg_gnss_set_data *data, struct u_blox_cfg_gnss_set_data_config_block *config_blocks, uint8_t num_config_blocks);
+int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_gnss_set_data *data);
 
 struct u_blox_cfg_msg_set_data {
 	uint8_t message_class;

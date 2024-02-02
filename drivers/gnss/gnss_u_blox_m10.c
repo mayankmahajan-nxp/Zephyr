@@ -245,7 +245,8 @@ static int u_blox_m10_ubx_cfg_prt_get_send(const struct device *dev, uint16_t re
 	uint16_t ubx_frame_len;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	ubx_frame_len = u_blox_cfg_prt_get(script_inst.ubx_frame, ubx_frame_size, UBX_PORT_NUMBER_UART);
+	struct u_blox_cfg_prt_get_data data = { .port_id = UBX_PORT_NUMBER_UART };
+	ubx_frame_len = u_blox_cfg_prt_get(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -261,15 +262,13 @@ static int u_blox_m10_ubx_cfg_prt_set_send(const struct device *dev, uint32_t ba
 
 	uint16_t ubx_frame_size = U_BLOX_MESSAGE_LEN_MAX;
 	uint8_t ubx_frame[ubx_frame_size];
-	uint16_t ubx_frame_len, in_proto_mask, out_proto_mask;
+	uint16_t ubx_frame_len;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	in_proto_mask = UBX_CFG_PRT_IN_PROTO_UBX | UBX_CFG_PRT_IN_PROTO_NMEA |
-			UBX_CFG_PRT_IN_PROTO_RTCM;
-	out_proto_mask = UBX_CFG_PRT_OUT_PROTO_UBX | UBX_CFG_PRT_OUT_PROTO_NMEA |
-			 UBX_CFG_PRT_OUT_PROTO_RTCM3;
-	ubx_frame_len = u_blox_cfg_prt_set(script_inst.ubx_frame, ubx_frame_size, UBX_PORT_NUMBER_UART,
-			       baudrate, in_proto_mask, out_proto_mask);
+	struct u_blox_cfg_prt_set_data data;
+	u_blox_cfg_prt_set_data_default(&data);
+	data.baudrate = 9600;
+	ubx_frame_len = u_blox_cfg_prt_set(script_inst.ubx_frame, ubx_frame_size, &data);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;

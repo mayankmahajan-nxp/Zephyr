@@ -64,11 +64,23 @@ extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 #define UBX_CFG_GNSS_GET_PAYLOAD_SIZE	0
 #define UBX_CFG_MSG_SET_PAYLOAD_SIZE	3
 
-int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size,
-			    enum ubx_port_number port_id);
-int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size,
-			    enum ubx_port_number port_id, uint32_t baudrate, uint16_t in_proto_mask,
-			    uint16_t out_proto_mask);
+struct u_blox_cfg_prt_get_data {
+	uint8_t port_id;
+};
+
+struct u_blox_cfg_prt_set_data {
+	uint8_t port_id;
+	uint16_t tx_ready_pin_conf;
+	uint32_t port_mode;
+	uint32_t baudrate;
+	uint16_t in_proto_mask;
+	uint16_t out_proto_mask;
+	uint16_t flags;
+};
+
+int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_get_data *data);
+void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data);
+int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_set_data *data);
 
 int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t reset_mode);
 

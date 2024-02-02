@@ -54,20 +54,31 @@ static int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 	return ubx_frame_len;
 }
 
-int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, enum ubx_port_number port_id)
+int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_get_data *data)
 {
 	uint16_t payload_size = 1;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
-	payload[0] = port_id;
+	payload[0] = data->port_id;
 
 	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT,
 			    payload_size);
 }
 
-int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size,
-			    enum ubx_port_number port_id, uint32_t baudrate, uint16_t in_proto_mask,
-			    uint16_t out_proto_mask)
+void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data) {
+	data->port_id = UBX_PORT_NUMBER_UART;
+	data->tx_ready_pin_conf = 0U;
+	data->port_mode = UBX_CFG_PRT_PORT_MODE_CHAR_LEN_8 | UBX_CFG_PRT_PORT_MODE_PARITY_NONE |
+			  UBX_CFG_PRT_PORT_MODE_STOP_BITS_1;
+	data->baudrate = u_blox_baudrate[3];
+	data->in_proto_mask = UBX_CFG_PRT_IN_PROTO_UBX | UBX_CFG_PRT_IN_PROTO_NMEA |
+			      UBX_CFG_PRT_IN_PROTO_RTCM;
+	data->out_proto_mask = UBX_CFG_PRT_OUT_PROTO_UBX | UBX_CFG_PRT_OUT_PROTO_NMEA |
+			       UBX_CFG_PRT_OUT_PROTO_RTCM3;
+	data->flags = 0U;
+}
+
+int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_set_data *data)
 {
 	uint16_t payload_size = 20;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
@@ -77,38 +88,42 @@ int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 			     UBX_CFG_PRT_PORT_MODE_STOP_BITS_1;
 
 	/* Port identifier number */
-	payload[0] = port_id;
+	payload[0] = data->port_id;
 
 	/* Reserved0 */
-	payload[1] = 0x0;
+	payload[1] = 0x00;
 
 	/* TX ready PIN conﬁguration */
-	payload[2] = 0x0;
-	payload[3] = 0x0;
+	payload[2] = data->tx_ready_pin_conf;
+	payload[3] = data->tx_ready_pin_conf >> 8;
 
 	/* Port mode */
 	memcpy(payload + 4, (uint8_t *) &port_mode, 4);
 
 	/* Baud Rate */
-	payload[8] = baudrate;
-	payload[9] = baudrate >> 8;
-	payload[10] = baudrate >> 16;
-	payload[11] = baudrate >> 24;
+	payload[8] = data->baudrate;
+	payload[9] = data->baudrate >> 8;
+	payload[10] = data->baudrate >> 16;
+	payload[11] = data->baudrate >> 24;
+	for (int i = 0; i < 4; ++i) {
+		printk("%d %d\n", payload[8 + i], data->baudrate >> (8 * i));
+	}
 
 	/* In Proto Mask = All proto enable */
-	payload[12] = in_proto_mask;
-	payload[13] = in_proto_mask >> 8;
+	payload[12] = data->in_proto_mask;
+	payload[13] = data->in_proto_mask >> 8;
 
 	/* Out Proto Mask = All proto enable */
-	payload[14] = out_proto_mask;
-	payload[15] = out_proto_mask >> 8;
+	payload[14] = data->out_proto_mask;
+	payload[15] = data->out_proto_mask >> 8;
 
 	/* Flags */
-	payload[16] = 0x0;
-	payload[17] = 0x0;
+	payload[16] = data->flags;
+	payload[17] = data->flags >> 8;
 
-	payload[18] = 0x0;
-	payload[19] = 0x0;
+	/* Reserved1 */
+	payload[18] = 0x00;
+	payload[19] = 0x00;
 
 	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT,
 			    payload_size);

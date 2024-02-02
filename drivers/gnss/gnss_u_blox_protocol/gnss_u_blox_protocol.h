@@ -21,6 +21,9 @@
 #define U_BLOX_MESSAGE_FOOTER_SIZE		2
 #define U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD	U_BLOX_MESSAGE_HEADER_SIZE + U_BLOX_MESSAGE_FOOTER_SIZE
 
+#define U_BLOX_PREAMBLE_SYNC_CHAR_1	0xB5
+#define U_BLOX_PREAMBLE_SYNC_CHAR_2	0x62
+
 #define U_BLOX_MESSAGE_LEN_MAX	264
 #define U_BLOX_PAYLOAD_LEN_MAX	256
 
@@ -63,6 +66,11 @@ extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 #define UBX_CFG_NAV5_SET_PAYLOAD_SIZE	36
 #define UBX_CFG_GNSS_GET_PAYLOAD_SIZE	0
 #define UBX_CFG_MSG_SET_PAYLOAD_SIZE	3
+
+
+int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
+				uint8_t message_class, uint8_t message_id,
+				void *data, uint16_t payload_size);
 
 struct u_blox_cfg_prt_get_data {
 	uint8_t port_id;

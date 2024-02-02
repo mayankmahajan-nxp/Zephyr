@@ -21,27 +21,71 @@ const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 	460800,
 };
 
-static int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
+int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 				uint8_t message_class, uint8_t message_id,
-				uint16_t payload_size)
+				void *data, uint16_t payload_size)
 {
+	int payload_len;
 	uint8_t ckA = 0;
 	uint8_t ckB = 0;
 
-	uint16_t ubx_frame_len = U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD + payload_size;
+	// uint16_t ubx_frame_len = U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD + payload_size;
 
-	printk("ubx frame size = %d, ubx frame len = %d.\n", ubx_frame_size, ubx_frame_len);
-	if (ubx_frame_size < ubx_frame_len) {
+	// printk("ubx frame size = %d, ubx frame len = %d.\n", ubx_frame_size, ubx_frame_len);
+	if (ubx_frame_size < U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD) {
+		return -1;
+	} else if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
 		return -1;
 	}
 
-	ubx_frame[0] = 0xb5;
-	ubx_frame[1] = 0x62;
+	ubx_frame[0] = U_BLOX_PREAMBLE_SYNC_CHAR_1;
+	ubx_frame[1] = U_BLOX_PREAMBLE_SYNC_CHAR_2;
 	ubx_frame[2] = message_class;
 	ubx_frame[3] = message_id;
-	ubx_frame[4] = (payload_size & 0xff);
-	ubx_frame[5] = (payload_size >> 8);
+
+	switch (message_class) {
+	case UBX_CLASS_CFG:
+		switch (message_id) {
+		case UBX_CFG_PRT:
+			switch (payload_size) {
+			case 1:
+				payload_len = u_blox_cfg_prt_get(ubx_frame, ubx_frame_size, data);
+				break;
+			case 20:
+				payload_len = u_blox_cfg_prt_set(ubx_frame, ubx_frame_size, data);
+				break;
+			default:
+				payload_len = 0;
+				break;
+			}
+			break;
+		case UBX_CFG_NAV5:
+			switch (payload_size) {
+			case 36:
+				payload_len = u_blox_cfg_nav5_set(ubx_frame, ubx_frame_size, data);
+				break;
+			default:
+				payload_len = 0;
+				break;
+			}
+			break;
+		default:
+			return -1;
+		}
+		break;
+	default:
+		return -1;
+	}
+
+	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_len) {
+		return -1;
+	}
 	// memcpy(&ubx_frame[6], payload, payload_size);
+
+	ubx_frame[4] = (payload_len & 0xff);
+	ubx_frame[5] = (payload_len >> 8);
+
+	uint16_t ubx_frame_len = payload_len + U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD;
 
 	for (unsigned int i = 2; i < (ubx_frame_len - 2); i++) {
 		ckA += ubx_frame[i];
@@ -61,12 +105,16 @@ void u_blox_cfg_prt_get_data_default(struct u_blox_cfg_prt_get_data *data) {
 int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_get_data *data)
 {
 	uint16_t payload_size = 1;
+
+	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
+		return -1;
+	}
+
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
 	payload[0] = data->port_id;
 
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT,
-			    payload_size);
+	return payload_size;
 }
 
 void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data) {
@@ -85,6 +133,11 @@ void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data) {
 int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_prt_set_data *data)
 {
 	uint16_t payload_size = 20;
+
+	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
+		return -1;
+	}
+
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
 	/* Port identifier number */
@@ -115,7 +168,8 @@ int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blo
 	payload[18] = 0x00;
 	payload[19] = 0x00;
 
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload_size);
+	// return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload_size);
+	return payload_size;
 }
 
 void u_blox_cfg_rst_set_data_default(struct u_blox_cfg_rst_set_data *data) {
@@ -126,6 +180,11 @@ void u_blox_cfg_rst_set_data_default(struct u_blox_cfg_rst_set_data *data) {
 int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blox_cfg_rst_set_data *data)
 {
 	uint16_t payload_size = 4;
+
+	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
+		return -1;
+	}
+
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
 	/* navBbrMask. */
@@ -137,13 +196,15 @@ int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blo
 	/* reserved1. */
 	payload[3] = 0x00;
 
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_RST,
-			    payload_size);
+	return payload_size;
+	// return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_RST,
+			//     payload_size);
 }
 
 int u_blox_cfg_nav5_get(uint8_t *ubx_frame, uint16_t ubx_frame_size)
 {
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, 0);
+	return 0;
+	// return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, 0);
 }
 
 void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *data) {
@@ -177,6 +238,9 @@ int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_bl
 	uint16_t payload_size = 36;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
+	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
+		return -1;
+	}
 	memcpy(payload, &(data->mask), 2);
 
 	memcpy(payload + 2, &(data->dyn_model), 1);
@@ -196,13 +260,15 @@ int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_bl
 	memcpy(payload + 28, &(data->static_hold_dist_threshold), 2);
 	payload[30] = data->utc_standard;
 
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5,
-			    payload_size);
+	return payload_size;
+	// return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5,
+			//     payload_size);
 }
 
 int u_blox_cfg_gnss_get(uint8_t *ubx_frame, uint16_t ubx_frame_size)
 {
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, 0);
+	return 0;
+	// return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, 0);
 }
 
 static struct u_blox_cfg_gnss_set_data_config_block u_blox_cfg_gnss_set_data_config_block_default = {
@@ -231,6 +297,9 @@ int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_bl
 	uint16_t payload_size = (4 + (data->num_config_blocks * sizeof(struct u_blox_cfg_gnss_set_data_config_block)));
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
+	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
+		return -1;
+	}
 	payload[0] = data->msg_ver;
 	payload[1] = data->num_trk_ch_hw;
 	payload[2] = data->num_trk_ch_use;
@@ -238,8 +307,9 @@ int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_bl
 
 	memcpy(payload + 4, data->config_blocks, data->num_config_blocks * sizeof(struct u_blox_cfg_gnss_set_data_config_block));
 
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS,
-			    payload_size);
+	return payload_size;
+	// return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS,
+			//     payload_size);
 }
 
 void u_blox_cfg_msg_set_data_default(struct u_blox_cfg_msg_set_data *data)
@@ -254,10 +324,14 @@ int u_blox_cfg_msg_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, struct u_blo
 	uint16_t payload_size = 3;
 	uint8_t *payload = ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE;
 
+	if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
+		return -1;
+	}
 	payload[0] = data->message_class;
 	payload[1] = data->message_id;
 	payload[2] = data->rate;
 
-	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_MSG,
-			    payload_size);
+	return payload_size;
+	// return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_MSG,
+			//     payload_size);
 }

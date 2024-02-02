@@ -245,7 +245,7 @@ static int u_blox_m10_ubx_cfg_prt_get_send(const struct device *dev, uint16_t re
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
 	struct u_blox_cfg_prt_get_data data = { .port_id = UBX_PORT_NUMBER_UART };
-	ubx_frame_len = u_blox_cfg_prt_get(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, &data, 1);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -267,7 +267,7 @@ static int u_blox_m10_ubx_cfg_prt_set_send(const struct device *dev, uint32_t ba
 	struct u_blox_cfg_prt_set_data data;
 	u_blox_cfg_prt_set_data_default(&data);
 	data.baudrate = 9600;
-	ubx_frame_len = u_blox_cfg_prt_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data, UBX_CLASS_CFG, UBX_CFG_PRT, 20);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -289,7 +289,7 @@ static int u_blox_m10_ubx_cfg_rst_set_send(const struct device *dev, uint8_t res
 		. nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START,
 		.reset_mode = reset_mode
 	};
-	ubx_frame_len = u_blox_cfg_rst_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data, UBX_CLASS_CFG, UBX_CFG_RST, 4);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -395,67 +395,67 @@ static int u_blox_m10_configure_messages(const struct device *dev)
 
 	data.message_id = UBX_NMEA_GGA;
 	data.rate = 1;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_RMC;
 	data.rate = 1;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_GSV;
 	data.rate = 1;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_DTM;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_GBS;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_GLL;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_GNS;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_GRS;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_GSA;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_GST;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_VLW;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_VTG;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	data.message_id = UBX_NMEA_ZDA;
 	data.rate = 0;
-	ubx_frame_len = u_blox_cfg_msg_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data), UBX_CLASS_CFG, UBX_CFG_MSG, 3;
 	ret |= u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 
 	if (ret < 0) {
@@ -505,7 +505,7 @@ static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_na
 	struct u_blox_cfg_nav5_set_data data;
 	u_blox_cfg_nav5_set_data_default(&data);
 	data.dyn_model = d_model;
-	ubx_frame_len = u_blox_cfg_nav5_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data, UBX_CLASS_CFG, UBX_CFG_NAV5, 36);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -523,7 +523,7 @@ static int u_blox_m10_get_navigation_mode(const struct device *dev, enum gnss_na
 	uint16_t ubx_frame_len;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	ubx_frame_len = u_blox_cfg_nav5_get(script_inst.ubx_frame, ubx_frame_size);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, NULL, UBX_CLASS_CFG, UBX_CFG_NAV5, 0);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	if (ret < 0) {
 		return ret;
@@ -618,7 +618,7 @@ static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems
 	uint16_t ubx_frame_len;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	ubx_frame_len = u_blox_cfg_gnss_set(script_inst.ubx_frame, ubx_frame_size, &data);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, &data, UBX_CLASS_CFG, UBX_CFG_GNSS, (4 + (data.num_config_blocks * sizeof(struct u_blox_cfg_gnss_set_data_config_block)));
 	for (int i = 0; i < ubx_frame_len; ++i)
 		printk("%x ", ubx_frame[i]);
 	printk("(%d)\n", ubx_frame_len);
@@ -639,7 +639,7 @@ static int u_blox_m10_get_enabled_systems(const struct device *dev, gnss_systems
 	uint16_t ubx_frame_len;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frame, ubx_frame_len, retry_count);
-	ubx_frame_len = u_blox_cfg_gnss_get(script_inst.ubx_frame, ubx_frame_size);
+	ubx_frame_len = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, NULL, UBX_CLASS_CFG, UBX_CFG_GNSS, 0);
 	ret = u_blox_m10_modem_ubx_script_send(dev, &script_inst);
 	for (int i = 0; i < ubx_frame_len; ++i)
 		printk("%x ", ubx_frame[i]);
@@ -696,6 +696,15 @@ static struct gnss_driver_api gnss_api = {
 static int u_blox_m10_configure(const struct device *dev)
 {
 	int ret;
+
+	// temp.
+	// ret = u_blox_m10_ubx_cfg_prt_get_send(dev, 7);
+	// if (ret < 0) {
+	// 	LOG_ERR("u_blox_m10_ubx_cfg_prt_get_send failed %d. exiting.", ret);
+	// 	goto out;
+	// }
+	// printk("success.\n");
+	// return -1;
 
 	u_blox_m10_configure_baudrate_prerequisite(dev);
 

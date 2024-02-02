@@ -59,10 +59,41 @@ int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 				break;
 			}
 			break;
+		case UBX_CFG_RST:
+			switch (payload_size) {
+			case 4:
+				payload_len = u_blox_cfg_rst_set(ubx_frame, ubx_frame_size, data);
+				break;
+			default:
+				payload_len = 0;
+				break;
+			}
+			break;
 		case UBX_CFG_NAV5:
 			switch (payload_size) {
 			case 36:
 				payload_len = u_blox_cfg_nav5_set(ubx_frame, ubx_frame_size, data);
+				break;
+			default:
+				payload_len = 0;
+				break;
+			}
+			break;
+		case UBX_CFG_GNSS:
+			switch (payload_size) {
+			case 0:
+				payload_len = 0;
+				break;
+			default:
+				payload_len = u_blox_cfg_gnss_set(ubx_frame, ubx_frame_size, data);
+				break;
+			}
+			break;
+
+		case UBX_CFG_MSG:
+			switch (payload_size) {
+			case 3:
+				payload_len = u_blox_cfg_msg_set(ubx_frame, ubx_frame_size, data);
 				break;
 			default:
 				payload_len = 0;

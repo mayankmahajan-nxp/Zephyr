@@ -21,7 +21,7 @@ const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 	460800,
 };
 
-static void u_blox_create_frame(uint8_t *ubx_frame, uint16_t *ubx_frame_size,
+static int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 				uint8_t message_class, uint8_t message_id,
 				const uint8_t *payload, uint16_t payload_size)
 {
@@ -30,7 +30,9 @@ static void u_blox_create_frame(uint8_t *ubx_frame, uint16_t *ubx_frame_size,
 	uint8_t ckA = 0;
 	uint8_t ckB = 0;
 
-	*ubx_frame_size = frame_length_without_payload + payload_size;
+	uint16_t ubx_frame_len = frame_length_without_payload + payload_size;
+
+	printk("ubx frame size = %d, ubx frame len = %d.\n", ubx_frame_size, ubx_frame_len);
 
 	ubx_frame[0] = 0xb5;
 	ubx_frame[1] = 0x62;
@@ -40,27 +42,29 @@ static void u_blox_create_frame(uint8_t *ubx_frame, uint16_t *ubx_frame_size,
 	ubx_frame[5] = (payload_size >> 8);
 	memcpy(&ubx_frame[6], payload, payload_size);
 
-	for (unsigned int i = 2; i < (*ubx_frame_size - 2); i++) {
+	for (unsigned int i = 2; i < (ubx_frame_len - 2); i++) {
 		ckA += ubx_frame[i];
 		ckB += ckA;
 	}
 
-	ubx_frame[*ubx_frame_size - 2] = ckA;
-	ubx_frame[*ubx_frame_size - 1] = ckB;
+	ubx_frame[ubx_frame_len - 2] = ckA;
+	ubx_frame[ubx_frame_len - 1] = ckB;
+
+	return ubx_frame_len;
 }
 
-void u_blox_get_cfg_prt_get(uint8_t *ubx_frame, uint16_t *ubx_frame_size, enum ubx_port_number port_id)
+int u_blox_cfg_prt_get(uint8_t *ubx_frame, uint16_t ubx_frame_size, enum ubx_port_number port_id)
 {
 	uint16_t payload_size = 1;
 	uint8_t payload[payload_size];
 
 	payload[0] = port_id;
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload,
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload,
 			    payload_size);
 }
 
-void u_blox_get_cfg_prt_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size,
+int u_blox_cfg_prt_set(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 			    enum ubx_port_number port_id, uint32_t baudrate, uint16_t in_proto_mask,
 			    uint16_t out_proto_mask)
 {
@@ -105,11 +109,11 @@ void u_blox_get_cfg_prt_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size,
 	payload[18] = 0x0;
 	payload[19] = 0x0;
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload,
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_PRT, payload,
 			    payload_size);
 }
 
-void u_blox_get_cfg_rst_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_t reset_mode)
+int u_blox_cfg_rst_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t reset_mode)
 {
 	uint16_t payload_size = 4;
 	uint8_t payload[payload_size];
@@ -124,16 +128,16 @@ void u_blox_get_cfg_rst_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_
 	/* reserved1. */
 	payload[3] = 0x00;
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_RST, payload,
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_RST, payload,
 			    payload_size);
 }
 
-void u_blox_get_cfg_nav5_get(uint8_t *ubx_frame, uint16_t *ubx_frame_size)
+int u_blox_cfg_nav5_get(uint8_t *ubx_frame, uint16_t ubx_frame_size)
 {
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, 0);
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, 0);
 }
 
-void u_blox_get_cfg_nav5_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, enum ubx_dynamic_model dyn_model,
+int u_blox_cfg_nav5_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, enum ubx_dynamic_model dyn_model,
 			     enum ubx_fix_mode f_mode, int32_t fixed_alt, uint32_t fixed_alt_var,
 			     int8_t min_elev, uint16_t p_dop, uint16_t t_dop, uint16_t p_acc,
 			     uint16_t t_acc, uint8_t static_hold_thresh, uint8_t dgnss_timeout,
@@ -179,16 +183,16 @@ void u_blox_get_cfg_nav5_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, enum 
 	memcpy(payload + 28, static_hold_max_dist_le, 2);
 	payload[30] = utc_strd;
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, payload,
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, payload,
 			    payload_size);
 }
 
-void u_blox_get_cfg_gnss_get(uint8_t *ubx_frame, uint16_t *ubx_frame_size)
+int u_blox_cfg_gnss_get(uint8_t *ubx_frame, uint16_t ubx_frame_size)
 {
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, 0);
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, 0);
 }
 
-void u_blox_get_cfg_gnss_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_t msg_ver,
+int u_blox_cfg_gnss_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_ver,
 			     uint8_t num_trk_ch_use, uint8_t *config_gnss, uint16_t config_size)
 {
 	uint16_t payload_size = (4 + (config_size));
@@ -200,11 +204,11 @@ void u_blox_get_cfg_gnss_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8
 
 	memcpy(payload + 4, config_gnss, config_size);
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, payload,
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, payload,
 			    payload_size);
 }
 
-void u_blox_get_cfg_msg_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_t msg_id,
+int u_blox_cfg_msg_set(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_id,
 			    uint8_t rate)
 {
 	uint16_t payload_size = 3;
@@ -214,6 +218,6 @@ void u_blox_get_cfg_msg_set(uint8_t *ubx_frame, uint16_t *ubx_frame_size, uint8_
 	payload[1] = msg_id;
 	payload[2] = rate;
 
-	u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_MSG, payload,
+	return u_blox_create_frame(ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_MSG, payload,
 			    payload_size);
 }

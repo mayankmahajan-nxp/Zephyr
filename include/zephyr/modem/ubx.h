@@ -28,6 +28,19 @@ extern "C" {
  * @{
  */
 
+#define UBX_ACK_IDX			3
+#define UBX_PREAMBLE_SYNC_CHAR_1	0xB5
+#define UBX_PREAMBLE_SYNC_CHAR_2	0x62
+
+#define UBX_FRM_CLASS_IDX		2
+#define UBX_FRM_CLASS_ACK		5
+
+#define UBX_FRM_HEADER_LEN		6
+#define UBX_FRM_FOOTER_LEN		2
+#define UBX_FRM_LEN_WITHOUT_PAYLOAD	UBX_FRM_HEADER_LEN + UBX_FRM_FOOTER_LEN
+#define UBX_FRM_PAYLOAD_LEN_L_IDX	4
+#define UBX_FRM_PAYLOAD_LEN_H_IDX	5
+
 struct modem_ubx_script {
 	uint8_t *ubx_frame;
 	uint16_t *ubx_frame_size;

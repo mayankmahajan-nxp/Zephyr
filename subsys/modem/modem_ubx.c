@@ -16,8 +16,19 @@ LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 
 #define MODEM_UBX_STATE_ATTACHED_BIT		(0)
 
-static bool received_ubx_ack_start_1;
-static bool received_ubx_ack_start_2;
+static bool received_ubx_preamble_sync_chars;
+// static bool received_ubx_frame_get_response;
+// static bool received_ubx_frame_preamble_sync_char_2;
+
+void modem_ubx_reset_parser(struct modem_ubx *ubx)
+{
+	received_ubx_preamble_sync_chars = false;
+	// received_ubx_frame_get_response = false;
+	// received_ubx_frame_preamble_sync_char_1 = false;
+	// received_ubx_frame_preamble_sync_char_2 = false;
+	ubx->work_buf_len = 0;
+	ubx->supplementary_buf_len = 0;
+}
 
 int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_script *script)
 {
@@ -32,10 +43,11 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 	ubx->transmit_buf = script->ubx_frame;
 	ubx->transmit_buf_size = *script->ubx_frame_size;
 
-	received_ubx_ack_start_1 = false;
-	received_ubx_ack_start_2 = false;
-	ubx->work_buf_len = 0;
-	ubx->supplementary_buf_len = 0;
+	modem_ubx_reset_parser(ubx);
+	// received_ubx_frame_preamble_sync_char_1 = false;
+	// received_ubx_frame_preamble_sync_char_2 = false;
+	// ubx->work_buf_len = 0;
+	// ubx->supplementary_buf_len = 0;
 
 	k_work_submit(&ubx->send_work);
 
@@ -48,7 +60,7 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 
 	if (ret < 0) {
 		return ret;
-	} else if (ubx->work_buf[3] == 0) {
+	} else if (ubx->work_buf[UBX_ACK_IDX] == 0) {
 		return -1;
 	} else {
 		return 0;
@@ -59,13 +71,13 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *scr
 {
 	int ret;
 
+	if (atomic_test_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == false) {
+		return -EPERM;
+	}
+
 	ret = k_sem_take(&ubx->script_running_sem, K_FOREVER);
 	if (ret < 0) {
 		return ret;
-	}
-
-	if (atomic_test_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == false) {
-		return -EPERM;
 	}
 
 	for (int i = 0; i < script->retry_count; ++i) {
@@ -75,6 +87,7 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *scr
 			break;
 		}
 	}
+
 	if (ret < 0) {
 		goto out;
 	}
@@ -102,16 +115,14 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 	ret = modem_pipe_transmit(ubx->pipe, ubx->transmit_buf, ubx->transmit_buf_size);
 	if (ret < ubx->transmit_buf_size) {
-		LOG_ERR("modem_pipe_transmit failed %d.", ret);
+		LOG_ERR("modem_pipe_transmit failed. returned %d.", ret);
 		return;
 	}
 }
 
-static uint16_t received_ubx_msg_len;
-
-static int modem_ubx_process_received_ubx(struct modem_ubx *ubx)
+static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
-	if (ubx->work_buf[2] == 5) {
+	if (ubx->work_buf[UBX_FRM_CLASS_IDX] == UBX_FRM_CLASS_ACK) {
 		k_sem_give(&ubx->script_stopped_sem);
 		return 0;
 	}
@@ -119,38 +130,41 @@ static int modem_ubx_process_received_ubx(struct modem_ubx *ubx)
 	memcpy(ubx->supplementary_buf, ubx->work_buf, ubx->work_buf_len);
 	ubx->supplementary_buf_len = ubx->work_buf_len;
 
-	received_ubx_ack_start_1 = false;
-	received_ubx_ack_start_2 = false;
+	// received_ubx_frame_preamble_sync_char_1 = false;
+	// received_ubx_frame_preamble_sync_char_2 = false;
+	received_ubx_preamble_sync_chars = false;
 
 	return -1;
 }
 
 static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 {
-	if (!received_ubx_ack_start_1 || !received_ubx_ack_start_2) {
-		if (byte == 0xB5) {
-			received_ubx_ack_start_1 = true;
-		}
-		if (byte == 0x62 && received_ubx_ack_start_1) {
-			received_ubx_ack_start_2 = true;
-			ubx->work_buf[0] = 0xB5;
-			ubx->work_buf[1] = 0x62;
+	static uint8_t byte_prev;
+	static uint16_t received_ubx_frame_len;
+
+	if (received_ubx_preamble_sync_chars == false) {
+		if (byte_prev == UBX_PREAMBLE_SYNC_CHAR_1 && byte == UBX_PREAMBLE_SYNC_CHAR_2) {
+			received_ubx_preamble_sync_chars = true;
+			ubx->work_buf[0] = UBX_PREAMBLE_SYNC_CHAR_1;
+			ubx->work_buf[1] = UBX_PREAMBLE_SYNC_CHAR_2;
 			ubx->work_buf_len = 2;
 		}
 	} else {
-		if (received_ubx_ack_start_1 && received_ubx_ack_start_2) {
-			ubx->work_buf[ubx->work_buf_len] = byte;
-			++ubx->work_buf_len;
+		ubx->work_buf[ubx->work_buf_len] = byte;
+		++ubx->work_buf_len;
+
+		if (ubx->work_buf_len == UBX_FRM_HEADER_LEN) {
+			received_ubx_frame_len = (ubx->work_buf[UBX_FRM_PAYLOAD_LEN_L_IDX] |
+						 ubx->work_buf[UBX_FRM_PAYLOAD_LEN_H_IDX] << 8) +
+						 UBX_FRM_LEN_WITHOUT_PAYLOAD;
 		}
 
-		if (ubx->work_buf_len == 6) {
-			received_ubx_msg_len = (ubx->work_buf[4] | ubx->work_buf[5] << 8) + 8;
-		}
-
-		if (ubx->work_buf_len == received_ubx_msg_len) {
-			return modem_ubx_process_received_ubx(ubx);
+		if (ubx->work_buf_len == received_ubx_frame_len) {
+			return modem_ubx_process_received_ubx_frame(ubx);
 		}
 	}
+
+	byte_prev = byte;
 
 	return -1;
 }
@@ -203,6 +217,7 @@ void modem_ubx_release(struct modem_ubx *ubx)
 	k_sem_reset(&ubx->script_running_sem);
 	ubx->work_buf_len = 0;
 	ubx->supplementary_buf_len = 0;
+	modem_ubx_reset_parser(ubx);
 	ubx->pipe = NULL;
 }
 

@@ -64,7 +64,7 @@ extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 #define UBX_CFG_RST_SET_PAYLOAD_SIZE		4
 #define UBX_CFG_NAV5_SET_PAYLOAD_SIZE		36
 #define UBX_CFG_MSG_SET_PAYLOAD_SIZE		3
-#define UBX_CFG_GNSS_SET_PAYLOAD_INIT_SIZE			4
+#define UBX_CFG_GNSS_SET_PAYLOAD_INIT_SIZE		4
 #define UBX_CFG_GNSS_SET_PAYLOAD_CFG_BLOCK_SIZE		8
 
 int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,

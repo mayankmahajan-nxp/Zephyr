@@ -17,10 +17,10 @@
 
 #define U_BLOX_BAUDRATE_COUNT			8
 
-#define U_BLOX_FRM_HEADER_SIZE			6
-#define U_BLOX_FRM_FOOTER_SIZE			2
-#define U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD		U_BLOX_FRM_HEADER_SIZE + U_BLOX_FRM_FOOTER_SIZE
-#define U_BLOX_FRM_SIZE(payload_size)		payload_size + U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD
+#define U_BLOX_FRM_HEADER_SZ			6
+#define U_BLOX_FRM_FOOTER_SZ			2
+#define U_BLOX_FRM_SZ_WITHOUT_PAYLOAD		U_BLOX_FRM_HEADER_SZ + U_BLOX_FRM_FOOTER_SZ
+#define U_BLOX_FRM_SZ(payload_size)		payload_size + U_BLOX_FRM_SZ_WITHOUT_PAYLOAD
 
 #define U_BLOX_PREAMBLE_SYNC_CHAR_1		0xB5
 #define U_BLOX_PREAMBLE_SYNC_CHAR_2		0x62
@@ -29,8 +29,8 @@
 #define U_BLOX_PREAMBLE_SYNC_CHAR_2_IDX		1
 #define U_BLOX_FRM_MSG_CLASS_IDX		2
 #define U_BLOX_FRM_MSG_ID_IDX			3
-#define U_BLOX_FRM_PAYLOAD_SIZE_L_IDX		4
-#define U_BLOX_FRM_PAYLOAD_SIZE_H_IDX		5
+#define U_BLOX_FRM_PAYLOAD_SZ_L_IDX		4
+#define U_BLOX_FRM_PAYLOAD_SZ_H_IDX		5
 #define U_BLOX_FRM_PAYLOAD_IDX			6
 
 #define U_BLOX_CHECKSUM_START_IDX		2
@@ -38,11 +38,11 @@
 #define U_BLOX_CHECKSUM_A_IDX_FROM_END		2
 #define U_BLOX_CHECKSUM_B_IDX_FROM_END		1
 
-#define U_BLOX_FRM_SIZE_MAX			264
-#define U_BLOX_PAYLOAD_SIZE_MAX			256
-#define U_BLOX_FRM_HEADER_SIZE			6
-#define U_BLOX_FRM_FOOTER_SIZE			2
-#define U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD	U_BLOX_FRM_HEADER_SIZE + U_BLOX_FRM_FOOTER_SIZE
+#define U_BLOX_FRM_SZ_MAX			264
+#define U_BLOX_PAYLOAD_SZ_MAX			256
+#define U_BLOX_FRM_HEADER_SZ			6
+#define U_BLOX_FRM_FOOTER_SZ			2
+#define U_BLOX_FRM_SZ_WO_PAYLOAD		U_BLOX_FRM_HEADER_SZ + U_BLOX_FRM_FOOTER_SZ
 
 #define U_BLOX_CFG_RST_WAIT_MS			8000
 
@@ -75,13 +75,21 @@ extern const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT];
 #define UBX_CFG_PRT_PORT_MODE_STOP_BITS_2		BIT(13)
 #define UBX_CFG_PRT_PORT_MODE_STOP_BITS_HALF		BIT(12) | BIT(13)
 
-#define UBX_CFG_PRT_POLL_PAYLOAD_SIZE			1
-#define UBX_CFG_PRT_SET_PAYLOAD_SIZE			20
-#define UBX_CFG_RST_PAYLOAD_SIZE			4
-#define UBX_CFG_NAV5_PAYLOAD_SIZE			36
-#define UBX_CFG_MSG_PAYLOAD_SIZE			3
-#define UBX_CFG_GNSS_PAYLOAD_INIT_SIZE		4
-#define UBX_CFG_GNSS_PAYLOAD_CFG_BLOCK_SIZE		8
+#define UBX_CFG_PRT_POLL_PAYLOAD_SZ	1
+#define UBX_CFG_PRT_POLL_FRM_SZ		U_BLOX_FRM_SZ_WO_PAYLOAD + UBX_CFG_PRT_POLL_PAYLOAD_SZ
+#define UBX_CFG_PRT_SET_PAYLOAD_SZ	20
+#define UBX_CFG_PRT_SET_FRM_SZ		U_BLOX_FRM_SZ_WO_PAYLOAD + UBX_CFG_PRT_SET_PAYLOAD_SZ
+#define UBX_CFG_RST_PAYLOAD_SZ		4
+#define UBX_CFG_RST_FRM_SZ		U_BLOX_FRM_SZ_WO_PAYLOAD + UBX_CFG_RST_PAYLOAD_SZ
+#define UBX_CFG_NAV5_PAYLOAD_SZ		36
+#define UBX_CFG_NAV5_FRM_SZ		U_BLOX_FRM_SZ_WO_PAYLOAD + UBX_CFG_NAV5_PAYLOAD_SZ
+#define UBX_CFG_MSG_PAYLOAD_SZ		3
+#define UBX_CFG_MSG_FRM_SZ		U_BLOX_FRM_SZ_WO_PAYLOAD + UBX_CFG_MSG_PAYLOAD_SZ
+#define UBX_CFG_GNSS_PAYLOAD_INIT_SZ	4
+#define UBX_CFG_GNSS_PAYLOAD_CFG_BLK_SZ	8
+#define UBX_CFG_GNSS_PAYLOAD_SZ(n)	\
+	UBX_CFG_GNSS_PAYLOAD_INIT_SZ + UBX_CFG_GNSS_PAYLOAD_CFG_BLK_SZ * n
+#define UBX_CFG_GNSS_FRM_SZ(n)		U_BLOX_FRM_SZ_WO_PAYLOAD + UBX_CFG_GNSS_PAYLOAD_SZ(n)
 
 int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 			uint8_t message_class, uint8_t message_id,
@@ -105,6 +113,10 @@ struct u_blox_cfg_prt_set_data {
 };
 void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *data);
 
+#define U_BLOX_CFG_PRT_SET_DATA_INIT(inst)		\
+	struct u_blox_cfg_prt_set_data inst;		\
+	(void) u_blox_cfg_prt_set_data_default(&inst);
+
 #define UBX_CFG_RST_NAV_BBR_MASK_HOT_START	0x0000
 #define UBX_CFG_RST_NAV_BBR_MASK_WARM_START	0x0001
 #define UBX_CFG_RST_NAV_BBR_MASK_COLD_START	0xFFFF
@@ -122,6 +134,10 @@ struct u_blox_cfg_rst_data {
 	uint8_t reserved0;
 };
 void u_blox_cfg_rst_data_default(struct u_blox_cfg_rst_data *data);
+
+#define U_BLOX_CFG_RST_DATA_INIT(inst)			\
+	struct u_blox_cfg_rst_data inst;		\
+	(void) u_blox_cfg_rst_data_default(&inst);
 
 struct u_blox_cfg_nav5_data {
 	uint16_t mask;
@@ -151,6 +167,10 @@ struct u_blox_cfg_nav5_data {
 	uint8_t utc_standard;
 };
 void u_blox_cfg_nav5_data_default(struct u_blox_cfg_nav5_data *data);
+
+#define U_BLOX_CFG_NAV5_DATA_INIT(inst)			\
+	struct u_blox_cfg_nav5_data inst;		\
+	(void) u_blox_cfg_nav5_data_default(&inst);
 
 #define U_BLOX_CFG_GNSS_DATA_MSG_VER			0x00
 #define U_BLOX_CFG_GNSS_DATA_NUM_TRK_CH_HW_DEFAULT		0x31
@@ -200,6 +220,10 @@ struct u_blox_cfg_gnss_data {
 };
 void u_blox_cfg_gnss_data_default(struct u_blox_cfg_gnss_data *data);
 
+#define U_BLOX_CFG_GNSS_DATA_INIT(inst)			\
+	struct u_blox_cfg_gnss_data inst;		\
+	(void) u_blox_cfg_gnss_data_default(&inst);
+
 #define U_BLOX_CFG_MSG_DATA_RATE_DEFAULT	1
 
 struct u_blox_cfg_msg_data {
@@ -208,5 +232,9 @@ struct u_blox_cfg_msg_data {
 	uint8_t rate;
 };
 void u_blox_cfg_msg_data_default(struct u_blox_cfg_msg_data *data);
+
+#define U_BLOX_CFG_MSG_DATA_INIT(inst)			\
+	struct u_blox_cfg_msg_data inst;		\
+	(void) u_blox_cfg_msg_data_default(&inst);
 
 #endif /* ZEPHYR_U_BLOX_PROTOCOL_ */

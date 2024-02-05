@@ -24,9 +24,9 @@ const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 int u_blox_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, uint8_t message_id,
 			  uint16_t payload_size)
 {
-	if (ubx_frame_size > U_BLOX_FRM_SIZE_MAX ||
-	    ubx_frame_size < U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD ||
-	    ubx_frame_size < U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD + payload_size) {
+	if (ubx_frame_size > U_BLOX_FRM_SZ_MAX ||
+	    ubx_frame_size < U_BLOX_FRM_SZ_WITHOUT_PAYLOAD ||
+	    ubx_frame_size < U_BLOX_FRM_SZ_WITHOUT_PAYLOAD + payload_size) {
 		return -1;
 	}
 
@@ -39,29 +39,29 @@ int u_blox_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, uint8_
 	case UBX_CLASS_CFG:
 		switch (message_id) {
 		case UBX_CFG_PRT:
-			if (payload_size == UBX_CFG_PRT_POLL_PAYLOAD_SIZE ||
-			    payload_size == UBX_CFG_PRT_SET_PAYLOAD_SIZE) {
+			if (payload_size == UBX_CFG_PRT_POLL_PAYLOAD_SZ ||
+			    payload_size == UBX_CFG_PRT_SET_PAYLOAD_SZ) {
 				return 0;
 			} else {
 				return -1;
 			}
 			break;
 		case UBX_CFG_RST:
-			payload_size_expected = UBX_CFG_RST_PAYLOAD_SIZE;
+			payload_size_expected = UBX_CFG_RST_PAYLOAD_SZ;
 			break;
 		case UBX_CFG_NAV5:
-			payload_size_expected = UBX_CFG_NAV5_PAYLOAD_SIZE;
+			payload_size_expected = UBX_CFG_NAV5_PAYLOAD_SZ;
 			break;
 		case UBX_CFG_GNSS:
-			if ((payload_size - UBX_CFG_GNSS_PAYLOAD_INIT_SIZE) %
-			    UBX_CFG_GNSS_PAYLOAD_CFG_BLOCK_SIZE == 0) {
+			if ((payload_size - UBX_CFG_GNSS_PAYLOAD_INIT_SZ) %
+			    UBX_CFG_GNSS_PAYLOAD_CFG_BLK_SZ == 0) {
 				return 0;
 			} else {
 				return -1;
 			}
 			break;
 		case UBX_CFG_MSG:
-			payload_size_expected = UBX_CFG_MSG_PAYLOAD_SIZE;
+			payload_size_expected = UBX_CFG_MSG_PAYLOAD_SZ;
 			break;
 		default: return -1;
 		}
@@ -88,12 +88,12 @@ int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 	ubx_frame[U_BLOX_PREAMBLE_SYNC_CHAR_2_IDX] = U_BLOX_PREAMBLE_SYNC_CHAR_2;
 	ubx_frame[U_BLOX_FRM_MSG_CLASS_IDX] = message_class;
 	ubx_frame[U_BLOX_FRM_MSG_ID_IDX] = message_id;
-	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_SIZE_L_IDX, (uint8_t *) &payload_size,
+	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_SZ_L_IDX, (uint8_t *) &payload_size,
 	       sizeof(payload_size));
 
 	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_IDX, (uint8_t *) data, payload_size);
 
-	uint16_t ubx_frame_len = payload_size + U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD;
+	uint16_t ubx_frame_len = payload_size + U_BLOX_FRM_SZ_WITHOUT_PAYLOAD;
 
 	uint8_t ckA = 0, ckB = 0;
 	for (unsigned int i = U_BLOX_CHECKSUM_START_IDX;

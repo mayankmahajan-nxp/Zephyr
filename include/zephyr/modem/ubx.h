@@ -45,7 +45,7 @@ extern "C" {
 
 struct modem_ubx_script {
 	uint8_t *ubx_frame;
-	uint16_t *ubx_frame_size;
+	uint16_t ubx_frame_size;
 	uint16_t retry_count;
 };
 
@@ -62,9 +62,9 @@ struct modem_ubx {
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
 	uint16_t work_buf_len;
-	uint8_t *supplementary_buf;
-	uint16_t supplementary_buf_size;
-	uint16_t supplementary_buf_len;
+	uint8_t *ubx_response_buf;
+	uint16_t ubx_response_buf_size;
+	uint16_t ubx_response_buf_len;
 
 	struct modem_pipe *pipe;
 
@@ -77,13 +77,15 @@ struct modem_ubx {
 
 struct modem_ubx_config {
 	void *user_data;
+
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
-	k_timeout_t process_timeout;
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
-	uint8_t *supplementary_buf;
-	uint16_t supplementary_buf_size;
+	uint8_t *ubx_response_buf;
+	uint16_t ubx_response_buf_size;
+
+	k_timeout_t process_timeout;
 };
 
 /**
@@ -112,8 +114,8 @@ void modem_ubx_release(struct modem_ubx *ubx);
  */
 int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config);
 
-int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *frame);
-int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_script *frame);
+int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *frame);
+int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_script *frame);
 
 #ifdef __cplusplus
 }

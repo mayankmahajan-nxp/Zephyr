@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* Referred from the files:
- * "zephyr/subsys/modem/modem_chat.c" and "zephyr/subsys/modem/modem_ppp.c".
- */
-
 #include <zephyr/modem/ubx.h>
 #include <string.h>
 
@@ -44,10 +40,6 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 	ubx->transmit_buf_size = *script->ubx_frame_size;
 
 	modem_ubx_reset_parser(ubx);
-	// received_ubx_frame_preamble_sync_char_1 = false;
-	// received_ubx_frame_preamble_sync_char_2 = false;
-	// ubx->work_buf_len = 0;
-	// ubx->supplementary_buf_len = 0;
 
 	k_work_submit(&ubx->send_work);
 
@@ -60,10 +52,10 @@ int modem_ubx_transmit_async(struct modem_ubx *ubx, const struct modem_ubx_scrip
 
 	if (ret < 0) {
 		return ret;
-	} else if (ubx->work_buf[UBX_ACK_IDX] == 0) {
-		return -1;
-	} else {
+	} else if (ubx->work_buf[UBX_FRM_MSG_ID_IDX] == UBX_FRM_MSG_ID_ACK) {
 		return 0;
+	} else {
+		return -1;
 	}
 }
 
@@ -84,6 +76,8 @@ int modem_ubx_transmit(struct modem_ubx *ubx, const struct modem_ubx_script *scr
 		ret = modem_ubx_transmit_async(ubx, script);
 		if (ret == 0) {
 			LOG_INF("success on attempt: %d.", i);
+			break;
+		} else if (ret == -EPERM) {
 			break;
 		}
 	}
@@ -122,7 +116,7 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
-	if (ubx->work_buf[UBX_FRM_CLASS_IDX] == UBX_FRM_CLASS_ACK) {
+	if (ubx->work_buf[UBX_FRM_MSG_CLASS_IDX] == UBX_FRM_MSG_CLASS_ACK) {
 		k_sem_give(&ubx->script_stopped_sem);
 		return 0;
 	}
@@ -153,10 +147,10 @@ static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 		ubx->work_buf[ubx->work_buf_len] = byte;
 		++ubx->work_buf_len;
 
-		if (ubx->work_buf_len == UBX_FRM_HEADER_LEN) {
-			received_ubx_frame_len = (ubx->work_buf[UBX_FRM_PAYLOAD_LEN_L_IDX] |
-						 ubx->work_buf[UBX_FRM_PAYLOAD_LEN_H_IDX] << 8) +
-						 UBX_FRM_LEN_WITHOUT_PAYLOAD;
+		if (ubx->work_buf_len == UBX_FRM_HEADER_SIZE) {
+			received_ubx_frame_len = (ubx->work_buf[UBX_FRM_PAYLOAD_SIZE_L_IDX] |
+						 ubx->work_buf[UBX_FRM_PAYLOAD_SIZE_H_IDX] << 8) +
+						 UBX_FRM_SIZE_WITHOUT_PAYLOAD;
 		}
 
 		if (ubx->work_buf_len == received_ubx_frame_len) {

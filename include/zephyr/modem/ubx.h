@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* Referred from the files:
- * "zephyr/include/zephyr/modem/chat.h" and "zephyr/include/zephyr/modem/ppp.h".
- */
-
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
 #include <zephyr/sys/atomic.h>
@@ -28,18 +24,24 @@ extern "C" {
  * @{
  */
 
-#define UBX_ACK_IDX			3
+// the following macros should be in gnss_u_blox_protocol.h.
+	// but would need to make the file importable for that.
 #define UBX_PREAMBLE_SYNC_CHAR_1	0xB5
 #define UBX_PREAMBLE_SYNC_CHAR_2	0x62
 
-#define UBX_FRM_CLASS_IDX		2
-#define UBX_FRM_CLASS_ACK		5
+#define UBX_FRM_MSG_CLASS_IDX		2
+#define UBX_FRM_MSG_ID_IDX		3
 
-#define UBX_FRM_HEADER_LEN		6
-#define UBX_FRM_FOOTER_LEN		2
-#define UBX_FRM_LEN_WITHOUT_PAYLOAD	UBX_FRM_HEADER_LEN + UBX_FRM_FOOTER_LEN
-#define UBX_FRM_PAYLOAD_LEN_L_IDX	4
-#define UBX_FRM_PAYLOAD_LEN_H_IDX	5
+#define UBX_FRM_MSG_CLASS_ACK		5
+#define UBX_FRM_MSG_ID_ACK		1
+
+#define UBX_FRM_HEADER_SIZE		6
+#define UBX_FRM_FOOTER_SIZE		2
+#define UBX_FRM_SIZE_WITHOUT_PAYLOAD	UBX_FRM_HEADER_SIZE + UBX_FRM_FOOTER_SIZE
+#define UBX_FRM_PAYLOAD_SIZE_L_IDX	4
+#define UBX_FRM_PAYLOAD_SIZE_H_IDX	5
+
+#define MODEM_UBX_RETRY_DEFAULT		10
 
 struct modem_ubx_script {
 	uint8_t *ubx_frame;

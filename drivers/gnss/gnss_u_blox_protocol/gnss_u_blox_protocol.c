@@ -10,19 +10,6 @@
 
 #include "gnss_u_blox_protocol.h"
 
-static int u_blox_cfg_prt_get(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_prt_get_data *const data);
-static int u_blox_cfg_prt_set(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_prt_set_data *const data);
-static int u_blox_cfg_rst_set(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_rst_set_data *const data);
-static int u_blox_cfg_nav5_set(uint8_t *payload, uint16_t payload_size,
-			       const struct u_blox_cfg_nav5_set_data *const data);
-static int u_blox_cfg_gnss_set(uint8_t *payload, uint16_t payload_size,
-			       const struct u_blox_cfg_gnss_set_data *const data);
-static int u_blox_cfg_msg_set(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_msg_set_data *const data);
-
 const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 	4800,
 	9600,
@@ -34,42 +21,58 @@ const uint32_t u_blox_baudrate[U_BLOX_BAUDRATE_COUNT] = {
 	460800,
 };
 
-int u_blox_create_payload(uint8_t *payload, uint16_t payload_size,
-			  uint8_t message_class, uint8_t message_id,
-			  const void *const data)
+int u_blox_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, uint8_t message_id,
+			  uint16_t payload_size)
 {
+	if (ubx_frame_size > U_BLOX_FRM_SIZE_MAX ||
+	    ubx_frame_size < U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD ||
+	    ubx_frame_size < U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD + payload_size) {
+		return -1;
+	}
+
+	if (payload_size == 0) {
+		return 0;
+	}
+
+	uint16_t payload_size_expected;
 	switch (message_class) {
 	case UBX_CLASS_CFG:
 		switch (message_id) {
 		case UBX_CFG_PRT:
-			switch (payload_size) {
-			case UBX_CFG_PRT_GET_PAYLOAD_SIZE: return u_blox_cfg_prt_get(payload, payload_size, data);
-			case UBX_CFG_PRT_SET_PAYLOAD_SIZE: return u_blox_cfg_prt_set(payload, payload_size, data);
-			default: return 0;
+			if (payload_size == UBX_CFG_PRT_POLL_PAYLOAD_SIZE ||
+			    payload_size == UBX_CFG_PRT_SET_PAYLOAD_SIZE) {
+				return 0;
+			} else {
+				return -1;
 			}
+			break;
 		case UBX_CFG_RST:
-			switch (payload_size) {
-			case UBX_CFG_RST_SET_PAYLOAD_SIZE: return u_blox_cfg_rst_set(payload, payload_size, data);
-			default: return 0;
-			}
+			payload_size_expected = UBX_CFG_RST_PAYLOAD_SIZE;
+			break;
 		case UBX_CFG_NAV5:
-			switch (payload_size) {
-			case UBX_CFG_NAV5_SET_PAYLOAD_SIZE: return u_blox_cfg_nav5_set(payload, payload_size, data);
-			default: return 0;
-			}
+			payload_size_expected = UBX_CFG_NAV5_PAYLOAD_SIZE;
+			break;
 		case UBX_CFG_GNSS:
-			switch (payload_size) {
-			case 0: return 0;
-			default: return u_blox_cfg_gnss_set(payload, payload_size, data);
+			if ((payload_size - UBX_CFG_GNSS_PAYLOAD_INIT_SIZE) %
+			    UBX_CFG_GNSS_PAYLOAD_CFG_BLOCK_SIZE == 0) {
+				return 0;
+			} else {
+				return -1;
 			}
+			break;
 		case UBX_CFG_MSG:
-			switch (payload_size) {
-			case UBX_CFG_MSG_SET_PAYLOAD_SIZE: return u_blox_cfg_msg_set(payload, payload_size, data);
-			default: return 0;
-			}
+			payload_size_expected = UBX_CFG_MSG_PAYLOAD_SIZE;
+			break;
 		default: return -1;
 		}
+		break;
 	default: return -1;
+	}
+
+	if (payload_size == payload_size_expected) {
+		return 0;
+	} else {
+		return -1;
 	}
 }
 
@@ -77,66 +80,41 @@ int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 			uint8_t message_class, uint8_t message_id,
 			const void *const data, uint16_t payload_size)
 {
-	int payload_len;
-	uint8_t ckA = 0;
-	uint8_t ckB = 0;
-
-	if (ubx_frame_size < U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD) {
-		return -1;
-	} else if (ubx_frame_size - U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD < payload_size) {
+	if (u_blox_validate_frame(ubx_frame_size, message_class, message_id, payload_size)) {
 		return -1;
 	}
 
-	ubx_frame[0] = U_BLOX_PREAMBLE_SYNC_CHAR_1;
-	ubx_frame[1] = U_BLOX_PREAMBLE_SYNC_CHAR_2;
-	ubx_frame[2] = message_class;
-	ubx_frame[3] = message_id;
+	ubx_frame[U_BLOX_PREAMBLE_SYNC_CHAR_1_IDX] = U_BLOX_PREAMBLE_SYNC_CHAR_1;
+	ubx_frame[U_BLOX_PREAMBLE_SYNC_CHAR_2_IDX] = U_BLOX_PREAMBLE_SYNC_CHAR_2;
+	ubx_frame[U_BLOX_FRM_MSG_CLASS_IDX] = message_class;
+	ubx_frame[U_BLOX_FRM_MSG_ID_IDX] = message_id;
+	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_SIZE_L_IDX, (uint8_t *) &payload_size,
+	       sizeof(payload_size));
 
-	payload_len = u_blox_create_payload(ubx_frame + U_BLOX_MESSAGE_HEADER_SIZE, payload_size,
-					    message_class, message_id, data);
+	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_IDX, (uint8_t *) data, payload_size);
 
-	if (payload_len < 0) {
-		return -1;
-	} else if (payload_size < payload_len) {
-		return -1;
-	}
+	uint16_t ubx_frame_len = payload_size + U_BLOX_FRM_SIZE_WITHOUT_PAYLOAD;
 
-	ubx_frame[4] = (payload_len & 0xff);
-	ubx_frame[5] = (payload_len >> 8);
-
-	uint16_t ubx_frame_len = payload_len + U_BLOX_MESSAGE_SIZE_WITHOUT_PAYLOAD;
-
-	for (unsigned int i = 2; i < (ubx_frame_len - 2); i++) {
+	uint8_t ckA = 0, ckB = 0;
+	for (unsigned int i = U_BLOX_CHECKSUM_START_IDX;
+	     i < (ubx_frame_len - U_BLOX_CHECKSUM_STOP_IDX_FROM_END); i++) {
 		ckA += ubx_frame[i];
 		ckB += ckA;
 	}
 
-	ubx_frame[ubx_frame_len - 2] = ckA;
-	ubx_frame[ubx_frame_len - 1] = ckB;
+	ubx_frame[ubx_frame_len - U_BLOX_CHECKSUM_A_IDX_FROM_END] = ckA;
+	ubx_frame[ubx_frame_len - U_BLOX_CHECKSUM_B_IDX_FROM_END] = ckB;
 
 	return ubx_frame_len;
 }
 
-void u_blox_cfg_prt_get_data_default(struct u_blox_cfg_prt_get_data *const data) {
+void u_blox_cfg_prt_poll_data_default(struct u_blox_cfg_prt_poll_data *const data) {
 	data->port_id = UBX_PORT_NUMBER_UART;
-}
-
-static int u_blox_cfg_prt_get(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_prt_get_data *const data)
-{
-	uint16_t payload_len = UBX_CFG_PRT_GET_PAYLOAD_SIZE;
-
-	if (payload_size < payload_len) {
-		return -1;
-	}
-
-	payload[0] = data->port_id;
-
-	return payload_len;
 }
 
 void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *const data) {
 	data->port_id = UBX_PORT_NUMBER_UART;
+	data->reserved0 = 0x00;
 	data->tx_ready_pin_conf = 0x0000;
 	data->port_mode = UBX_CFG_PRT_PORT_MODE_CHAR_LEN_8 | UBX_CFG_PRT_PORT_MODE_PARITY_NONE |
 			  UBX_CFG_PRT_PORT_MODE_STOP_BITS_1;
@@ -146,75 +124,16 @@ void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *const data)
 	data->out_proto_mask = UBX_CFG_PRT_OUT_PROTO_UBX | UBX_CFG_PRT_OUT_PROTO_NMEA |
 			       UBX_CFG_PRT_OUT_PROTO_RTCM3;
 	data->flags = 0x0000;
+	data->reserved1 = 0x0000;
 }
 
-static int u_blox_cfg_prt_set(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_prt_set_data *const data)
-{
-	uint16_t payload_len = UBX_CFG_PRT_SET_PAYLOAD_SIZE;
-
-	if (payload_size < payload_len) {
-		return -1;
-	}
-
-	/* Port identifier number */
-	payload[0] = data->port_id;
-
-	/* Reserved0 */
-	payload[1] = 0x00;
-
-	/* TX ready PIN conﬁguration */
-	memcpy(payload + 2, &(data->tx_ready_pin_conf), 2);
-
-	/* Port mode */
-	memcpy(payload + 4, &(data->port_mode), 4);
-
-	/* Baud Rate */
-	memcpy(payload + 8, &(data->baudrate), 4);
-
-	/* In Proto Mask = All proto enable */
-	memcpy(payload + 12, &(data->in_proto_mask), 2);
-
-	/* Out Proto Mask = All proto enable */
-	memcpy(payload + 14, &(data->out_proto_mask), 2);
-
-	/* Flags */
-	memcpy(payload + 16, &(data->flags), 2);
-
-	/* Reserved1 */
-	payload[18] = 0x00;
-	payload[19] = 0x00;
-
-	return payload_len;
-}
-
-void u_blox_cfg_rst_set_data_default(struct u_blox_cfg_rst_set_data *const data) {
+void u_blox_cfg_rst_data_default(struct u_blox_cfg_rst_data *const data) {
 	data->nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
 	data->reset_mode = UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET;
+	data->reserved0 = 0x00;
 }
 
-static int u_blox_cfg_rst_set(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_rst_set_data *const data)
-{
-	uint16_t payload_len = UBX_CFG_RST_SET_PAYLOAD_SIZE;
-
-	if (payload_size < payload_len) {
-		return -1;
-	}
-
-	/* navBbrMask. */
-	memcpy(payload, &(data->nav_bbr_mask), 2);
-
-	/* resetMode. */
-	payload[2] = data->reset_mode;
-
-	/* reserved1. */
-	payload[3] = 0x00;
-
-	return payload_len;
-}
-
-void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *const data) {
+void u_blox_cfg_nav5_data_default(struct u_blox_cfg_nav5_data *const data) {
 	data->mask = 0x05FF;
 	data->dyn_model = UBX_DYN_MODEL_PORTABLE;
 
@@ -236,105 +155,36 @@ void u_blox_cfg_nav5_set_data_default(struct u_blox_cfg_nav5_set_data *const dat
 	data->cno_threshold_num_svs = 0;
 	data->cno_threshold = 0;
 
+	data->reserved0 = 0x0000;
+
 	data->static_hold_dist_threshold = 0;
 	data->utc_standard = UBX_UTC_AutoUTC;
 }
 
-static int u_blox_cfg_nav5_set(uint8_t *payload, uint16_t payload_size,
-			       const struct u_blox_cfg_nav5_set_data *const data)
+static struct u_blox_cfg_gnss_data_config_block u_blox_cfg_gnss_data_config_block_default =
 {
-	uint16_t payload_len = UBX_CFG_NAV5_SET_PAYLOAD_SIZE;
-
-	if (payload_size < payload_len) {
-		return -1;
-	}
-
-	memcpy(payload, &(data->mask), 2);
-
-	memcpy(payload + 2, &(data->dyn_model), 1);
-	memcpy(payload + 3, &(data->fix_mode), 1);
-
-	memcpy(payload + 4, &(data->fixed_alt), 4);
-	memcpy(payload + 8, &(data->fixed_alt_var), 4);
-	payload[12] = data->min_elev;
-	memcpy(payload + 14, &(data->p_dop), 2);
-	memcpy(payload + 16, &(data->t_dop), 2);
-	memcpy(payload + 18, &(data->p_acc), 2);
-	memcpy(payload + 20, &(data->t_acc), 2);
-	payload[22] = data->static_hold_threshold;
-	payload[23] = data->dgnss_timeout;
-	payload[24] = data->cno_threshold_num_svs;
-	payload[25] = data->cno_threshold;
-	memcpy(payload + 28, &(data->static_hold_dist_threshold), 2);
-	payload[30] = data->utc_standard;
-
-	return payload_len;
-}
-
-static struct u_blox_cfg_gnss_set_data_config_block u_blox_cfg_gnss_set_data_config_block_default =
-{
-	.gnssId = 0x00,
+	.gnssId = UBX_GNSS_ID_GPS,
 	.num_res_trk_ch = 0x08,
 	.max_num_trk_ch = 0x16,
-	.reserved0 = 0x00,
-	.flags = 0x00000000,
+	.reserved0 = U_BLOX_CFG_GNSS_DATA_RESERVED0,
+	.flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
+		 U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L1C_A,
 };
 
-void u_blox_cfg_gnss_set_data_default(struct u_blox_cfg_gnss_set_data *data,
-				      struct u_blox_cfg_gnss_set_data_config_block *cfg_blocks,
-				      uint8_t num_cfg_blocks)
+void u_blox_cfg_gnss_data_default(struct u_blox_cfg_gnss_data *data)
 {
-	data->msg_ver = 0x00;
-	data->num_trk_ch_hw = 0x31;
-	data->num_trk_ch_use = 0x31;
-	data->num_config_blocks = num_cfg_blocks;
-	data->config_blocks = cfg_blocks;
+	data->msg_ver = U_BLOX_CFG_GNSS_DATA_MSG_VER;
+	data->num_trk_ch_hw = U_BLOX_CFG_GNSS_DATA_NUM_TRK_CH_HW_DEFAULT;
+	data->num_trk_ch_use = U_BLOX_CFG_GNSS_DATA_NUM_TRK_CH_USE_DEFAULT;
 
-	for (int i = 0; i < num_cfg_blocks; ++i) {
-		data->config_blocks[i] = u_blox_cfg_gnss_set_data_config_block_default;
+	for (int i = 0; i < data->num_config_blocks; ++i) {
+		data->config_blocks[i] = u_blox_cfg_gnss_data_config_block_default;
 	}
 }
 
-static int u_blox_cfg_gnss_set(uint8_t *payload, uint16_t payload_size,
-			       const struct u_blox_cfg_gnss_set_data *const data)
-{
-	uint16_t payload_len = UBX_CFG_GNSS_SET_PAYLOAD_INIT_SIZE +
-			       (data->num_config_blocks * UBX_CFG_GNSS_SET_PAYLOAD_CFG_BLOCK_SIZE);
-
-	if (payload_size < payload_len) {
-		return -1;
-	}
-
-	payload[0] = data->msg_ver;
-	payload[1] = data->num_trk_ch_hw;
-	payload[2] = data->num_trk_ch_use;
-	payload[3] = data->num_config_blocks;
-
-	memcpy(payload + UBX_CFG_GNSS_SET_PAYLOAD_INIT_SIZE, data->config_blocks,
-	       data->num_config_blocks * UBX_CFG_GNSS_SET_PAYLOAD_CFG_BLOCK_SIZE);
-
-	return payload_len;
-}
-
-void u_blox_cfg_msg_set_data_default(struct u_blox_cfg_msg_set_data *const data)
+void u_blox_cfg_msg_data_default(struct u_blox_cfg_msg_data *const data)
 {
 	data->message_class = UBX_CLASS_NMEA;
 	data->message_id = UBX_NMEA_GGA;
-	data->rate = 1;
-}
-
-static int u_blox_cfg_msg_set(uint8_t *payload, uint16_t payload_size,
-			      const struct u_blox_cfg_msg_set_data *const data)
-{
-	uint16_t payload_len = UBX_CFG_MSG_SET_PAYLOAD_SIZE;
-
-	if (payload_size < payload_len) {
-		return -1;
-	}
-
-	payload[0] = data->message_class;
-	payload[1] = data->message_id;
-	payload[2] = data->rate;
-
-	return payload_len;
+	data->rate = U_BLOX_CFG_MSG_DATA_RATE_DEFAULT;
 }

@@ -36,6 +36,8 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define MODEM_UBX_FRM_TIMEOUT_MS	500
 
+#define U_BLOX_M10_GNSS_SYS_CNT_MAX	6
+
 #define U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE_TEMP(script_name, ubx_frame, ubx_frame_len, retry)	\
 	struct modem_ubx_script script_name = {							\
 		.ubx_frame = ubx_frame,								\
@@ -54,7 +56,7 @@ LOG_MODULE_REGISTER(u_blox_m10, CONFIG_GNSS_LOG_LEVEL);
 					 msg_id, data, payload_size)				\
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frm, ubx_frm_sz, retry)		\
 	script_inst.ubx_frame_size = u_blox_create_frame(script_inst.ubx_frame, ubx_frm_sz,	\
-							 msg_class, msg_id, &data, payload_size);
+							 msg_class, msg_id, data, payload_size);
 
 #define U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script_inst, script_ret)		\
 	int script_ret;								\
@@ -272,20 +274,20 @@ static int u_blox_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_
 	U_BLOX_CFG_PRT_SET_DATA_INIT(data)
 	data.baudrate = target_baudrate;
 	U_BLOX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_PRT_SET_FRM_SZ, retry,
-		UBX_CLASS_CFG, UBX_CFG_PRT, data, UBX_CFG_PRT_SET_PAYLOAD_SZ)
+		UBX_CLASS_CFG, UBX_CFG_PRT, &data, UBX_CFG_PRT_SET_PAYLOAD_SZ)
 	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
 	return 0;
 }
 
-static void u_blox_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
+static int u_blox_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 {
 	int retry = 2;
 	U_BLOX_CFG_RST_DATA_INIT(data)
 	data.nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
 	data.reset_mode = reset_mode;
 	U_BLOX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_RST_FRM_SZ, retry,
-		UBX_CLASS_CFG, UBX_CFG_RST, data, UBX_CFG_RST_PAYLOAD_SZ)
+		UBX_CLASS_CFG, UBX_CFG_RST, &data, UBX_CFG_RST_PAYLOAD_SZ)
 	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
 	return 0;
@@ -373,8 +375,6 @@ static int u_blox_m10_configure_gnss_device_baudrate(const struct device *dev)
 
 static int u_blox_m10_configure_messages(const struct device *dev)
 {
-	int ret = 0;
-
 	U_BLOX_CFG_MSG_DATA_INIT(data)
 	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE(script, ubx_frame, UBX_CFG_MSG_FRM_SZ,
 		MODEM_UBX_RETRY_DEFAULT)
@@ -430,7 +430,7 @@ static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_na
 	data.dyn_model = dynamic_model;
 
 	U_BLOX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_NAV5_FRM_SZ,
-		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, data,
+		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, &data,
 		UBX_CFG_NAV5_PAYLOAD_SZ)
 	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
@@ -439,20 +439,11 @@ static int u_blox_m10_set_navigation_mode(const struct device *dev, enum gnss_na
 
 static int u_blox_m10_get_navigation_mode(const struct device *dev, enum gnss_navigation_mode *mode)
 {
-	int ret;
+	U_BLOX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_NAV5_FRM_SZ,
+		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, UBX_FRM_GET_PAYLOAD_SZ)
+	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
-	uint16_t ubx_frame_size = U_BLOX_FRM_SZ_MAX;
-	uint8_t ubx_frame[ubx_frame_size];
-	uint16_t ubx_frame_len;
-
-	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE_TEMP(script_inst, ubx_frame, ubx_frame_len, MODEM_UBX_RETRY_DEFAULT);
-	script_inst.ubx_frame_size = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, 0);
-	ret = u_blox_m10_modem_ubx_run_script(dev, &script_inst);
-	if (ret < 0) {
-		return ret;
-	}
-
-	switch (script_inst.ubx_frame[8]) {
+	switch (script.ubx_frame[8]) {
 	case UBX_DYN_MODEL_STATIONARY:
 		*mode = GNSS_NAVIGATION_MODE_ZERO_DYNAMICS;
 		break;
@@ -476,15 +467,15 @@ static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems
 {
 	struct u_blox_cfg_gnss_data *data;
 
-	uint8_t config_blocks_count = 0;
+	uint8_t cfg_blocks_count = 0;
 	gnss_systems_t temp = systems;
 	while (temp > 0) {
-	        ++config_blocks_count;
+	        ++cfg_blocks_count;
 		temp = temp & (temp - 1);
 	}
 
-	data = malloc(sizeof(*data) + sizeof(struct u_blox_cfg_gnss_data_config_block) * config_blocks_count);
-	data->num_config_blocks = config_blocks_count;
+	data = malloc(sizeof(*data) + sizeof(struct u_blox_cfg_gnss_data_config_block) * cfg_blocks_count);
+	data->num_config_blocks = cfg_blocks_count;
 
 	(void) u_blox_cfg_gnss_data_default(data);
 
@@ -541,18 +532,12 @@ static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems
 		}
 	}
 
+
+	U_BLOX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_GNSS_FRM_SZ(cfg_blocks_count),
+					 MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_GNSS,
+					 data, UBX_CFG_GNSS_PAYLOAD_SZ(cfg_blocks_count))
 	int ret;
-
-	uint16_t ubx_frame_size = U_BLOX_FRM_SZ_MAX;
-	uint8_t ubx_frame[ubx_frame_size];
-	uint16_t ubx_frame_len;
-
-	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE_TEMP(script_inst, ubx_frame, ubx_frame_len, MODEM_UBX_RETRY_DEFAULT);
-	script_inst.ubx_frame_size = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, data, 4 + (data->num_config_blocks * sizeof(struct u_blox_cfg_gnss_data_config_block)));
-	if (ubx_frame_len < 0) {
-		goto out;
-	}
-	ret = u_blox_m10_modem_ubx_run_script(dev, &script_inst);
+	ret = u_blox_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
 		goto out;
 	}
@@ -565,21 +550,12 @@ out:
 
 static int u_blox_m10_get_enabled_systems(const struct device *dev, gnss_systems_t *systems)
 {
-	int ret;
+	U_BLOX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_GNSS_FRM_SZ(U_BLOX_M10_GNSS_SYS_CNT_MAX),
+		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, UBX_FRM_GET_PAYLOAD_SZ)
+	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
-	uint16_t ubx_frame_size = U_BLOX_FRM_SZ_MAX;
-	uint8_t ubx_frame[ubx_frame_size];
-	uint16_t ubx_frame_len;
-
-	U_BLOX_M10_MODEM_UBX_SCRIPT_CREATE_TEMP(script_inst, ubx_frame, ubx_frame_len, MODEM_UBX_RETRY_DEFAULT);
-	script_inst.ubx_frame_size = u_blox_create_frame(script_inst.ubx_frame, ubx_frame_size, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, 0);
-	ret = u_blox_m10_modem_ubx_run_script(dev, &script_inst);
-	if (ret < 0) {
-		return ret;
-	}
-
-	for (int i = 10; i < ubx_frame_len - 2; i += 8) {
-		switch (script_inst.ubx_frame[i]) {
+	for (int i = 10; i < script.ubx_frame_size - 2; i += 8) {
+		switch (script.ubx_frame[i]) {
 		case UBX_GNSS_ID_GPS:
 			*systems |= GNSS_SYSTEM_GPS;
 			break;

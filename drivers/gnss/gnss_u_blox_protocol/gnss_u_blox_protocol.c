@@ -84,26 +84,28 @@ int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 		return -1;
 	}
 
-	ubx_frame[U_BLOX_PREAMBLE_SYNC_CHAR_1_IDX] = U_BLOX_PREAMBLE_SYNC_CHAR_1;
-	ubx_frame[U_BLOX_PREAMBLE_SYNC_CHAR_2_IDX] = U_BLOX_PREAMBLE_SYNC_CHAR_2;
-	ubx_frame[U_BLOX_FRM_MSG_CLASS_IDX] = message_class;
-	ubx_frame[U_BLOX_FRM_MSG_ID_IDX] = message_id;
-	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_SZ_L_IDX, (uint8_t *) &payload_size,
-	       sizeof(payload_size));
+	struct ubx_frame_t *frame = (struct ubx_frame_t *) ubx_frame;
 
-	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_IDX, (uint8_t *) data, payload_size);
+	frame->preamble_sync_char_1 = U_BLOX_PREAMBLE_SYNC_CHAR_1;
+	frame->preamble_sync_char_2 = U_BLOX_PREAMBLE_SYNC_CHAR_2;
+	frame->message_class = message_class;
+	frame->message_id = message_id;
+	frame->payload_size_low = payload_size & 0xFF;
+	frame->payload_size_high = payload_size >> 8;
+
+	memcpy(frame->payload_and_checksum, (uint8_t *) data, payload_size);
 
 	uint16_t ubx_frame_len = payload_size + U_BLOX_FRM_SZ_WITHOUT_PAYLOAD;
 
 	uint8_t ckA = 0, ckB = 0;
 	for (unsigned int i = U_BLOX_CHECKSUM_START_IDX;
-	     i < (ubx_frame_len - U_BLOX_CHECKSUM_STOP_IDX_FROM_END); i++) {
+	     i < U_BLOX_FRM_HEADER_SZ + payload_size; i++) {
 		ckA += ubx_frame[i];
 		ckB += ckA;
 	}
 
-	ubx_frame[ubx_frame_len - U_BLOX_CHECKSUM_A_IDX_FROM_END] = ckA;
-	ubx_frame[ubx_frame_len - U_BLOX_CHECKSUM_B_IDX_FROM_END] = ckB;
+	frame->payload_and_checksum[payload_size] = ckA;
+	frame->payload_and_checksum[payload_size + 1] = ckB;
 
 	return ubx_frame_len;
 }

@@ -561,7 +561,6 @@ static void modem_chat_on_unknown_command_received(struct modem_chat *chat)
 
 static void modem_chat_process_byte(struct modem_chat *chat, uint8_t byte)
 {
-	printk("%c", byte);
 	/* Validate receive buffer not overrun */
 	if (chat->receive_buf_size == chat->receive_buf_len) {
 		LOG_WRN("receive buffer overrun");

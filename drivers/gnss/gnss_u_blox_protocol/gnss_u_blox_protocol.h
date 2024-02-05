@@ -140,6 +140,8 @@ void u_blox_cfg_rst_data_default(struct u_blox_cfg_rst_data *data);
 	struct u_blox_cfg_rst_data inst;		\
 	(void) u_blox_cfg_rst_data_default(&inst);
 
+#define UBX_CFG_NAV5_DYN_MODEL_IDX	2
+
 struct u_blox_cfg_nav5_data {
 	uint16_t mask;
 	uint8_t dyn_model;

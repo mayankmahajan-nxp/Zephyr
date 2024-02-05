@@ -13,20 +13,15 @@ LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 #define MODEM_UBX_STATE_ATTACHED_BIT		(0)
 
 static bool received_ubx_preamble_sync_chars;
-// static bool received_ubx_frame_get_response;
-// static bool received_ubx_frame_preamble_sync_char_2;
 
 void modem_ubx_reset_parser(struct modem_ubx *ubx)
 {
 	received_ubx_preamble_sync_chars = false;
-	// received_ubx_frame_get_response = false;
-	// received_ubx_frame_preamble_sync_char_1 = false;
-	// received_ubx_frame_preamble_sync_char_2 = false;
 	ubx->work_buf_len = 0;
 	ubx->ubx_response_buf_len = 0;
 }
 
-int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_script *script)
+int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_script *script)
 {
 	int ret;
 
@@ -73,7 +68,7 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 	}
 
 	for (int i = 0; i < script->retry_count; ++i) {
-		ret = modem_ubx_run_script_async(ubx, script);
+		ret = modem_ubx_run_script_helper(ubx, script);
 		if (ret > -1) {
 			LOG_INF("success on attempt: %d.", i);
 			break;
@@ -124,8 +119,6 @@ static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 	memcpy(ubx->ubx_response_buf, ubx->work_buf, ubx->work_buf_len);
 	ubx->ubx_response_buf_len = ubx->work_buf_len;
 
-	// received_ubx_frame_preamble_sync_char_1 = false;
-	// received_ubx_frame_preamble_sync_char_2 = false;
 	received_ubx_preamble_sync_chars = false;
 
 	return -1;

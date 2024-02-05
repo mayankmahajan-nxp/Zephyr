@@ -443,7 +443,7 @@ static int u_blox_m10_get_navigation_mode(const struct device *dev, enum gnss_na
 		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, UBX_FRM_GET_PAYLOAD_SZ)
 	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
-	switch (script.ubx_frame[8]) {
+	switch (script.ubx_frame[U_BLOX_FRM_HEADER_SZ + UBX_CFG_NAV5_DYN_MODEL_IDX]) {
 	case UBX_DYN_MODEL_STATIONARY:
 		*mode = GNSS_NAVIGATION_MODE_ZERO_DYNAMICS;
 		break;
@@ -554,7 +554,8 @@ static int u_blox_m10_get_enabled_systems(const struct device *dev, gnss_systems
 		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, UBX_FRM_GET_PAYLOAD_SZ)
 	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
-	for (int i = 10; i < script.ubx_frame_size - 2; i += 8) {
+	for (int i = 10; i < script.ubx_frame_size - U_BLOX_CHECKSUM_STOP_IDX_FROM_END;
+	     i += UBX_CFG_GNSS_PAYLOAD_CFG_BLK_SZ) {
 		switch (script.ubx_frame[i]) {
 		case UBX_GNSS_ID_GPS:
 			*systems |= GNSS_SYSTEM_GPS;
@@ -618,7 +619,7 @@ static int u_blox_m10_configure(const struct device *dev)
 		goto out;
 	}
 
-out:
+out:	// temp: don't need out: in this function anymore.
 	(void) u_blox_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
 
 	// temp. need to remove the following.

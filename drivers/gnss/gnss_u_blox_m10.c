@@ -619,9 +619,6 @@ static int u_blox_m10_configure(const struct device *dev)
 		goto out;
 	}
 
-out:	// temp: don't need out: in this function anymore.
-	(void) u_blox_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
-
 	// temp. need to remove the following.
 	gnss_systems_t systems = 0;
 	printk("u_blox_m10_get_enabled_systems.\n");
@@ -643,6 +640,9 @@ out:	// temp: don't need out: in this function anymore.
 	nav_mode = 0;
 	u_blox_m10_get_navigation_mode(dev, &nav_mode);
 	printk("u_blox_m10_get_navigation_mode. %d\n", nav_mode);
+
+out:
+	(void) u_blox_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
 
 	if (ret < 0) {
 		return ret;
@@ -681,6 +681,32 @@ static int u_blox_m10_init(const struct device *dev)
 	if (ret < 0) {
 		return ret;
 	}
+
+	// (void) u_blox_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
+	k_sleep(K_MSEC(U_BLOX_CFG_RST_WAIT_MS));
+	// temp. need to remove the following.
+	gnss_systems_t systems = 0;
+	printk("u_blox_m10_get_enabled_systems.\n");
+	u_blox_m10_get_enabled_systems(dev, &systems);
+	systems = GNSS_SYSTEM_GPS | GNSS_SYSTEM_QZSS | GNSS_SYSTEM_GALILEO | GNSS_SYSTEM_GLONASS
+		| GNSS_SYSTEM_SBAS;
+	printk("u_blox_m10_set_enabled_systems.\n");
+	u_blox_m10_set_enabled_systems(dev, systems);
+	systems = 0;
+	printk("u_blox_m10_get_enabled_systems.\n");
+	u_blox_m10_get_enabled_systems(dev, &systems);
+
+	enum gnss_navigation_mode nav_mode = GNSS_NAVIGATION_MODE_LOW_DYNAMICS;
+	printk("navigation starting. %d\n", nav_mode);
+	u_blox_m10_get_navigation_mode(dev, &nav_mode);
+	printk("u_blox_m10_get_navigation_mode. %d\n", nav_mode);
+	nav_mode = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
+	u_blox_m10_set_navigation_mode(dev, nav_mode);
+	printk("u_blox_m10_set_navigation_mode. %d\n", nav_mode);
+	nav_mode = 0;
+	u_blox_m10_get_navigation_mode(dev, &nav_mode);
+	printk("u_blox_m10_get_navigation_mode. %d\n", nav_mode);
+	// (void) u_blox_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
 
 	return 0;
 }

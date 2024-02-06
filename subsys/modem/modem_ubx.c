@@ -17,6 +17,7 @@ static bool received_ubx_preamble_sync_chars;
 void modem_ubx_reset_parser(struct modem_ubx *ubx)
 {
 	received_ubx_preamble_sync_chars = false;
+	// TODO: do we need to reset work_buf_len.
 	ubx->work_buf_len = 0;
 	ubx->ubx_response_buf_len = 0;
 }
@@ -42,7 +43,7 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 
 	if (ubx->ubx_response_buf_len > 0) {
 		memcpy(script->ubx_frame, ubx->ubx_response_buf, ubx->ubx_response_buf_len);
-		// *script->ubx_frame_size = ubx->ubx_response_buf_len;
+			// temp: add check if ubx_frame is big enough to hold the response.
 	}
 
 	if (ret < 0) {
@@ -111,6 +112,8 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
+	// TODO: check validity of ubx frame received and return accordingly.
+
 	if (ubx->work_buf[UBX_FRM_MSG_CLASS_IDX] == UBX_FRM_MSG_CLASS_ACK) {
 		k_sem_give(&ubx->script_stopped_sem);
 		return 0;

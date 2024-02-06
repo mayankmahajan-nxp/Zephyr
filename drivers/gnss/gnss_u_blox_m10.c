@@ -487,43 +487,31 @@ static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems
 			switch (systems & (1 << i)) {
 			case GNSS_SYSTEM_GPS:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GPS;
-				data->config_blocks[filled_blocks].num_res_trk_ch = 0x08;
-				data->config_blocks[filled_blocks].max_num_trk_ch = 0x10;
 				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
 					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L1C_A;
 				break;
 			case GNSS_SYSTEM_GLONASS:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GLONAS;
-				data->config_blocks[filled_blocks].num_res_trk_ch = 0x08;
-				data->config_blocks[filled_blocks].max_num_trk_ch = 0x0E;
 				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
 					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_GLONASS_L1;
 				break;
 			case GNSS_SYSTEM_GALILEO:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GALILEO;
-				data->config_blocks[filled_blocks].num_res_trk_ch = 0x04;
-				data->config_blocks[filled_blocks].max_num_trk_ch = 0x08;
 				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
 					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_Galileo_E1;
 				break;
 			case GNSS_SYSTEM_BEIDOU:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_BEIDOU;
-				data->config_blocks[filled_blocks].num_res_trk_ch = 0x08;
-				data->config_blocks[filled_blocks].max_num_trk_ch = 0x10;
 				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
 					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_BeiDou_B1I;
 				break;
 			case GNSS_SYSTEM_QZSS:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_QZSS;
-				data->config_blocks[filled_blocks].num_res_trk_ch = 0x00;
-				data->config_blocks[filled_blocks].max_num_trk_ch = 0x03;
 				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
 					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_QZSS_L1C_A;
 				break;
 			case GNSS_SYSTEM_SBAS:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_SBAS;
-				data->config_blocks[filled_blocks].num_res_trk_ch = 0x03;
-				data->config_blocks[filled_blocks].max_num_trk_ch = 0x03;
 				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
 					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_SBAS_L1C_A;
 				break;

@@ -84,14 +84,16 @@ int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 		return -1;
 	}
 
-	ubx_frame[U_BLOX_PREAMBLE_SYNC_CHAR_1_IDX] = U_BLOX_PREAMBLE_SYNC_CHAR_1;
-	ubx_frame[U_BLOX_PREAMBLE_SYNC_CHAR_2_IDX] = U_BLOX_PREAMBLE_SYNC_CHAR_2;
-	ubx_frame[U_BLOX_FRM_MSG_CLASS_IDX] = message_class;
-	ubx_frame[U_BLOX_FRM_MSG_ID_IDX] = message_id;
-	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_SZ_L_IDX, (uint8_t *) &payload_size,
-	       sizeof(payload_size));
+	struct ubx_frame_t *frame = (struct ubx_frame_t *) ubx_frame;
 
-	memcpy(ubx_frame + U_BLOX_FRM_PAYLOAD_IDX, (uint8_t *) data, payload_size);
+	frame->preamble_sync_char_1 = U_BLOX_PREAMBLE_SYNC_CHAR_1;
+	frame->preamble_sync_char_2 = U_BLOX_PREAMBLE_SYNC_CHAR_2;
+	frame->message_class = message_class;
+	frame->message_id = message_id;
+	frame->payload_size_low = payload_size & 0xFF;
+	frame->payload_size_high = payload_size >> 8;
+
+	memcpy(frame->payload_and_checksum, (uint8_t *) data, payload_size);
 
 	uint16_t ubx_frame_len = payload_size + U_BLOX_FRM_SZ_WITHOUT_PAYLOAD;
 
@@ -102,8 +104,8 @@ int u_blox_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 		ckB += ckA;
 	}
 
-	ubx_frame[ubx_frame_len - U_BLOX_CHECKSUM_A_IDX_FROM_END] = ckA;
-	ubx_frame[ubx_frame_len - U_BLOX_CHECKSUM_B_IDX_FROM_END] = ckB;
+	frame->payload_and_checksum[payload_size] = ckA;
+	frame->payload_and_checksum[payload_size + 1] = ckB;
 
 	return ubx_frame_len;
 }
@@ -114,8 +116,8 @@ void u_blox_cfg_prt_poll_data_default(struct u_blox_cfg_prt_poll_data *const dat
 
 void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *const data) {
 	data->port_id = UBX_PORT_NUMBER_UART;
-	data->reserved0 = 0x00;
-	data->tx_ready_pin_conf = 0x0000;
+	data->reserved0 = UBX_CFG_PRT_DATA_RESERVED0;
+	data->tx_ready_pin_conf = UBX_CFG_PRT_TX_READY_PIN_CONF_POL_HIGH;
 	data->port_mode = UBX_CFG_PRT_PORT_MODE_CHAR_LEN_8 | UBX_CFG_PRT_PORT_MODE_PARITY_NONE |
 			  UBX_CFG_PRT_PORT_MODE_STOP_BITS_1;
 	data->baudrate = u_blox_baudrate[3];
@@ -123,59 +125,59 @@ void u_blox_cfg_prt_set_data_default(struct u_blox_cfg_prt_set_data *const data)
 			      UBX_CFG_PRT_IN_PROTO_RTCM;
 	data->out_proto_mask = UBX_CFG_PRT_OUT_PROTO_UBX | UBX_CFG_PRT_OUT_PROTO_NMEA |
 			       UBX_CFG_PRT_OUT_PROTO_RTCM3;
-	data->flags = 0x0000;
-	data->reserved1 = 0x0000;
+	data->flags = UBX_CFG_PRT_DATA_FLAGS_DEFAULT;
+	data->reserved1 = UBX_CFG_PRT_DATA_RESERVED1;
 }
 
 void u_blox_cfg_rst_data_default(struct u_blox_cfg_rst_data *const data) {
 	data->nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
 	data->reset_mode = UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET;
-	data->reserved0 = 0x00;
+	data->reserved0 = UBX_CFG_RST_DATA_RESERVED0;
 }
 
 void u_blox_cfg_nav5_data_default(struct u_blox_cfg_nav5_data *const data) {
-	data->mask = 0x05FF;
+	data->mask = UBX_CFG_NAV5_DATA_MASK_ALL;
 	data->dyn_model = UBX_DYN_MODEL_PORTABLE;
 
 	data->fix_mode = UBX_FIX_AUTO_FIX;
 
-	data->fixed_alt = 0;
-	data->fixed_alt_var = 1;
+	data->fixed_alt = UBX_CFG_NAV5_DATA_FIXED_ALT_DEFAULT;
+	data->fixed_alt_var = UBX_CFG_NAV5_DATA_FIXED_ALT_VAR_DEFAULT;
 
-	data->min_elev = 5;
-	data->dr_limit = 3;
+	data->min_elev = UBX_CFG_NAV5_DATA_MIN_ELEV_DEFAULT;
+	data->dr_limit = UBX_CFG_NAV5_DATA_DR_LIMIT_DEFAULT;
 
-	data->p_dop = 100;
-	data->t_dop = 100;
-	data->p_acc = 100;
-	data->t_acc = 350;
+	data->p_dop = UBX_CFG_NAV5_DATA_P_DOP_DEFAULT;
+	data->t_dop = UBX_CFG_NAV5_DATA_T_DOP_DEFAULT;
+	data->p_acc = UBX_CFG_NAV5_DATA_P_ACC_DEFAULT;
+	data->t_acc = UBX_CFG_NAV5_DATA_T_ACC_DEFAULT;
 
-	data->static_hold_threshold = 0;
-	data->dgnss_timeout = 60;
-	data->cno_threshold_num_svs = 0;
-	data->cno_threshold = 0;
+	data->static_hold_threshold = UBX_CFG_NAV5_DATA_STATIC_HOLD_THRESHOLD_DEFAULT;
+	data->dgnss_timeout = UBX_CFG_NAV5_DATA_DGNSS_TIMEOUT_DEFAULT;
+	data->cno_threshold_num_svs = UBX_CFG_NAV5_DATA_CNO_THRESHOLD_NUM_SVS_DEFAULT;
+	data->cno_threshold = UBX_CFG_NAV5_DATA_CNO_THRESHOLD_DEFAULT;
 
-	data->reserved0 = 0x0000;
+	data->reserved0 = UBX_CFG_NAV5_DATA_RESERVED0;
 
-	data->static_hold_dist_threshold = 0;
-	data->utc_standard = UBX_UTC_AutoUTC;
+	data->static_hold_dist_threshold = UBX_CFG_NAV5_DATA_STATIC_HOLD_DIST_THRESHOLD;
+	data->utc_standard = UBX_CFG_NAV5_DATA_UTC_STANDARD_DEFAULT;
 }
 
 static struct u_blox_cfg_gnss_data_config_block u_blox_cfg_gnss_data_config_block_default =
 {
 	.gnssId = UBX_GNSS_ID_GPS,
-	.num_res_trk_ch = 0x08,
-	.max_num_trk_ch = 0x16,
-	.reserved0 = U_BLOX_CFG_GNSS_DATA_RESERVED0,
-	.flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
-		 U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L1C_A,
+	.num_res_trk_ch = 0x00,
+	.max_num_trk_ch = 0x00,
+	.reserved0 = U_BLOX_CFG_GNSS_RESERVED0,
+	.flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
+		 U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L1C_A,
 };
 
 void u_blox_cfg_gnss_data_default(struct u_blox_cfg_gnss_data *data)
 {
-	data->msg_ver = U_BLOX_CFG_GNSS_DATA_MSG_VER;
-	data->num_trk_ch_hw = U_BLOX_CFG_GNSS_DATA_NUM_TRK_CH_HW_DEFAULT;
-	data->num_trk_ch_use = U_BLOX_CFG_GNSS_DATA_NUM_TRK_CH_USE_DEFAULT;
+	data->msg_ver = U_BLOX_CFG_GNSS_MSG_VER;
+	data->num_trk_ch_hw = U_BLOX_CFG_GNSS_NUM_TRK_CH_HW_DEFAULT;
+	data->num_trk_ch_use = U_BLOX_CFG_GNSS_NUM_TRK_CH_USE_DEFAULT;
 
 	for (int i = 0; i < data->num_config_blocks; ++i) {
 		data->config_blocks[i] = u_blox_cfg_gnss_data_config_block_default;

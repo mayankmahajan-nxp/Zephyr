@@ -443,7 +443,9 @@ static int u_blox_m10_get_navigation_mode(const struct device *dev, enum gnss_na
 		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, UBX_FRM_GET_PAYLOAD_SZ)
 	U_BLOX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
-	switch (script.ubx_frame[U_BLOX_FRM_HEADER_SZ + UBX_CFG_NAV5_DYN_MODEL_IDX]) {
+	struct ubx_frame_t *frame = (struct ubx_frame_t *) ubx_frame;
+
+	switch (((struct u_blox_cfg_nav5_data *)frame->payload_and_checksum)->dyn_model) {
 	case UBX_DYN_MODEL_STATIONARY:
 		*mode = GNSS_NAVIGATION_MODE_ZERO_DYNAMICS;
 		break;
@@ -487,43 +489,43 @@ static int u_blox_m10_set_enabled_systems(const struct device *dev, gnss_systems
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GPS;
 				data->config_blocks[filled_blocks].num_res_trk_ch = 0x08;
 				data->config_blocks[filled_blocks].max_num_trk_ch = 0x10;
-				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
-					U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L1C_A;
+				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
+					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_GPS_L1C_A;
 				break;
 			case GNSS_SYSTEM_GLONASS:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GLONAS;
 				data->config_blocks[filled_blocks].num_res_trk_ch = 0x08;
 				data->config_blocks[filled_blocks].max_num_trk_ch = 0x0E;
-				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
-					U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_GLONASS_L1;
+				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
+					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_GLONASS_L1;
 				break;
 			case GNSS_SYSTEM_GALILEO:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GALILEO;
 				data->config_blocks[filled_blocks].num_res_trk_ch = 0x04;
 				data->config_blocks[filled_blocks].max_num_trk_ch = 0x08;
-				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
-					U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_Galileo_E1;
+				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
+					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_Galileo_E1;
 				break;
 			case GNSS_SYSTEM_BEIDOU:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_BEIDOU;
 				data->config_blocks[filled_blocks].num_res_trk_ch = 0x08;
 				data->config_blocks[filled_blocks].max_num_trk_ch = 0x10;
-				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
-					U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_BeiDou_B1I;
+				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
+					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_BeiDou_B1I;
 				break;
 			case GNSS_SYSTEM_QZSS:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_QZSS;
 				data->config_blocks[filled_blocks].num_res_trk_ch = 0x00;
 				data->config_blocks[filled_blocks].max_num_trk_ch = 0x03;
-				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
-					U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_QZSS_L1C_A;
+				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
+					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_QZSS_L1C_A;
 				break;
 			case GNSS_SYSTEM_SBAS:
 				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_SBAS;
 				data->config_blocks[filled_blocks].num_res_trk_ch = 0x03;
 				data->config_blocks[filled_blocks].max_num_trk_ch = 0x03;
-				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_ENABLE |
-					U_BLOX_CFG_GNSS_DATA_CNF_BLK_FLAG_SGN_CNF_MASK_SBAS_L1C_A;
+				data->config_blocks[filled_blocks].flags = U_BLOX_CFG_GNSS_CNF_BLK_FLAG_ENABLE |
+					U_BLOX_CFG_GNSS_CNF_BLK_FLAG_SGN_CNF_MASK_SBAS_L1C_A;
 				break;
 			default:
 				break;

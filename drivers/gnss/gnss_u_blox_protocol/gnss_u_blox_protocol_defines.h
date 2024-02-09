@@ -58,7 +58,7 @@ enum ubx_utc_standard {
 	UBX_UTC_NAVIC,
 };
 
-enum ubx_class_ids {
+enum ubx_msg_class {
 	UBX_CLASS_NAV = 0x01,
 	UBX_CLASS_RXM = 0x02,
 	UBX_CLASS_INF = 0x04,
@@ -76,20 +76,20 @@ enum ubx_class_ids {
 	UBX_CLASS_NMEA = 0xF0,
 };
 
-enum ubx_ack_nack_messages {
+enum ubx_ack_message {
 	UBX_ACK_ACK = 0x01,
 	UBX_ACK_NAK = 0x00,
 };
 
-enum ubx_assistnow_aiding_messages {
-	UBX_AID_ALM = 0x30,
-	UBX_AID_AOP = 0x33,
-	UBX_AID_EPH = 0x31,
-	UBX_AID_HUI = 0x02,
-	UBX_AID_INI = 0x01,
-};
+// enum ubx_assistnow_aiding_message {
+// 	UBX_AID_ALM = 0x30,
+// 	UBX_AID_AOP = 0x33,
+// 	UBX_AID_EPH = 0x31,
+// 	UBX_AID_HUI = 0x02,
+// 	UBX_AID_INI = 0x01,
+// };
 
-enum ubx_configuration_input_messages {
+enum ubx_config_message {
 	UBX_CFG_ANT = 0x13,
 	UBX_CFG_BATCH = 0x93,
 	UBX_CFG_CFG = 0x09,
@@ -132,21 +132,21 @@ enum ubx_configuration_input_messages {
 	UBX_CFG_USB = 0x1B,
 };
 
-enum ubx_external_sensor_fusion_messages {
-	UBX_ESF_ALG = 0x14,
-	UBX_ESF_INS = 0x15,
-	UBX_ESF_MEAS = 0x02,
-	UBX_ESF_RAW = 0x03,
-	UBX_ESF_STATUS = 0x10,
-};
+// enum ubx_external_sensor_fusion_message {
+// 	UBX_ESF_ALG = 0x14,
+// 	UBX_ESF_INS = 0x15,
+// 	UBX_ESF_MEAS = 0x02,
+// 	UBX_ESF_RAW = 0x03,
+// 	UBX_ESF_STATUS = 0x10,
+// };
 
-enum ubx_high_rate_navigation_results_messages {
-	UBX_HNR_ATT = 0x01,
-	UBX_HNR_INS = 0x02,
-	UBX_HNR_PVT = 0x00,
-};
+// enum ubx_high_rate_navigation_results_message {
+// 	UBX_HNR_ATT = 0x01,
+// 	UBX_HNR_INS = 0x02,
+// 	UBX_HNR_PVT = 0x00,
+// };
 
-enum ubx_information_messages {
+enum ubx_information_message {
 	UBX_INF_DEBUG = 0x04,
 	UBX_INF_ERROR = 0x00,
 	UBX_INF_NOTICE = 0x02,
@@ -154,7 +154,7 @@ enum ubx_information_messages {
 	UBX_INF_WARNING = 0x01,
 };
 
-enum ubx_logging_messages {
+enum ubx_logging_message {
 	UBX_LOG_BATCH = 0x11,
 	UBX_LOG_CREATE = 0x07,
 	UBX_LOG_ERASE = 0x03,
@@ -168,7 +168,7 @@ enum ubx_logging_messages {
 	UBX_LOG_STRING = 0x04,
 };
 
-enum ubx_multiple_gnss_assistance_messages {
+enum ubx_multiple_gnss_assistance_message {
 	UBX_MGA_ACK = 0x60,
 	UBX_MGA_ANO = 0x20,
 	UBX_MGA_BDS = 0x03,
@@ -181,7 +181,7 @@ enum ubx_multiple_gnss_assistance_messages {
 	UBX_MGA_QZSS = 0x05,
 };
 
-enum ubx_monitoring_messages {
+enum ubx_monitoring_message {
 	UBX_MON_BATCH = 0x32,
 	UBX_MON_GNSS = 0x28,
 	UBX_MON_HW2 = 0x0B,
@@ -197,7 +197,7 @@ enum ubx_monitoring_messages {
 	UBX_MON_VER = 0x04,
 };
 
-enum ubx_nagivation_results_messages {
+enum ubx_nagivation_results_message {
 	UBX_NAV_AOPSTATUS = 0x60,
 	UBX_NAV_ATT = 0x05,
 	UBX_NAV_CLOCK = 0x22,
@@ -234,7 +234,7 @@ enum ubx_nagivation_results_messages {
 	UBX_NAV_VELNED = 0x12,
 };
 
-enum ubx_receiver_manager_messages {
+enum ubx_receiver_manager_message {
 	UBX_RXM_IMES = 0x61,
 	UBX_RXM_MEASX = 0x14,
 	UBX_RXM_PMREQ = 0x41,
@@ -244,7 +244,7 @@ enum ubx_receiver_manager_messages {
 	UBX_RXM_SFRBX = 0x13,
 };
 
-enum ubx_timing_messages {
+enum ubx_timing_message {
 	UBX_TIM_DOSC = 0x11,
 	UBX_TIM_FCHG = 0x16,
 	UBX_TIM_HOC = 0x17,
@@ -257,7 +257,7 @@ enum ubx_timing_messages {
 	UBX_TIM_VRFY = 0x06,
 };
 
-enum ubx_nmea_message_ids {
+enum ubx_nmea_message_id {
 	UBX_NMEA_DTM = 0x0A,
 	UBX_NMEA_GBQ = 0x44,
 	UBX_NMEA_GBS = 0x09,

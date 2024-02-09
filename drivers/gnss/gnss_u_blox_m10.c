@@ -31,19 +31,22 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 #define CHAT_ARGV_SZ		32
 
 #define UBX_RECV_BUF_SZ		UBX_FRM_SZ_MAX
+#define UBX_TRNS_BUF_SZ		UBX_FRM_SZ_MAX
 #define UBX_WORK_BUF_SZ		UBX_FRM_SZ_MAX
 #define UBX_RESPONSE_BUF_SZ	UBX_FRM_SZ_MAX
+
+#define UBX_FRM_BUF_SZ		UBX_FRM_SZ_MAX
 
 #define MODEM_UBX_FRM_TIMEOUT_MS	500
 
 #define UBX_M10_GNSS_SYS_CNT_MAX	6
 
-#define UBX_M10_MODEM_UBX_SCRIPT_CREATE_TEMP(script_name, ubx_frame, ubx_frame_len, retry)	\
+/* #define UBX_M10_MODEM_UBX_SCRIPT_CREATE_TEMP(script_name, ubx_frame, ubx_frame_len, retry)	\
 	struct modem_ubx_script script_name = {							\
 		.ubx_frame = ubx_frame,								\
 		.ubx_frame_size = ubx_frame_len,						\
 		.retry_count = retry,								\
-	};
+	}; */
 
 #define UBX_M10_MODEM_UBX_SCRIPT_CREATE(script_inst, ubx_frm, ubx_frm_sz, retry)		\
 	uint8_t ubx_frm[ubx_frm_sz];								\
@@ -58,12 +61,12 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 	script_inst.ubx_frame_size = ubx_create_frame(script_inst.ubx_frame, ubx_frm_sz,	\
 							 msg_class, msg_id, data, payload_size);
 
-#define UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script_inst, script_ret)		\
+/* #define UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script_inst, script_ret)		\
 	int script_ret;								\
 	script_ret = ubx_m10_modem_ubx_run_script(dev, &script_inst);		\
 	if (script_ret < 0) {							\
 		return script_ret;						\
-	}
+	} */
 
 enum MODEM_MODULE {
 	MODEM_MODULE_CHAT = 0,
@@ -96,6 +99,9 @@ struct ubx_m10_data {
 	uint8_t ubx_receive_buf[UBX_RECV_BUF_SZ];
 	uint8_t ubx_work_buf[UBX_WORK_BUF_SZ];
 	uint8_t ubx_response_buf[UBX_RESPONSE_BUF_SZ];
+
+	/* Ubx frame */
+	uint8_t ubx_frame_buf[UBX_FRM_BUF_SZ];
 
 	struct k_spinlock lock;
 };
@@ -268,29 +274,69 @@ out:
 	return 0;
 }
 
+static int ubx_m10_modem_ubx_script_init(const struct device *dev, struct modem_ubx_script script,
+					 uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t retry,
+					 void *frame_data, enum ubx_msg_class msg_cls,
+					 enum ubx_config_message msg_id, uint16_t payload_size)
+{
+	script.ubx_frame = ubx_frame;
+	script.retry_count = retry;
+
+	return ubx_create_frame(ubx_frame, ubx_frame_size, msg_cls, msg_id, frame_data,
+				payload_size);
+}
+
 static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_baudrate,
 				   uint16_t retry)
 {
-	UBX_CFG_PRT_SET_DATA_INIT(data)
-	data.baudrate = target_baudrate;
-	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_PRT_SET_FRM_SZ, retry,
-		UBX_CLASS_CFG, UBX_CFG_PRT, &data, UBX_CFG_PRT_SET_PAYLOAD_SZ)
-	UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
 
-	return 0;
+	key = k_spin_lock(&data->lock);
+
+	UBX_CFG_PRT_SET_DATA_INIT(frm_data)
+	frm_data.baudrate = target_baudrate;
+
+	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_PRT_SET_FRM_SZ, retry,
+		UBX_CLASS_CFG, UBX_CFG_PRT, &frm_data, UBX_CFG_PRT_SET_PAYLOAD_SZ)
+
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out;
+	}
+
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
 }
 
 static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 {
-	int retry = 2;
-	UBX_CFG_RST_DATA_INIT(data)
-	data.nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
-	data.reset_mode = reset_mode;
-	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_RST_FRM_SZ, retry,
-		UBX_CLASS_CFG, UBX_CFG_RST, &data, UBX_CFG_RST_PAYLOAD_SZ)
-	UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
 
-	return 0;
+	key = k_spin_lock(&data->lock);
+
+	int retry = 2;
+	UBX_CFG_RST_DATA_INIT(frm_data)
+	frm_data.nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
+	frm_data.reset_mode = reset_mode;
+
+	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_RST_FRM_SZ, retry,
+		UBX_CLASS_CFG, UBX_CFG_RST, &frm_data, UBX_CFG_RST_PAYLOAD_SZ)
+
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out;
+	}
+
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
 }
 
 static int ubx_m10_get_uart_baudrate(const struct device *dev)
@@ -308,6 +354,11 @@ static int ubx_m10_get_uart_baudrate(const struct device *dev)
 
 static int ubx_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate)
 {
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+
+	key = k_spin_lock(&data->lock);
 	const struct ubx_m10_config *cfg = dev->config;
 
 	const struct uart_driver_api *uart_api = cfg->uart->api;
@@ -318,15 +369,18 @@ static int ubx_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate
 	uart_api->config_get(cfg->uart, &uart_cfg);
 	uart_cfg.baudrate = baudrate;
 
-	int ret = uart_api->configure(cfg->uart, &uart_cfg);
+	ret = uart_api->configure(cfg->uart, &uart_cfg);
 
 	ubx_m10_init_pipe(dev);
 	ret = ubx_m10_resume(dev);
 	if (ret < 0) {
-		return ret;
+		goto out;
 	}
 
-	return 0;
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
 }
 
 static int ubx_m10_configure_gnss_device_baudrate_prerequisite(const struct device *dev)
@@ -356,7 +410,7 @@ static int ubx_m10_configure_gnss_device_baudrate_prerequisite(const struct devi
 		return ret;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int ubx_m10_configure_gnss_device_baudrate(const struct device *dev)
@@ -375,39 +429,62 @@ static int ubx_m10_configure_gnss_device_baudrate(const struct device *dev)
 
 static int ubx_m10_configure_messages(const struct device *dev)
 {
-	UBX_CFG_MSG_DATA_INIT(data)
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+
+	key = k_spin_lock(&data->lock);
+
+	UBX_CFG_MSG_DATA_INIT(frm_data)
 	UBX_M10_MODEM_UBX_SCRIPT_CREATE(script, ubx_frame, UBX_CFG_MSG_FRM_SZ,
 		MODEM_UBX_RETRY_DEFAULT)
 
 	/* Enabling GGA, RMC and GSV messages. */
-	data.rate = 1;
+	frm_data.rate = 1;
 	uint8_t message_enable[] = {UBX_NMEA_GGA, UBX_NMEA_RMC, UBX_NMEA_GSV};
 
 	for (int i = 0; i < sizeof(message_enable); ++i) {
-		data.message_id = message_enable[i];
+		frm_data.message_id = message_enable[i];
 		script.ubx_frame_size = ubx_create_frame(script.ubx_frame, UBX_CFG_MSG_FRM_SZ,
-			UBX_CLASS_CFG, UBX_CFG_MSG, &data, UBX_CFG_MSG_PAYLOAD_SZ);
-		UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
+			UBX_CLASS_CFG, UBX_CFG_MSG, &frm_data, UBX_CFG_MSG_PAYLOAD_SZ);
+
+		ret = ubx_m10_modem_ubx_run_script(dev, &script);
+		if (ret < 0) {
+			goto out;
+		}
 	}
 
 	/* Disabling DTM, GBS, GLL, GNS, GRS, GSA, GST, VLW, VTG and ZDA messages. */
-	data.rate = 0;
+	frm_data.rate = 0;
 	uint8_t message_disable[] = {UBX_NMEA_DTM, UBX_NMEA_GBS, UBX_NMEA_GLL, UBX_NMEA_GNS,
 				     UBX_NMEA_GRS, UBX_NMEA_GSA, UBX_NMEA_GST, UBX_NMEA_VLW,
 				     UBX_NMEA_VTG, UBX_NMEA_ZDA};
 
 	for (int i = 0; i < sizeof(message_disable); ++i) {
-		data.message_id = message_disable[i];
+		frm_data.message_id = message_disable[i];
 		script.ubx_frame_size = ubx_create_frame(script.ubx_frame, UBX_CFG_MSG_FRM_SZ,
-			UBX_CLASS_CFG, UBX_CFG_MSG, &data, UBX_CFG_MSG_PAYLOAD_SZ);
-		UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
+			UBX_CLASS_CFG, UBX_CFG_MSG, &frm_data, UBX_CFG_MSG_PAYLOAD_SZ);
+
+		ret = ubx_m10_modem_ubx_run_script(dev, &script);
+		if (ret < 0) {
+			goto out;
+		}
 	}
 
-	return 0;
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
 }
 
 static int ubx_m10_set_navigation_mode(const struct device *dev, enum gnss_navigation_mode mode)
 {
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+
+	key = k_spin_lock(&data->lock);
+
 	enum ubx_dynamic_model dynamic_model = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
 	switch (mode) {
 	case GNSS_NAVIGATION_MODE_ZERO_DYNAMICS:
@@ -426,22 +503,39 @@ static int ubx_m10_set_navigation_mode(const struct device *dev, enum gnss_navig
 		break;
 	}
 
-	UBX_CFG_NAV5_DATA_INIT(data)
-	data.dyn_model = dynamic_model;
+	UBX_CFG_NAV5_DATA_INIT(frm_data)
+	frm_data.dyn_model = dynamic_model;
 
 	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_NAV5_FRM_SZ,
-		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, &data,
+		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, &frm_data,
 		UBX_CFG_NAV5_PAYLOAD_SZ)
-	UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
 
-	return 0;
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out;
+	}
+
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
 }
 
 static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navigation_mode *mode)
 {
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+
+	key = k_spin_lock(&data->lock);
+
 	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_NAV5_FRM_SZ,
 		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_NAV5, NULL, UBX_FRM_GET_PAYLOAD_SZ)
-	UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
+
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out;
+	}
 
 	struct ubx_frame_t *frame = (struct ubx_frame_t *) ubx_frame;
 
@@ -462,12 +556,21 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 		break;
 	}
 
-	return 0;
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
 }
 
 static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t systems)
 {
-	struct ubx_cfg_gnss_data *data;
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+
+	key = k_spin_lock(&data->lock);
+
+	struct ubx_cfg_gnss_data *frm_data;
 
 	uint8_t cfg_blocks_count = 0;
 	gnss_systems_t temp = systems;
@@ -476,48 +579,48 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 		temp = temp & (temp - 1);
 	}
 
-	data = malloc(sizeof(*data) + sizeof(struct ubx_cfg_gnss_data_config_block) * cfg_blocks_count);
-	data->num_config_blocks = cfg_blocks_count;
+	frm_data = malloc(sizeof(*frm_data) + sizeof(struct ubx_cfg_gnss_data_config_block) * cfg_blocks_count);
+	frm_data->num_config_blocks = cfg_blocks_count;
 
-	(void) ubx_cfg_gnss_data_default(data);
+	(void) ubx_cfg_gnss_data_default(frm_data);
 
 	uint8_t filled_blocks = 0;
 	for (int i = 0; i < 8; ++i) {
 		if (systems & (1 << i)) {
 			switch (systems & (1 << i)) {
 			case GNSS_SYSTEM_GPS:
-				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GPS;
-				data->config_blocks[filled_blocks].flags =
+				frm_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_GPS;
+				frm_data->config_blocks[filled_blocks].flags =
 					UBX_CFG_GNSS_FLAG_ENABLE |
 					UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L1C_A;
 				break;
 			case GNSS_SYSTEM_GLONASS:
-				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GLONAS;
-				data->config_blocks[filled_blocks].flags =
+				frm_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_GLONAS;
+				frm_data->config_blocks[filled_blocks].flags =
 					UBX_CFG_GNSS_FLAG_ENABLE |
 					UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L1;
 				break;
 			case GNSS_SYSTEM_GALILEO:
-				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_GALILEO;
-				data->config_blocks[filled_blocks].flags =
+				frm_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_GALILEO;
+				frm_data->config_blocks[filled_blocks].flags =
 					UBX_CFG_GNSS_FLAG_ENABLE |
 					UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E1;
 				break;
 			case GNSS_SYSTEM_BEIDOU:
-				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_BEIDOU;
-				data->config_blocks[filled_blocks].flags =
+				frm_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_BEIDOU;
+				frm_data->config_blocks[filled_blocks].flags =
 					UBX_CFG_GNSS_FLAG_ENABLE |
 					UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B1I;
 				break;
 			case GNSS_SYSTEM_QZSS:
-				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_QZSS;
-				data->config_blocks[filled_blocks].flags =
+				frm_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_QZSS;
+				frm_data->config_blocks[filled_blocks].flags =
 					UBX_CFG_GNSS_FLAG_ENABLE |
 					UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L1C_A;
 				break;
 			case GNSS_SYSTEM_SBAS:
-				data->config_blocks[filled_blocks].gnssId = UBX_GNSS_ID_SBAS;
-				data->config_blocks[filled_blocks].flags =
+				frm_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_SBAS;
+				frm_data->config_blocks[filled_blocks].flags =
 					UBX_CFG_GNSS_FLAG_ENABLE |
 					UBX_CFG_GNSS_FLAG_SGN_CNF_SBAS_L1C_A;
 				break;
@@ -530,25 +633,37 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 
 
 	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_GNSS_FRM_SZ(cfg_blocks_count),
-				      MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_GNSS, data,
+				      MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_GNSS, frm_data,
 				      UBX_CFG_GNSS_PAYLOAD_SZ(cfg_blocks_count))
-	int ret;
+
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
 		goto out;
 	}
 
 out:
-	free(data);
+	free(frm_data);
+
+	k_spin_unlock(&data->lock, key);
 
 	return ret;
 }
 
 static int ubx_m10_get_enabled_systems(const struct device *dev, gnss_systems_t *systems)
 {
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+
+	key = k_spin_lock(&data->lock);
+
 	UBX_M10_MODEM_UBX_SCRIPT_INIT(script, ubx_frame, UBX_CFG_GNSS_FRM_SZ(UBX_M10_GNSS_SYS_CNT_MAX),
 		MODEM_UBX_RETRY_DEFAULT, UBX_CLASS_CFG, UBX_CFG_GNSS, NULL, UBX_FRM_GET_PAYLOAD_SZ)
-	UBX_M10_MODEM_UBX_SCRIPT_RUN(dev, script, script_ret)
+
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out;
+	}
 
 	for (int i = 10; i < script.ubx_frame_size - UBX_CHECKSUM_STOP_IDX_FROM_END;
 	     i += UBX_CFG_GNSS_PAYLOAD_CFG_BLK_SZ) {
@@ -576,7 +691,10 @@ static int ubx_m10_get_enabled_systems(const struct device *dev, gnss_systems_t 
 		};
 	}
 
-	return 0;
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
 }
 
 static int ubx_m10_get_supported_systems(const struct device *dev, gnss_systems_t *systems)
@@ -615,14 +733,32 @@ static int ubx_m10_configure(const struct device *dev)
 		goto out;
 	}
 
+	// temp. need to remove the following.
+	gnss_systems_t systems = 0;
+	printk("ubx_m10_get_enabled_systems.\n");
+	ubx_m10_get_enabled_systems(dev, &systems);
+	systems = GNSS_SYSTEM_GPS | GNSS_SYSTEM_QZSS | GNSS_SYSTEM_GALILEO | GNSS_SYSTEM_GLONASS
+		| GNSS_SYSTEM_SBAS;
+	printk("ubx_m10_set_enabled_systems.\n");
+	ubx_m10_set_enabled_systems(dev, systems);
+	systems = 0;
+	printk("ubx_m10_get_enabled_systems.\n");
+	ubx_m10_get_enabled_systems(dev, &systems);
+
+	enum gnss_navigation_mode nav_mode = GNSS_NAVIGATION_MODE_LOW_DYNAMICS;
+	ubx_m10_get_navigation_mode(dev, &nav_mode);
+	printk("ubx_m10_get_navigation_mode. %d\n", nav_mode);
+	nav_mode = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
+	ubx_m10_set_navigation_mode(dev, nav_mode);
+	printk("ubx_m10_set_navigation_mode. %d\n", nav_mode);
+	nav_mode = 0;
+	ubx_m10_get_navigation_mode(dev, &nav_mode);
+	printk("ubx_m10_get_navigation_mode. %d\n", nav_mode);
+
 out:
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
 
-	if (ret < 0) {
-		return ret;
-	}
-
-	return 0;
+	return ret;
 }
 
 static int ubx_m10_init(const struct device *dev)
@@ -655,6 +791,29 @@ static int ubx_m10_init(const struct device *dev)
 	if (ret < 0) {
 		return ret;
 	}
+
+	k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
+	// temp. need to remove the following.
+	gnss_systems_t systems = 0;
+	printk("ubx_m10_get_enabled_systems.\n");
+	ubx_m10_get_enabled_systems(dev, &systems);
+	systems = GNSS_SYSTEM_GPS | GNSS_SYSTEM_QZSS | GNSS_SYSTEM_GALILEO | GNSS_SYSTEM_GLONASS
+		| GNSS_SYSTEM_SBAS;
+	printk("ubx_m10_set_enabled_systems.\n");
+	ubx_m10_set_enabled_systems(dev, systems);
+	systems = 0;
+	printk("ubx_m10_get_enabled_systems.\n");
+	ubx_m10_get_enabled_systems(dev, &systems);
+
+	enum gnss_navigation_mode nav_mode = GNSS_NAVIGATION_MODE_LOW_DYNAMICS;
+	ubx_m10_get_navigation_mode(dev, &nav_mode);
+	printk("ubx_m10_get_navigation_mode. %d\n", nav_mode);
+	nav_mode = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
+	ubx_m10_set_navigation_mode(dev, nav_mode);
+	printk("ubx_m10_set_navigation_mode. %d\n", nav_mode);
+	nav_mode = 0;
+	ubx_m10_get_navigation_mode(dev, &nav_mode);
+	printk("ubx_m10_get_navigation_mode. %d\n", nav_mode);
 
 	return 0;
 }

@@ -44,10 +44,10 @@
 
 extern const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT];
 
-#define TO_LITTLE_ENDIAN(data, b)			\
+/* #define TO_LITTLE_ENDIAN(data, b)			\
 	for (int j = 0; j < sizeof(data); j++) {	\
 		b[j] = (data >> (j * 8)) & 0xFF;	\
-	}
+	} */
 
 #define UBX_FRM_GET_PAYLOAD_SZ			0
 #define UBX_CFG_PRT_POLL_PAYLOAD_SZ		1
@@ -215,33 +215,33 @@ void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *data);
 #define UBX_CFG_GNSS_RESERVED0			0x00
 #define UBX_CFG_GNSS_FLAG_ENABLE		BIT(0)
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT		16
-/* When gnssId is 0 (GPS) */
+/* When gnss_id is 0 (GPS) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L1C_A	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L2C	0x10 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L5	0x20 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
-/* When gnssId is 1 (SBAS) */
+/* When gnss_id is 1 (SBAS) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_SBAS_L1C_A	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
-/* When gnssId is 2 (Galileo) */
+/* When gnss_id is 2 (Galileo) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E1	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E5A	0x10 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E5B	0x20 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
-/* When gnssId is 3 (BeiDou) */
+/* When gnss_id is 3 (BeiDou) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B1I	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B2I	0x10 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B2A	0x80 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
-/* When gnssId is 4 (IMES) */
+/* When gnss_id is 4 (IMES) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_IMES_L1	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
-/* When gnssId is 5 (QZSS) */
+/* When gnss_id is 5 (QZSS) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L1C_A	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L1S	0x04 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L2C	0x10 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L5	0x20 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
-/* When gnssId is 6 (GLONASS) */
+/* When gnss_id is 6 (GLONASS) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L1	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L2	0x10 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 
 struct ubx_cfg_gnss_data_config_block {
-	uint8_t gnssId;
+	uint8_t gnss_id;
 	uint8_t num_res_trk_ch;
 	uint8_t max_num_trk_ch;
 	uint8_t reserved0;

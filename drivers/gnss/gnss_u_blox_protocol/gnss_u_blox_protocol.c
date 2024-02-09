@@ -159,7 +159,7 @@ void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *const data) {
 }
 
 static struct ubx_cfg_gnss_data_config_block ubx_cfg_gnss_data_config_block_default = {
-	.gnssId = UBX_GNSS_ID_GPS,
+	.gnss_id = UBX_GNSS_ID_GPS,
 	.num_res_trk_ch = 0x00,
 	.max_num_trk_ch = 0x00,
 	.reserved0 = UBX_CFG_GNSS_RESERVED0,

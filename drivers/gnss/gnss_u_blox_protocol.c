@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "gnss_u_blox_protocol.h"
+#include <zephyr/drivers/gnss/gnss_u_blox_protocol.h>
 
 const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT] = {
 	4800,
@@ -17,7 +17,7 @@ const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT] = {
 	460800,
 };
 
-int ubx_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, uint8_t message_id,
+static int ubx_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, uint8_t message_id,
 		       uint16_t payload_size)
 {
 	if (ubx_frame_size > UBX_FRM_SZ_MAX ||
@@ -182,4 +182,11 @@ void ubx_cfg_msg_data_default(struct ubx_cfg_msg_data *const data)
 	data->message_class = UBX_CLASS_NMEA;
 	data->message_id = UBX_NMEA_GGA;
 	data->rate = UBX_CFG_MSG_RATE_DEFAULT;
+}
+
+uint16_t ubx_get_payload_size(uint8_t *ubx_frame)
+{
+	struct ubx_frame_t *frame = (struct ubx_frame_t *) ubx_frame;
+
+	return (uint16_t) ((frame->payload_size_low & 0xFF) | (frame->payload_size_high << 8));
 }

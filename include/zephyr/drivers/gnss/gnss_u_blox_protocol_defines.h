@@ -81,14 +81,6 @@ enum ubx_ack_message {
 	UBX_ACK_NAK = 0x00,
 };
 
-// enum ubx_assistnow_aiding_message {
-// 	UBX_AID_ALM = 0x30,
-// 	UBX_AID_AOP = 0x33,
-// 	UBX_AID_EPH = 0x31,
-// 	UBX_AID_HUI = 0x02,
-// 	UBX_AID_INI = 0x01,
-// };
-
 enum ubx_config_message {
 	UBX_CFG_ANT = 0x13,
 	UBX_CFG_BATCH = 0x93,
@@ -131,20 +123,6 @@ enum ubx_config_message {
 	UBX_CFG_TXSLOT = 0x53,
 	UBX_CFG_USB = 0x1B,
 };
-
-// enum ubx_external_sensor_fusion_message {
-// 	UBX_ESF_ALG = 0x14,
-// 	UBX_ESF_INS = 0x15,
-// 	UBX_ESF_MEAS = 0x02,
-// 	UBX_ESF_RAW = 0x03,
-// 	UBX_ESF_STATUS = 0x10,
-// };
-
-// enum ubx_high_rate_navigation_results_message {
-// 	UBX_HNR_ATT = 0x01,
-// 	UBX_HNR_INS = 0x02,
-// 	UBX_HNR_PVT = 0x00,
-// };
 
 enum ubx_information_message {
 	UBX_INF_DEBUG = 0x04,

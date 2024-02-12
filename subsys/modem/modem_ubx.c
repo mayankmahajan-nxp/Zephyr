@@ -12,14 +12,15 @@ LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 
 #define MODEM_UBX_STATE_ATTACHED_BIT		(0)
 
-static bool received_ubx_preamble_sync_chars;
+void modem_ubx_reset_received_ubx_preamble_sync_chars(struct modem_ubx *ubx)
+{
+	ubx->received_ubx_preamble_sync_chars = false;
+}
 
 void modem_ubx_reset_parser(struct modem_ubx *ubx)
 {
-	received_ubx_preamble_sync_chars = false;
-	// TODO: do we need to reset work_buf_len.
-	ubx->work_buf_len = 0;
-	ubx->ubx_response_buf_len = 0;
+	modem_ubx_reset_received_ubx_preamble_sync_chars(ubx);
+	ubx->received_ubx_get_frame_response = false;
 }
 
 int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_script *script)
@@ -32,8 +33,9 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 
 	k_sem_reset(&ubx->script_stopped_sem);
 
-	ubx->transmit_buf = script->ubx_frame;
-	ubx->transmit_buf_size = script->ubx_frame_size;
+	/* Initialize transfer buffer to the ubx frame in the script. */
+	ubx->transfer_buf = script->ubx_frame;
+	ubx->transfer_buf_len = script->ubx_frame_size;
 
 	modem_ubx_reset_parser(ubx);
 
@@ -41,17 +43,20 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 
 	ret = k_sem_take(&ubx->script_stopped_sem, ubx->process_timeout);
 
-	if (ubx->ubx_response_buf_len > 0) {
-		// TODO: check that ubx_frame is big enough to hold the received response.
-		memcpy(script->ubx_frame, ubx->ubx_response_buf, ubx->ubx_response_buf_len);
-	}
-
 	if (ret < 0) {
 		return ret;
-	} else if (ubx->work_buf[UBX_FRM_MSG_ID_IDX] == UBX_FRM_MSG_ID_ACK) {
-		return ubx->ubx_response_buf_len;
 	} else {
-		return -1;
+		if (ubx->work_buf[UBX_FRM_MSG_ID_IDX] == UBX_ACK_ACK) {
+			/* The response of the ubx frame written was acknowledged. */
+			if (ubx->received_ubx_get_frame_response == true) {
+				/* The response of a "get" ubx frame was received. */
+				return ubx->transfer_buf_len;
+			} else {
+				return 0;
+			}
+		} else { /* The response of the ubx frame written was not acknowledged. */
+			return -1;
+		}
 	}
 }
 
@@ -68,10 +73,10 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 		return ret;
 	}
 
-	for (int i = 0; i < script->retry_count; ++i) {
+	for (int attempt = 0; attempt < script->retry_count; ++attempt) {
 		ret = modem_ubx_run_script_helper(ubx, script);
 		if (ret > -1) {
-			LOG_INF("success on attempt: %d.", i);
+			LOG_INF("Successfully executed script on attempt: %d.", attempt);
 			break;
 		} else if (ret == -EPERM) {
 			break;
@@ -79,6 +84,7 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 	}
 
 	if (ret < 0) {
+		LOG_ERR("Failed to execute script successfully.");
 		goto out;
 	}
 
@@ -103,9 +109,9 @@ static void modem_ubx_send_handler(struct k_work *item)
 	struct modem_ubx *ubx = CONTAINER_OF(item, struct modem_ubx, send_work);
 	int ret;
 
-	ret = modem_pipe_transmit(ubx->pipe, ubx->transmit_buf, ubx->transmit_buf_size);
-	if (ret < ubx->transmit_buf_size) {
-		LOG_ERR("modem_pipe_transmit failed. returned %d.", ret);
+	ret = modem_pipe_transmit(ubx->pipe, ubx->transfer_buf, ubx->transfer_buf_len);
+	if (ret < ubx->transfer_buf_len) {
+		LOG_ERR("Ubx frame transmission failed. Returned %d.", ret);
 		return;
 	}
 }
@@ -114,17 +120,20 @@ static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
 	// TODO: check validity of ubx frame received and return accordingly.
 
-	if (ubx->work_buf[UBX_FRM_MSG_CLASS_IDX] == UBX_FRM_MSG_CLASS_ACK) {
+	if (ubx->work_buf[UBX_FRM_MSG_CLASS_IDX] == UBX_CLASS_ACK) {
 		k_sem_give(&ubx->script_stopped_sem);
+
 		return 0;
+	} else {
+		ubx->received_ubx_get_frame_response = true;
+
+		memcpy(ubx->transfer_buf, ubx->work_buf, ubx->work_buf_len);
+		ubx->transfer_buf_len = ubx->work_buf_len;
+
+		modem_ubx_reset_received_ubx_preamble_sync_chars(ubx);
+
+		return -1;
 	}
-
-	memcpy(ubx->ubx_response_buf, ubx->work_buf, ubx->work_buf_len);
-	ubx->ubx_response_buf_len = ubx->work_buf_len;
-
-	received_ubx_preamble_sync_chars = false;
-
-	return -1;
 }
 
 static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
@@ -132,9 +141,9 @@ static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 	static uint8_t byte_prev;
 	static uint16_t received_ubx_frame_len;
 
-	if (received_ubx_preamble_sync_chars == false) {
+	if (ubx->received_ubx_preamble_sync_chars == false) {
 		if (byte_prev == UBX_PREAMBLE_SYNC_CHAR_1 && byte == UBX_PREAMBLE_SYNC_CHAR_2) {
-			received_ubx_preamble_sync_chars = true;
+			ubx->received_ubx_preamble_sync_chars = true;
 			ubx->work_buf[0] = UBX_PREAMBLE_SYNC_CHAR_1;
 			ubx->work_buf[1] = UBX_PREAMBLE_SYNC_CHAR_2;
 			ubx->work_buf_len = 2;
@@ -143,10 +152,10 @@ static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 		ubx->work_buf[ubx->work_buf_len] = byte;
 		++ubx->work_buf_len;
 
-		if (ubx->work_buf_len == UBX_FRM_HEADER_SIZE) {
-			received_ubx_frame_len = (ubx->work_buf[UBX_FRM_PAYLOAD_SIZE_L_IDX] |
-						 ubx->work_buf[UBX_FRM_PAYLOAD_SIZE_H_IDX] << 8) +
-						 UBX_FRM_SIZE_WITHOUT_PAYLOAD;
+		if (ubx->work_buf_len == UBX_FRM_HEADER_SZ) {
+			received_ubx_frame_len = (ubx->work_buf[UBX_FRM_PAYLOAD_SZ_L_IDX]
+						 | ubx->work_buf[UBX_FRM_PAYLOAD_SZ_H_IDX] << 8)
+						 + UBX_FRM_SZ_WITHOUT_PAYLOAD;
 		}
 
 		if (ubx->work_buf_len == received_ubx_frame_len) {
@@ -206,7 +215,6 @@ void modem_ubx_release(struct modem_ubx *ubx)
 	k_sem_reset(&ubx->script_stopped_sem);
 	k_sem_reset(&ubx->script_running_sem);
 	ubx->work_buf_len = 0;
-	ubx->ubx_response_buf_len = 0;
 	modem_ubx_reset_parser(ubx);
 	ubx->pipe = NULL;
 }
@@ -219,8 +227,6 @@ int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config)
 	__ASSERT_NO_MSG(config->receive_buf_size > 0);
 	__ASSERT_NO_MSG(config->work_buf != NULL);
 	__ASSERT_NO_MSG(config->work_buf_size > 0);
-	__ASSERT_NO_MSG(config->ubx_response_buf != NULL);
-	__ASSERT_NO_MSG(config->ubx_response_buf_size > 0);
 
 	memset(ubx, 0x00, sizeof(*ubx));
 	ubx->user_data = config->user_data;
@@ -229,8 +235,6 @@ int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config)
 	ubx->receive_buf_size = config->receive_buf_size;
 	ubx->work_buf = config->work_buf;
 	ubx->work_buf_size = config->work_buf_size;
-	ubx->ubx_response_buf = config->ubx_response_buf;
-	ubx->ubx_response_buf_size = config->ubx_response_buf_size;
 
 	ubx->pipe = NULL;
 

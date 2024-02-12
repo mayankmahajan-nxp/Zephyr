@@ -10,6 +10,8 @@
 
 #include <zephyr/modem/pipe.h>
 
+#include <zephyr/drivers/gnss/gnss_u_blox_protocol.h>
+
 #ifndef ZEPHYR_MODEM_UBX_
 #define ZEPHYR_MODEM_UBX_
 
@@ -23,21 +25,6 @@ extern "C" {
  * @ingroup modem
  * @{
  */
-
-#define UBX_PREAMBLE_SYNC_CHAR_1	0xB5
-#define UBX_PREAMBLE_SYNC_CHAR_2	0x62
-
-#define UBX_FRM_MSG_CLASS_IDX		2
-#define UBX_FRM_MSG_ID_IDX		3
-
-#define UBX_FRM_MSG_CLASS_ACK		5
-#define UBX_FRM_MSG_ID_ACK		1
-
-#define UBX_FRM_HEADER_SIZE		6
-#define UBX_FRM_FOOTER_SIZE		2
-#define UBX_FRM_SIZE_WITHOUT_PAYLOAD	UBX_FRM_HEADER_SIZE + UBX_FRM_FOOTER_SIZE
-#define UBX_FRM_PAYLOAD_SIZE_L_IDX	4
-#define UBX_FRM_PAYLOAD_SIZE_H_IDX	5
 
 #define MODEM_UBX_RETRY_DEFAULT		10
 
@@ -54,15 +41,15 @@ struct modem_ubx {
 
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
-	uint8_t *transmit_buf;
-	uint16_t transmit_buf_size;
+	bool received_ubx_preamble_sync_chars;
+	bool received_ubx_get_frame_response;
+
+	uint8_t *transfer_buf;
+	uint16_t transfer_buf_len;
 
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
 	uint16_t work_buf_len;
-	uint8_t *ubx_response_buf;
-	uint16_t ubx_response_buf_size;
-	uint16_t ubx_response_buf_len;
 
 	struct modem_pipe *pipe;
 

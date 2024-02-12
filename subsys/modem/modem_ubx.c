@@ -41,7 +41,7 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 
 	k_work_submit(&ubx->send_work);
 
-	ret = k_sem_take(&ubx->script_stopped_sem, ubx->process_timeout);
+	ret = k_sem_take(&ubx->script_stopped_sem, script->script_timeout);
 
 	if (ret < 0) {
 		return ret;
@@ -63,6 +63,10 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *script)
 {
 	int ret;
+
+	if (script->ubx_frame_size > UBX_FRM_SZ_MAX) {
+		return -EFBIG;
+	}
 
 	if (atomic_test_bit(&ubx->state, MODEM_UBX_STATE_ATTACHED_BIT) == false) {
 		return -EPERM;
@@ -242,7 +246,6 @@ int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config)
 	k_work_init(&ubx->process_work, modem_ubx_process_handler);
 	k_sem_init(&ubx->script_stopped_sem, 0, 1);
 	k_sem_init(&ubx->script_running_sem, 1, 1);
-	ubx->process_timeout = config->process_timeout;
 
 	return 0;
 }

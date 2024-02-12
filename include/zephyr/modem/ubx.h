@@ -32,6 +32,7 @@ struct modem_ubx_script {
 	uint8_t *ubx_frame;
 	uint16_t ubx_frame_size;
 	uint16_t retry_count;
+	k_timeout_t script_timeout;
 };
 
 struct modem_ubx {
@@ -57,7 +58,6 @@ struct modem_ubx {
 	struct k_work process_work;
 	struct k_sem script_stopped_sem;
 	struct k_sem script_running_sem;
-	k_timeout_t process_timeout;
 };
 
 struct modem_ubx_config {
@@ -99,8 +99,31 @@ void modem_ubx_release(struct modem_ubx *ubx);
  */
 int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config);
 
-int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *frame);
-int modem_ubx_run_script_async(struct modem_ubx *ubx, const struct modem_ubx_script *frame);
+/**
+ * @brief Writes the ubx frame in the script and reads it's response
+ * @details For each ubx frame sent, the device responds with a UBX-ACK message (class = 0x05).
+ * 	In case a "get" or "poll" ubx frame (used to get configuration of the device) is written,
+ * 	the device first responds with exact same ubx frame whose payload contains the desired
+ * 	configuration; then sends the UBX-ACK message.
+ * 	Ex: if "set" variant of UBX-CFG-GNSS was sent, then the device responds with UBX-ACK only.
+ * 	Ex: if "get" variant of UBX-CFG-GNSS was sent, then the device responds with UBX-CFG-GNSS
+ * 	then sends a UBX-ACK message.
+ *
+ * 	The message id of the UBX-ACK received determines whether the device acknowledged or not
+ * 	acknowledged the ubx frame that we wrote to it.
+ *
+ * 	This function writes the ubx frame in the script and reads it's response from the device.
+ * 	If a "get" response was received, then it's written back to the ubx_frame of the script,
+ * 	so that the caller could retrieve the information that it required.
+ * @param ubx Modem Ubx instance
+ * @param script Script (containing the ubx frame) to be executed
+ * @note The length of ubx frame in the script should not exceed UBX_FRM_SZ_MAX
+ * @note Modem Ubx instance must be attached to a pipe instance
+ * @returns 0 if device acknowledged via UBX-ACK and no "get" response was received
+ * @returns positive integer denoting the length of "get" response that was received
+ * @returns negative errno code if failure
+ */
+int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *script);
 
 #ifdef __cplusplus
 }

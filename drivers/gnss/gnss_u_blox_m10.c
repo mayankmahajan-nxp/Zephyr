@@ -36,7 +36,7 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_FRM_BUF_SZ		UBX_FRM_SZ_MAX
 
-#define MODEM_UBX_FRM_TIMEOUT_MS	500
+#define MODEM_UBX_SCRIPT_TIMEOUT_MS	500
 
 #define UBX_M10_GNSS_SYS_CNT_MAX	6
 
@@ -176,7 +176,6 @@ static int ubx_m10_init_ubx(const struct device *dev)
 		.receive_buf_size = sizeof(data->ubx_receive_buf),
 		.work_buf = data->ubx_work_buf,
 		.work_buf_size = sizeof(data->ubx_work_buf),
-		.process_timeout = K_MSEC(MODEM_UBX_FRM_TIMEOUT_MS),
 	};
 
 	return modem_ubx_init(&data->ubx, &ubx_config);
@@ -247,6 +246,7 @@ static void ubx_m10_modem_ubx_script_fill(const struct device *dev, struct modem
 {
 	script->ubx_frame = ubx_frame;
 	script->retry_count = retry;
+	script->script_timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS);
 }
 
 static int ubx_m10_modem_ubx_script_init(const struct device *dev, struct modem_ubx_script *script,
@@ -429,6 +429,10 @@ static int ubx_m10_configure_messages(const struct device *dev)
 		frame_data.message_id = message_enable[i];
 		script.ubx_frame_size = ubx_create_frame(script.ubx_frame, UBX_CFG_MSG_FRM_SZ,
 			UBX_CLASS_CFG, UBX_CFG_MSG, &frame_data, UBX_CFG_MSG_PAYLOAD_SZ);
+		if (script.ubx_frame_size < 0) {
+			ret = script.ubx_frame_size;
+			goto out;
+		}
 
 		ret = ubx_m10_modem_ubx_run_script(dev, &script);
 		if (ret < 0) {
@@ -446,6 +450,10 @@ static int ubx_m10_configure_messages(const struct device *dev)
 		frame_data.message_id = message_disable[i];
 		script.ubx_frame_size = ubx_create_frame(script.ubx_frame, UBX_CFG_MSG_FRM_SZ,
 			UBX_CLASS_CFG, UBX_CFG_MSG, &frame_data, UBX_CFG_MSG_PAYLOAD_SZ);
+		if (script.ubx_frame_size < 0) {
+			ret = script.ubx_frame_size;
+			goto out;
+		}
 
 		ret = ubx_m10_modem_ubx_run_script(dev, &script);
 		if (ret < 0) {

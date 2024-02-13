@@ -18,7 +18,7 @@ const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT] = {
 };
 
 static int ubx_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, uint8_t message_id,
-		       uint16_t payload_size)
+			      uint16_t payload_size)
 {
 	if (ubx_frame_size > UBX_FRM_SZ_MAX ||
 	    ubx_frame_size < UBX_FRM_SZ_WITHOUT_PAYLOAD ||

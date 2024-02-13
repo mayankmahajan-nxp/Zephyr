@@ -22,23 +22,24 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 
-#define DT_DRV_COMPAT u_blox_m10
+#define DT_DRV_COMPAT			u_blox_m10
 
-#define UART_RECV_BUF_SZ	128
-#define UART_TRNF_BUF_SZ	128
+#define UART_RECV_BUF_SZ		128
+#define UART_TRNF_BUF_SZ		128
 
-#define CHAT_RECV_BUF_SZ	256
-#define CHAT_ARGV_SZ		32
+#define CHAT_RECV_BUF_SZ		256
+#define CHAT_ARGV_SZ			32
 
-#define UBX_RECV_BUF_SZ		UBX_FRM_SZ_MAX
-#define UBX_TRNS_BUF_SZ		UBX_FRM_SZ_MAX
-#define UBX_WORK_BUF_SZ		UBX_FRM_SZ_MAX
+#define UBX_RECV_BUF_SZ			UBX_FRM_SZ_MAX
+#define UBX_TRNS_BUF_SZ			UBX_FRM_SZ_MAX
+#define UBX_WORK_BUF_SZ			UBX_FRM_SZ_MAX
 
-#define UBX_FRM_BUF_SZ		UBX_FRM_SZ_MAX
+#define UBX_FRM_BUF_SZ			UBX_FRM_SZ_MAX
 
 #define MODEM_UBX_SCRIPT_TIMEOUT_MS	500
 
-#define UBX_M10_GNSS_SYS_CNT_MAX	6
+#define UBX_M10_GNSS_SYS_CNT		8
+#define UBX_M10_GNSS_SUPP_SYS_CNT	6
 
 enum MODEM_MODULE {
 	MODEM_MODULE_CHAT = 0,
@@ -181,8 +182,7 @@ static int ubx_m10_init_ubx(const struct device *dev)
 	return modem_ubx_init(&data->ubx, &ubx_config);
 }
 
-static int ubx_m10_modem_module_switch(const struct device *dev,
-				       enum MODEM_MODULE release,
+static int ubx_m10_modem_module_switch(const struct device *dev, enum MODEM_MODULE release,
 				       enum MODEM_MODULE attach) {
 	struct ubx_m10_data *data = dev->data;
 	int ret;
@@ -276,10 +276,15 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 	frame_data.baudrate = target_baudrate;
 
 	struct modem_ubx_script script;
-	script.ubx_frame_size = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), retry, &frame_data, UBX_CLASS_CFG, UBX_CFG_PRT,
 		UBX_CFG_PRT_SET_PAYLOAD_SZ);
+	if (ret < 0) {
+		goto out;
+	}
 
+	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
 		goto out;
@@ -305,10 +310,14 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 	frame_data.reset_mode = reset_mode;
 
 	struct modem_ubx_script script;
-	script.ubx_frame_size = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), retry, &frame_data, UBX_CLASS_CFG, UBX_CFG_RST,
 		UBX_CFG_RST_PAYLOAD_SZ);
+	if (ret < 0) {
+		goto out;
+	}
 
+	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
 		goto out;
@@ -467,6 +476,40 @@ out:
 	return ret;
 }
 
+static int ubx_m10_navigation_mode_to_ubx_dynamic_model(const struct device *dev,
+							enum gnss_navigation_mode mode)
+{
+	switch (mode) {
+	case GNSS_NAVIGATION_MODE_ZERO_DYNAMICS:
+		return UBX_DYN_MODEL_STATIONARY;
+	case GNSS_NAVIGATION_MODE_LOW_DYNAMICS:
+		return UBX_DYN_MODEL_PORTABLE;
+	case GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS:
+		return UBX_DYN_MODEL_AIRBONE1G;
+	case GNSS_NAVIGATION_MODE_HIGH_DYNAMICS:
+		return UBX_DYN_MODEL_AIRBONE4G;
+	default:
+		return -EINVAL;
+	}
+}
+
+static int ubx_m10_ubx_dynamic_model_to_navigation_mode(const struct device *dev,
+							enum ubx_dynamic_model dynamic_model)
+{
+	switch (dynamic_model) {
+	case UBX_DYN_MODEL_STATIONARY:
+		return GNSS_NAVIGATION_MODE_ZERO_DYNAMICS;
+	case UBX_DYN_MODEL_PORTABLE:
+		return GNSS_NAVIGATION_MODE_LOW_DYNAMICS;
+	case UBX_DYN_MODEL_AIRBONE1G:
+		return GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
+	case UBX_DYN_MODEL_AIRBONE4G:
+		return GNSS_NAVIGATION_MODE_HIGH_DYNAMICS;
+	default:
+		return -EINVAL;
+	}
+}
+
 static int ubx_m10_set_navigation_mode(const struct device *dev, enum gnss_navigation_mode mode)
 {
 	int ret;
@@ -475,32 +518,24 @@ static int ubx_m10_set_navigation_mode(const struct device *dev, enum gnss_navig
 
 	key = k_spin_lock(&data->lock);
 
-	enum ubx_dynamic_model dynamic_model = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
-	switch (mode) {
-	case GNSS_NAVIGATION_MODE_ZERO_DYNAMICS:
-		dynamic_model = UBX_DYN_MODEL_STATIONARY;
-		break;
-	case GNSS_NAVIGATION_MODE_LOW_DYNAMICS:
-		dynamic_model = UBX_DYN_MODEL_PORTABLE;
-		break;
-	case GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS:
-		dynamic_model = UBX_DYN_MODEL_AIRBONE1G;
-		break;
-	case GNSS_NAVIGATION_MODE_HIGH_DYNAMICS:
-		dynamic_model = UBX_DYN_MODEL_AIRBONE4G;
-		break;
-	default:
-		break;
+	UBX_CFG_NAV5_DATA_INIT(frame_data)
+
+	ret = ubx_m10_navigation_mode_to_ubx_dynamic_model(dev, mode);
+	if (ret < 0) {
+		goto out;
 	}
 
-	UBX_CFG_NAV5_DATA_INIT(frame_data)
-	frame_data.dyn_model = dynamic_model;
+	frame_data.dyn_model = ret;
 
 	struct modem_ubx_script script;
-	script.ubx_frame_size = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, &frame_data, UBX_CLASS_CFG,
 		UBX_CFG_NAV5, UBX_CFG_NAV5_PAYLOAD_SZ);
+	if (ret < 0) {
+		goto out;
+	}
 
+	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
 		goto out;
@@ -521,10 +556,14 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 	key = k_spin_lock(&data->lock);
 
 	struct modem_ubx_script script;
-	script.ubx_frame_size = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, NULL, UBX_CLASS_CFG,
 		UBX_CFG_NAV5, UBX_FRM_GET_PAYLOAD_SZ);
+	if (ret < 0) {
+		goto out;
+	}
 
+	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
 		goto out;
@@ -532,27 +571,88 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 
 	struct ubx_frame_t *frame = (struct ubx_frame_t *) data->ubx_frame_buf;
 
-	switch (((struct ubx_cfg_nav5_data *)frame->payload_and_checksum)->dyn_model) {
-	case UBX_DYN_MODEL_STATIONARY:
-		*mode = GNSS_NAVIGATION_MODE_ZERO_DYNAMICS;
-		break;
-	case UBX_DYN_MODEL_PORTABLE:
-		*mode = GNSS_NAVIGATION_MODE_LOW_DYNAMICS;
-		break;
-	case UBX_DYN_MODEL_AIRBONE1G:
-		*mode = GNSS_NAVIGATION_MODE_BALANCED_DYNAMICS;
-		break;
-	case UBX_DYN_MODEL_AIRBONE4G:
-		*mode = GNSS_NAVIGATION_MODE_HIGH_DYNAMICS;
-		break;
-	default:
-		break;
+	enum ubx_dynamic_model dynamic_model =
+		((struct ubx_cfg_nav5_data *)frame->payload_and_checksum)->dyn_model;
+	ret = ubx_m10_ubx_dynamic_model_to_navigation_mode(dev, dynamic_model);
+	if (ret < 0) {
+		goto out;
 	}
+
+	*mode = ret;
 
 out:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
+}
+
+static int ubx_m10_get_supported_systems(const struct device *dev, gnss_systems_t *systems)
+{
+	*systems = (GNSS_SYSTEM_GPS | GNSS_SYSTEM_GLONASS | GNSS_SYSTEM_GALILEO |
+		    GNSS_SYSTEM_BEIDOU | GNSS_SYSTEM_SBAS | GNSS_SYSTEM_QZSS);
+
+	return 0;
+}
+
+static int ubx_m10_ubx_gnss_id_to_gnss_system(const struct device *dev, enum ubx_gnss_id gnss_id)
+{
+	switch (gnss_id) {
+	case UBX_GNSS_ID_GPS:
+		return GNSS_SYSTEM_GPS;
+	case UBX_GNSS_ID_SBAS:
+		return GNSS_SYSTEM_SBAS;
+	case UBX_GNSS_ID_GALILEO:
+		return GNSS_SYSTEM_GALILEO;
+	case UBX_GNSS_ID_BEIDOU:
+		return GNSS_SYSTEM_BEIDOU;
+	case UBX_GNSS_ID_QZSS:
+		return GNSS_SYSTEM_QZSS;
+	case UBX_GNSS_ID_GLONAS:
+		return GNSS_SYSTEM_GLONASS;
+	default:
+		return -EINVAL;
+	};
+}
+
+static int ubx_m10_config_block_fill(const struct device *dev, gnss_systems_t system,
+	struct ubx_cfg_gnss_data *frame_data, uint8_t index, bool enable)
+{
+	switch (system) {
+	case GNSS_SYSTEM_GPS:
+		frame_data->config_blocks[index].gnss_id = UBX_GNSS_ID_GPS;
+		frame_data->config_blocks[index].flags = enable |
+			UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L1C_A;
+		break;
+	case GNSS_SYSTEM_GLONASS:
+		frame_data->config_blocks[index].gnss_id = UBX_GNSS_ID_GLONAS;
+		frame_data->config_blocks[index].flags = enable |
+			UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L1;
+		break;
+	case GNSS_SYSTEM_GALILEO:
+		frame_data->config_blocks[index].gnss_id = UBX_GNSS_ID_GALILEO;
+		frame_data->config_blocks[index].flags = enable |
+			UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E1;
+		break;
+	case GNSS_SYSTEM_BEIDOU:
+		frame_data->config_blocks[index].gnss_id = UBX_GNSS_ID_BEIDOU;
+		frame_data->config_blocks[index].flags = enable |
+			UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B1I;
+		break;
+	case GNSS_SYSTEM_QZSS:
+		frame_data->config_blocks[index].gnss_id = UBX_GNSS_ID_QZSS;
+		frame_data->config_blocks[index].flags = enable |
+			UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L1C_A;
+		break;
+	case GNSS_SYSTEM_SBAS:
+		frame_data->config_blocks[index].gnss_id = UBX_GNSS_ID_SBAS;
+		frame_data->config_blocks[index].flags = enable |
+			UBX_CFG_GNSS_FLAG_SGN_CNF_SBAS_L1C_A;
+		break;
+	default:
+		return -EINVAL;
+	};
+
+	return 0;
 }
 
 static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t systems)
@@ -564,79 +664,85 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 	key = k_spin_lock(&data->lock);
 
 	struct ubx_cfg_gnss_data *frame_data;
+	struct modem_ubx_script script;
 
-	uint8_t cfg_blocks_count = 0;
-	gnss_systems_t temp = systems;
-	while (temp > 0) {
-	        ++cfg_blocks_count;
-		temp = temp & (temp - 1);
+	/* Get number of tracking channels for each supported gnss system by sending CFG-GNSS. */
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, NULL, UBX_CLASS_CFG,
+		UBX_CFG_GNSS, UBX_FRM_GET_PAYLOAD_SZ);
+	if (ret < 0) {
+		goto out_2;
 	}
 
-	frame_data = malloc(sizeof(*frame_data) + sizeof(struct ubx_cfg_gnss_data_config_block) * cfg_blocks_count);
-	frame_data->num_config_blocks = cfg_blocks_count;
+	script.ubx_frame_size = ret;
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out_2;
+	}
+
+	struct ubx_frame_t *frame = (struct ubx_frame_t *) script.ubx_frame;
+	uint16_t res_trk_ch_sum = 0, max_trk_ch_sum = 0;
+
+	/* Calculate sum of reserved and maximum tracking channels for each supported gnss system,
+	 * and assert that the sum is not greater than the number of tracking channels in use.
+	 */
+	frame_data = (struct ubx_cfg_gnss_data *) frame->payload_and_checksum;
+	for (int i = 0; i < frame_data->num_config_blocks; ++i) {
+		ret = ubx_m10_ubx_gnss_id_to_gnss_system(dev, frame_data->config_blocks[i].gnss_id);
+		if (ret < 0) {
+			ret = -EINVAL;
+			goto out_2;
+		}
+
+		if (ret & systems) {
+			res_trk_ch_sum += frame_data->config_blocks[i].num_res_trk_ch;
+			max_trk_ch_sum += frame_data->config_blocks[i].max_num_trk_ch;
+		}
+
+		if (res_trk_ch_sum > frame_data->num_trk_ch_use ||
+		    max_trk_ch_sum > frame_data->num_trk_ch_use) {
+			ret = -EINVAL;
+			goto out_2;
+		}
+	}
+
+	/* Prepare frame_data (payload) for sending CFG-GNSS for enabling the gnss systems. */
+	frame_data = malloc(sizeof(*frame_data) +
+		sizeof(struct ubx_cfg_gnss_data_config_block) * UBX_M10_GNSS_SUPP_SYS_CNT);
+	frame_data->num_config_blocks = UBX_M10_GNSS_SUPP_SYS_CNT;
 
 	(void) ubx_cfg_gnss_data_default(frame_data);
 
 	uint8_t filled_blocks = 0;
-	for (int i = 0; i < 8; ++i) {
-		if (systems & (1 << i)) {
-			switch (systems & (1 << i)) {
-			case GNSS_SYSTEM_GPS:
-				frame_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_GPS;
-				frame_data->config_blocks[filled_blocks].flags =
-					UBX_CFG_GNSS_FLAG_ENABLE |
-					UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L1C_A;
-				break;
-			case GNSS_SYSTEM_GLONASS:
-				frame_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_GLONAS;
-				frame_data->config_blocks[filled_blocks].flags =
-					UBX_CFG_GNSS_FLAG_ENABLE |
-					UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L1;
-				break;
-			case GNSS_SYSTEM_GALILEO:
-				frame_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_GALILEO;
-				frame_data->config_blocks[filled_blocks].flags =
-					UBX_CFG_GNSS_FLAG_ENABLE |
-					UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E1;
-				break;
-			case GNSS_SYSTEM_BEIDOU:
-				frame_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_BEIDOU;
-				frame_data->config_blocks[filled_blocks].flags =
-					UBX_CFG_GNSS_FLAG_ENABLE |
-					UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B1I;
-				break;
-			case GNSS_SYSTEM_QZSS:
-				frame_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_QZSS;
-				frame_data->config_blocks[filled_blocks].flags =
-					UBX_CFG_GNSS_FLAG_ENABLE |
-					UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L1C_A;
-				break;
-			case GNSS_SYSTEM_SBAS:
-				frame_data->config_blocks[filled_blocks].gnss_id = UBX_GNSS_ID_SBAS;
-				frame_data->config_blocks[filled_blocks].flags =
-					UBX_CFG_GNSS_FLAG_ENABLE |
-					UBX_CFG_GNSS_FLAG_SGN_CNF_SBAS_L1C_A;
-				break;
-			default:
-				break;
-			};
-			++filled_blocks;
+	gnss_systems_t supported_systems;
+	(void) ubx_m10_get_supported_systems(dev, &supported_systems);
+	for (int i = 0; i < UBX_M10_GNSS_SYS_CNT; ++i) {
+		gnss_systems_t system = 1 << i;
+
+		if (system & supported_systems) {
+			bool enable = (systems & system) ? UBX_CFG_GNSS_FLAG_ENABLE :
+				      UBX_CFG_GNSS_FLAG_DISABLE;
+			ubx_m10_config_block_fill(dev, system, frame_data, filled_blocks++, enable);
 		}
 	}
 
-	struct modem_ubx_script script;
-	script.ubx_frame_size = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, frame_data, UBX_CLASS_CFG,
-		UBX_CFG_GNSS, UBX_CFG_GNSS_PAYLOAD_SZ(cfg_blocks_count));
-
-	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+		UBX_CFG_GNSS, UBX_CFG_GNSS_PAYLOAD_SZ(UBX_M10_GNSS_SUPP_SYS_CNT));
 	if (ret < 0) {
-		goto out;
+		goto out_1;
 	}
 
-out:
+	script.ubx_frame_size = ret;
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out_1;
+	}
+
+out_1:
 	free(frame_data);
 
+out_2:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -651,52 +757,40 @@ static int ubx_m10_get_enabled_systems(const struct device *dev, gnss_systems_t 
 	key = k_spin_lock(&data->lock);
 
 	struct modem_ubx_script script;
-	script.ubx_frame_size = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, NULL, UBX_CLASS_CFG,
 		UBX_CFG_GNSS, UBX_FRM_GET_PAYLOAD_SZ);
+	if (ret < 0) {
+		goto out;
+	}
 
+	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
 		goto out;
 	}
 
-	for (int i = 10; i < script.ubx_frame_size - UBX_CHECKSUM_STOP_IDX_FROM_END;
-	     i += UBX_CFG_GNSS_PAYLOAD_CFG_BLK_SZ) {
-		switch (script.ubx_frame[i]) {
-		case UBX_GNSS_ID_GPS:
-			*systems |= GNSS_SYSTEM_GPS;
-			break;
-		case UBX_GNSS_ID_SBAS:
-			*systems |= GNSS_SYSTEM_SBAS;
-			break;
-		case UBX_GNSS_ID_GALILEO:
-			*systems |= GNSS_SYSTEM_GALILEO;
-			break;
-		case UBX_GNSS_ID_BEIDOU:
-			*systems |= GNSS_SYSTEM_BEIDOU;
-			break;
-		case UBX_GNSS_ID_QZSS:
-			*systems |= GNSS_SYSTEM_QZSS;
-			break;
-		case UBX_GNSS_ID_GLONAS:
-			*systems |= GNSS_SYSTEM_GLONASS;
-			break;
-		default:
-			break;
-		};
+	struct ubx_frame_t *frame = (struct ubx_frame_t *) script.ubx_frame;
+	struct ubx_cfg_gnss_data *frame_data =
+		(struct ubx_cfg_gnss_data *) frame->payload_and_checksum;
+
+	for (int i = 0; i < frame_data->num_config_blocks; ++i) {
+		if (frame_data->config_blocks[i].flags & UBX_CFG_GNSS_FLAG_ENABLE) {
+			enum ubx_gnss_id gnss_id = frame_data->config_blocks[i].gnss_id;
+
+			ret = ubx_m10_ubx_gnss_id_to_gnss_system(dev, gnss_id);
+			if (ret < 0) {
+				goto out;
+			}
+
+			*systems |= ret;
+		}
 	}
 
 out:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
-}
-
-static int ubx_m10_get_supported_systems(const struct device *dev, gnss_systems_t *systems)
-{
-	*systems = (GNSS_SYSTEM_GPS | GNSS_SYSTEM_GLONASS | GNSS_SYSTEM_GALILEO |
-		    GNSS_SYSTEM_BEIDOU | GNSS_SYSTEM_SBAS | GNSS_SYSTEM_QZSS);
-	return 0;
 }
 
 static struct gnss_driver_api gnss_api = {
@@ -730,15 +824,15 @@ static int ubx_m10_configure(const struct device *dev)
 
 	// temp. need to remove the following.
 	gnss_systems_t systems = 0;
-	printk("ubx_m10_get_enabled_systems.\n");
 	ubx_m10_get_enabled_systems(dev, &systems);
-	systems = GNSS_SYSTEM_GPS | GNSS_SYSTEM_QZSS | GNSS_SYSTEM_GALILEO | GNSS_SYSTEM_GLONASS
-		| GNSS_SYSTEM_SBAS;
-	printk("ubx_m10_set_enabled_systems.\n");
+	printk("ubx_m10_get_enabled_systems %d.\n", systems);
+	systems = GNSS_SYSTEM_GPS | GNSS_SYSTEM_GALILEO | GNSS_SYSTEM_BEIDOU
+		  | GNSS_SYSTEM_SBAS | GNSS_SYSTEM_QZSS;
 	ubx_m10_set_enabled_systems(dev, systems);
+	printk("ubx_m10_set_enabled_systems %d.\n", systems);
 	systems = 0;
-	printk("ubx_m10_get_enabled_systems.\n");
 	ubx_m10_get_enabled_systems(dev, &systems);
+	printk("ubx_m10_get_enabled_systems %d.\n", systems);
 
 	enum gnss_navigation_mode nav_mode = GNSS_NAVIGATION_MODE_LOW_DYNAMICS;
 	ubx_m10_get_navigation_mode(dev, &nav_mode);
@@ -787,18 +881,18 @@ static int ubx_m10_init(const struct device *dev)
 		return ret;
 	}
 
-	k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
 	// temp. need to remove the following.
+	k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
 	gnss_systems_t systems = 0;
-	printk("ubx_m10_get_enabled_systems.\n");
 	ubx_m10_get_enabled_systems(dev, &systems);
+	printk("ubx_m10_get_enabled_systems %d.\n", systems);
 	systems = GNSS_SYSTEM_GPS | GNSS_SYSTEM_QZSS | GNSS_SYSTEM_GALILEO | GNSS_SYSTEM_GLONASS
 		| GNSS_SYSTEM_SBAS;
-	printk("ubx_m10_set_enabled_systems.\n");
 	ubx_m10_set_enabled_systems(dev, systems);
+	printk("ubx_m10_set_enabled_systems %d.\n", systems);
 	systems = 0;
-	printk("ubx_m10_get_enabled_systems.\n");
 	ubx_m10_get_enabled_systems(dev, &systems);
+	printk("ubx_m10_get_enabled_systems %d.\n", systems);
 
 	enum gnss_navigation_mode nav_mode = GNSS_NAVIGATION_MODE_LOW_DYNAMICS;
 	ubx_m10_get_navigation_mode(dev, &nav_mode);

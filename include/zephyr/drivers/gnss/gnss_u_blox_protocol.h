@@ -44,11 +44,6 @@
 
 extern const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT];
 
-/* #define TO_LITTLE_ENDIAN(data, b)			\
-	for (int j = 0; j < sizeof(data); j++) {	\
-		b[j] = (data >> (j * 8)) & 0xFF;	\
-	} */
-
 #define UBX_FRM_GET_PAYLOAD_SZ			0
 #define UBX_CFG_PRT_POLL_PAYLOAD_SZ		1
 #define UBX_CFG_PRT_POLL_FRM_SZ			UBX_FRM_SZ_WO_PAYLOAD + UBX_CFG_PRT_POLL_PAYLOAD_SZ
@@ -83,6 +78,7 @@ int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 struct ubx_cfg_prt_poll_data {
 	uint8_t port_id;
 };
+
 void ubx_cfg_prt_poll_data_default(struct ubx_cfg_prt_poll_data *data);
 
 #define UBX_CFG_PRT_IN_PROTO_UBX			BIT(0)
@@ -127,15 +123,16 @@ struct ubx_cfg_prt_set_data {
 	uint16_t flags;
 	uint8_t reserved1;
 };
+
 void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *data);
 
 #define UBX_CFG_PRT_SET_DATA_INIT(inst)			\
 	struct ubx_cfg_prt_set_data inst;		\
 	(void) ubx_cfg_prt_set_data_default(&inst);
 
-#define UBX_CFG_RST_NAV_BBR_MASK_HOT_START	0x0000
-#define UBX_CFG_RST_NAV_BBR_MASK_WARM_START	0x0001
-#define UBX_CFG_RST_NAV_BBR_MASK_COLD_START	0xFFFF
+#define UBX_CFG_RST_NAV_BBR_MASK_HOT_START				0x0000
+#define UBX_CFG_RST_NAV_BBR_MASK_WARM_START				0x0001
+#define UBX_CFG_RST_NAV_BBR_MASK_COLD_START				0xFFFF
 
 #define UBX_CFG_RST_RESET_MODE_HARD_RESET				0x00
 #define UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET			0x01
@@ -144,13 +141,14 @@ void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *data);
 #define UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP			0x08
 #define UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START			0x09
 
-#define UBX_CFG_RST_RESERVED0		0x00
+#define UBX_CFG_RST_RESERVED0						0x00
 
 struct ubx_cfg_rst_data {
 	uint16_t nav_bbr_mask;
 	uint8_t reset_mode;
 	uint8_t reserved0;
 };
+
 void ubx_cfg_rst_data_default(struct ubx_cfg_rst_data *data);
 
 #define UBX_CFG_RST_DATA_INIT(inst)			\
@@ -202,6 +200,7 @@ struct ubx_cfg_nav5_data {
 	uint16_t static_hold_dist_threshold;
 	uint8_t utc_standard;
 };
+
 void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *data);
 
 #define UBX_CFG_NAV5_DATA_INIT(inst)			\
@@ -214,6 +213,7 @@ void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *data);
 
 #define UBX_CFG_GNSS_RESERVED0			0x00
 #define UBX_CFG_GNSS_FLAG_ENABLE		BIT(0)
+#define UBX_CFG_GNSS_FLAG_DISABLE		0U
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT		16
 /* When gnss_id is 0 (GPS) */
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L1C_A	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
@@ -247,6 +247,7 @@ struct ubx_cfg_gnss_data_config_block {
 	uint8_t reserved0;
 	uint32_t flags;
 };
+
 struct ubx_cfg_gnss_data {
 	uint8_t msg_ver;
 	uint8_t num_trk_ch_hw;
@@ -254,19 +255,21 @@ struct ubx_cfg_gnss_data {
 	uint8_t num_config_blocks;
 	struct ubx_cfg_gnss_data_config_block config_blocks[];
 };
+
 void ubx_cfg_gnss_data_default(struct ubx_cfg_gnss_data *data);
 
 #define UBX_CFG_GNSS_DATA_INIT(inst)			\
 	struct ubx_cfg_gnss_data inst;			\
 	(void) ubx_cfg_gnss_data_default(&inst);
 
-#define UBX_CFG_MSG_RATE_DEFAULT	1
+#define UBX_CFG_MSG_RATE_DEFAULT			1
 
 struct ubx_cfg_msg_data {
 	uint8_t message_class;
 	uint8_t message_id;
 	uint8_t rate;
 };
+
 void ubx_cfg_msg_data_default(struct ubx_cfg_msg_data *data);
 
 #define UBX_CFG_MSG_DATA_INIT(inst)			\

@@ -77,7 +77,7 @@ static int ubx_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, ui
 }
 
 int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t message_class,
-		     uint8_t message_id, const void *const data, uint16_t payload_size)
+		     uint8_t message_id, const void *data, uint16_t payload_size)
 {
 	if (ubx_validate_frame(ubx_frame_size, message_class, message_id, payload_size)) {
 		return -1;
@@ -117,12 +117,12 @@ void ubx_cfg_rate_data_default(struct ubx_cfg_rate_data *data)
 	data->time_ref = UBX_CFG_RATE_TIME_REF_UTC;
 }
 
-void ubx_cfg_prt_poll_data_default(struct ubx_cfg_prt_poll_data *const data)
+void ubx_cfg_prt_poll_data_default(struct ubx_cfg_prt_poll_data *data)
 {
 	data->port_id = UBX_PORT_NUMBER_UART;
 }
 
-void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *const data)
+void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *data)
 {
 	data->port_id = UBX_PORT_NUMBER_UART;
 	data->reserved0 = UBX_CFG_PRT_RESERVED0;
@@ -138,14 +138,14 @@ void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *const data)
 	data->reserved1 = UBX_CFG_PRT_RESERVED1;
 }
 
-void ubx_cfg_rst_data_default(struct ubx_cfg_rst_data *const data)
+void ubx_cfg_rst_data_default(struct ubx_cfg_rst_data *data)
 {
 	data->nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
 	data->reset_mode = UBX_CFG_RST_RESET_MODE_CONTROLLED_SOFT_RESET;
 	data->reserved0 = UBX_CFG_RST_RESERVED0;
 }
 
-void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *const data)
+void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *data)
 {
 	data->mask = UBX_CFG_NAV5_MASK_ALL;
 	data->dyn_model = UBX_DYN_MODEL_PORTABLE;
@@ -193,16 +193,9 @@ void ubx_cfg_gnss_data_default(struct ubx_cfg_gnss_data *data)
 	}
 }
 
-void ubx_cfg_msg_data_default(struct ubx_cfg_msg_data *const data)
+void ubx_cfg_msg_data_default(struct ubx_cfg_msg_data *data)
 {
 	data->message_class = UBX_CLASS_NMEA;
 	data->message_id = UBX_NMEA_GGA;
 	data->rate = UBX_CFG_MSG_RATE_DEFAULT;
-}
-
-uint16_t ubx_get_payload_size(uint8_t *ubx_frame)
-{
-	struct ubx_frame_t *frame = (struct ubx_frame_t *) ubx_frame;
-
-	return (uint16_t) ((frame->payload_size_low & 0xFF) | (frame->payload_size_high << 8));
 }

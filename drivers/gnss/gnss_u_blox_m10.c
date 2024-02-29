@@ -225,15 +225,15 @@ static int ubx_m10_modem_ubx_run_script(const struct device *dev,
 
 	ret = ubx_m10_modem_module_switch(dev, MODEM_MODULE_CHAT, MODEM_MODULE_UBX);
 	if (ret < 0) {
-		goto out;
+		goto reset_modem_module;
 	}
 
 	ret = modem_ubx_run_script(&data->ubx, modem_ubx_script_tx);
 	if (ret < 0) {
-		goto out;
+		goto reset_modem_module;
 	}
 
-out:
+reset_modem_module:
 	ret |= ubx_m10_modem_module_switch(dev, MODEM_MODULE_UBX, MODEM_MODULE_CHAT);
 	if (ret < 0) {
 		return ret;
@@ -280,16 +280,16 @@ static int ubx_m10_ubx_cfg_rate(const struct device *dev)
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, &frame_data,
 		UBX_CLASS_CFG, UBX_CFG_RATE, UBX_CFG_RATE_PAYLOAD_SZ);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -301,28 +301,30 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 	int ret;
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
+	struct ubx_cfg_prt_set_data frame_data;
+	struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
-	UBX_CFG_PRT_SET_DATA_INIT(frame_data)
-	frame_data.baudrate = target_baudrate;
+	// UBX_CFG_PRT_SET_DATA_INIT(frame_data)
+	(void) ubx_cfg_prt_set_data_default(&frame_data);
 
-	struct modem_ubx_script script;
+	frame_data.baudrate = target_baudrate;
 
 	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), retry, &frame_data, UBX_CLASS_CFG, UBX_CFG_PRT,
 		UBX_CFG_PRT_SET_PAYLOAD_SZ);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -333,31 +335,33 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 	int ret;
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
+	struct ubx_cfg_rst_data frame_data;
+	struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
 	int retry = 2;
 
-	UBX_CFG_RST_DATA_INIT(frame_data)
+	// UBX_CFG_RST_DATA_INIT(frame_data)
+	(void) ubx_cfg_rst_data_default(&frame_data);
+
 	frame_data.nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
 	frame_data.reset_mode = reset_mode;
-
-	struct modem_ubx_script script;
 
 	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), retry, &frame_data, UBX_CLASS_CFG, UBX_CFG_RST,
 		UBX_CFG_RST_PAYLOAD_SZ);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -398,10 +402,10 @@ static int ubx_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate
 	ubx_m10_init_pipe(dev);
 	ret = ubx_m10_resume(dev);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -456,12 +460,13 @@ static int ubx_m10_configure_messages(const struct device *dev)
 	int ret;
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
+	struct ubx_cfg_msg_data frame_data;
+	struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
-	UBX_CFG_MSG_DATA_INIT(frame_data)
-
-	struct modem_ubx_script script;
+	// UBX_CFG_MSG_DATA_INIT(frame_data)
+	(void) ubx_cfg_msg_data_default(&frame_data);
 
 	ubx_m10_modem_ubx_script_fill(dev, &script, data->ubx_frame_buf, MODEM_UBX_RETRY_DEFAULT);
 
@@ -475,12 +480,12 @@ static int ubx_m10_configure_messages(const struct device *dev)
 			UBX_CLASS_CFG, UBX_CFG_MSG, &frame_data, UBX_CFG_MSG_PAYLOAD_SZ);
 		if (script.ubx_frame_size < 0) {
 			ret = script.ubx_frame_size;
-			goto out;
+			goto unlock;
 		}
 
 		ret = ubx_m10_modem_ubx_run_script(dev, &script);
 		if (ret < 0) {
-			goto out;
+			goto unlock;
 		}
 	}
 
@@ -496,16 +501,16 @@ static int ubx_m10_configure_messages(const struct device *dev)
 			UBX_CLASS_CFG, UBX_CFG_MSG, &frame_data, UBX_CFG_MSG_PAYLOAD_SZ);
 		if (script.ubx_frame_size < 0) {
 			ret = script.ubx_frame_size;
-			goto out;
+			goto unlock;
 		}
 
 		ret = ubx_m10_modem_ubx_run_script(dev, &script);
 		if (ret < 0) {
-			goto out;
+			goto unlock;
 		}
 	}
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -550,34 +555,35 @@ static int ubx_m10_set_navigation_mode(const struct device *dev, enum gnss_navig
 	int ret;
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
+	struct ubx_cfg_nav5_data frame_data;
+	struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
-	UBX_CFG_NAV5_DATA_INIT(frame_data)
+	// UBX_CFG_NAV5_DATA_INIT(frame_data)
+	(void) ubx_cfg_nav5_data_default(&frame_data);
 
 	ret = ubx_m10_navigation_mode_to_ubx_dynamic_model(dev, mode);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	frame_data.dyn_model = ret;
-
-	struct modem_ubx_script script;
 
 	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, &frame_data, UBX_CLASS_CFG,
 		UBX_CFG_NAV5, UBX_CFG_NAV5_PAYLOAD_SZ);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -597,13 +603,13 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, NULL, UBX_CLASS_CFG,
 		UBX_CFG_NAV5, UBX_FRM_GET_PAYLOAD_SZ);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	struct ubx_frame_t *frame = (struct ubx_frame_t *) data->ubx_frame_buf;
@@ -612,12 +618,12 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 		((struct ubx_cfg_nav5_data *)frame->payload_and_checksum)->dyn_model;
 	ret = ubx_m10_ubx_dynamic_model_to_navigation_mode(dev, dynamic_model);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	*mode = ret;
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -708,13 +714,13 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, NULL, UBX_CLASS_CFG,
 		UBX_CFG_GNSS, UBX_FRM_GET_PAYLOAD_SZ);
 	if (ret < 0) {
-		goto out_2;
+		goto unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out_2;
+		goto unlock;
 	}
 
 	struct ubx_frame_t *frame = (struct ubx_frame_t *) script.ubx_frame;
@@ -728,7 +734,7 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 		ret = ubx_m10_ubx_gnss_id_to_gnss_system(dev, frame_data->config_blocks[i].gnss_id);
 		if (ret < 0) {
 			ret = -EINVAL;
-			goto out_2;
+			goto unlock;
 		}
 
 		if (ret & systems) {
@@ -739,7 +745,7 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 		if (res_trk_ch_sum > frame_data->num_trk_ch_use ||
 		    max_trk_ch_sum > frame_data->num_trk_ch_use) {
 			ret = -EINVAL;
-			goto out_2;
+			goto unlock;
 		}
 	}
 
@@ -767,19 +773,19 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, frame_data, UBX_CLASS_CFG,
 		UBX_CFG_GNSS, UBX_CFG_GNSS_PAYLOAD_SZ(UBX_M10_GNSS_SUPP_SYS_CNT));
 	if (ret < 0) {
-		goto out_1;
+		goto free_and_unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out_1;
+		goto free_and_unlock;
 	}
 
-out_1:
+free_and_unlock:
 	free(frame_data);
 
-out_2:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -799,13 +805,13 @@ static int ubx_m10_get_enabled_systems(const struct device *dev, gnss_systems_t 
 		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, NULL, UBX_CLASS_CFG,
 		UBX_CFG_GNSS, UBX_FRM_GET_PAYLOAD_SZ);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	script.ubx_frame_size = ret;
 	ret = ubx_m10_modem_ubx_run_script(dev, &script);
 	if (ret < 0) {
-		goto out;
+		goto unlock;
 	}
 
 	struct ubx_frame_t *frame = (struct ubx_frame_t *) script.ubx_frame;
@@ -818,14 +824,14 @@ static int ubx_m10_get_enabled_systems(const struct device *dev, gnss_systems_t 
 
 			ret = ubx_m10_ubx_gnss_id_to_gnss_system(dev, gnss_id);
 			if (ret < 0) {
-				goto out;
+				goto unlock;
 			}
 
 			*systems |= ret;
 		}
 	}
 
-out:
+unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -851,25 +857,22 @@ static int ubx_m10_configure(const struct device *dev)
 	ret = ubx_m10_ubx_cfg_rate(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring rate failed. Returned %d.", ret);
-		goto out;
+		goto reset;
 	}
-	LOG_INF("Configuring rate successful. Returned %d.", ret);
 
 	ret = ubx_m10_configure_gnss_device_baudrate(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring baudrate failed. Returned %d.", ret);
-		goto out;
+		goto reset;
 	}
-	LOG_INF("Configuring baudrate successful. Returned %d.", ret);
 
 	ret = ubx_m10_configure_messages(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring messages failed. Returned %d.", ret);
-		goto out;
+		goto reset;
 	}
-	LOG_INF("Configuring messages successful. Returned %d.", ret);
 
-out:
+reset:
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
 
 	return ret;

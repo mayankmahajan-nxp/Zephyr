@@ -89,10 +89,10 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 
 	if (ret < 0) {
 		LOG_ERR("Failed to execute script successfully.");
-		goto out;
+		goto unlock;
 	}
 
-out:
+unlock:
 	k_sem_give(&ubx->script_running_sem);
 
 	return ret;

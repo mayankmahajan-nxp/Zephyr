@@ -74,7 +74,7 @@ struct ubx_frame_t {
 
 int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 			uint8_t message_class, uint8_t message_id,
-			const void *const data, uint16_t payload_size);
+			const void *data, uint16_t payload_size);
 
 #define UBX_CFG_RATE_TIME_REF_UTC	0	/* Align measurements to UTC time */
 #define UBX_CFG_RATE_TIME_REF_GPS	1	/* Align measurements to GPS time */
@@ -141,10 +141,6 @@ struct ubx_cfg_prt_set_data {
 
 void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *data);
 
-#define UBX_CFG_PRT_SET_DATA_INIT(inst)			\
-	struct ubx_cfg_prt_set_data inst;		\
-	(void) ubx_cfg_prt_set_data_default(&inst);
-
 #define UBX_CFG_RST_NAV_BBR_MASK_HOT_START				0x0000
 #define UBX_CFG_RST_NAV_BBR_MASK_WARM_START				0x0001
 #define UBX_CFG_RST_NAV_BBR_MASK_COLD_START				0xFFFF
@@ -165,10 +161,6 @@ struct ubx_cfg_rst_data {
 };
 
 void ubx_cfg_rst_data_default(struct ubx_cfg_rst_data *data);
-
-#define UBX_CFG_RST_DATA_INIT(inst)			\
-	struct ubx_cfg_rst_data inst;			\
-	(void) ubx_cfg_rst_data_default(&inst);
 
 #define UBX_CFG_NAV5_MASK_ALL				0x05FF
 #define UBX_CFG_NAV5_FIX_MODE_DEFAULT			UBX_FIX_AUTO_FIX
@@ -217,10 +209,6 @@ struct ubx_cfg_nav5_data {
 };
 
 void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *data);
-
-#define UBX_CFG_NAV5_DATA_INIT(inst)			\
-	struct ubx_cfg_nav5_data inst;			\
-	(void) ubx_cfg_nav5_data_default(&inst);
 
 #define UBX_CFG_GNSS_MSG_VER			0x00
 #define UBX_CFG_GNSS_NUM_TRK_CH_HW_DEFAULT	0x31
@@ -273,10 +261,6 @@ struct ubx_cfg_gnss_data {
 
 void ubx_cfg_gnss_data_default(struct ubx_cfg_gnss_data *data);
 
-#define UBX_CFG_GNSS_DATA_INIT(inst)			\
-	struct ubx_cfg_gnss_data inst;			\
-	(void) ubx_cfg_gnss_data_default(&inst);
-
 #define UBX_CFG_MSG_RATE_DEFAULT			1
 
 struct ubx_cfg_msg_data {
@@ -286,9 +270,5 @@ struct ubx_cfg_msg_data {
 };
 
 void ubx_cfg_msg_data_default(struct ubx_cfg_msg_data *data);
-
-#define UBX_CFG_MSG_DATA_INIT(inst)			\
-	struct ubx_cfg_msg_data inst;			\
-	(void) ubx_cfg_msg_data_default(&inst);
 
 #endif /* ZEPHYR_U_BLOX_PROTOCOL_ */

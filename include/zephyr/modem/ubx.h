@@ -10,7 +10,7 @@
 
 #include <zephyr/modem/pipe.h>
 
-#include <zephyr/drivers/gnss/gnss_u_blox_protocol.h>
+// #include <zephyr/drivers/gnss/gnss_u_blox_protocol.h>
 
 #ifndef ZEPHYR_MODEM_UBX_
 #define ZEPHYR_MODEM_UBX_
@@ -27,6 +27,37 @@ extern "C" {
  */
 
 #define MODEM_UBX_RETRY_DEFAULT		10
+
+#define UBX_FRM_HEADER_SZ			6
+#define UBX_FRM_FOOTER_SZ			2
+#define UBX_FRM_SZ_WITHOUT_PAYLOAD		UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
+#define UBX_FRM_SZ(payload_size)		payload_size + UBX_FRM_SZ_WITHOUT_PAYLOAD
+
+#define UBX_PREAMBLE_SYNC_CHAR_1		0xB5
+#define UBX_PREAMBLE_SYNC_CHAR_2		0x62
+
+#define UBX_PREAMBLE_SYNC_CHAR_1_IDX		0
+#define UBX_PREAMBLE_SYNC_CHAR_2_IDX		1
+#define UBX_FRM_MSG_CLASS_IDX			2
+#define UBX_FRM_MSG_ID_IDX			3
+#define UBX_FRM_PAYLOAD_SZ_L_IDX		4
+#define UBX_FRM_PAYLOAD_SZ_H_IDX		5
+#define UBX_FRM_PAYLOAD_IDX			6
+
+#define UBX_CHECKSUM_START_IDX			2
+#define UBX_CHECKSUM_STOP_IDX_FROM_END		2
+#define UBX_CHECKSUM_A_IDX_FROM_END		2
+#define UBX_CHECKSUM_B_IDX_FROM_END		1
+
+#define UBX_FRM_SZ_MAX				264
+#define UBX_PAYLOAD_SZ_MAX			256
+#define UBX_FRM_HEADER_SZ			6
+#define UBX_FRM_FOOTER_SZ			2
+#define UBX_FRM_SZ_WO_PAYLOAD			UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
+
+#define UBX_MSG_CLASS_ACK		0x05
+#define UBX_ACK_MSG_ID_ACK		0x01
+#define UBX_ACK_MSG_ID_NAK		0x00
 
 struct modem_ubx_script {
 	uint8_t *ubx_frame;

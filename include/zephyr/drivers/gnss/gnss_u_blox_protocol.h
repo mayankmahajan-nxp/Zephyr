@@ -6,39 +6,13 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
+#include <zephyr/modem/ubx.h>
 #include "gnss_u_blox_protocol_defines.h"
 
 #ifndef ZEPHYR_U_BLOX_PROTOCOL_
 #define ZEPHYR_U_BLOX_PROTOCOL_
 
 #define UBX_BAUDRATE_COUNT			8
-
-#define UBX_FRM_HEADER_SZ			6
-#define UBX_FRM_FOOTER_SZ			2
-#define UBX_FRM_SZ_WITHOUT_PAYLOAD		UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
-#define UBX_FRM_SZ(payload_size)		payload_size + UBX_FRM_SZ_WITHOUT_PAYLOAD
-
-#define UBX_PREAMBLE_SYNC_CHAR_1		0xB5
-#define UBX_PREAMBLE_SYNC_CHAR_2		0x62
-
-#define UBX_PREAMBLE_SYNC_CHAR_1_IDX		0
-#define UBX_PREAMBLE_SYNC_CHAR_2_IDX		1
-#define UBX_FRM_MSG_CLASS_IDX			2
-#define UBX_FRM_MSG_ID_IDX			3
-#define UBX_FRM_PAYLOAD_SZ_L_IDX		4
-#define UBX_FRM_PAYLOAD_SZ_H_IDX		5
-#define UBX_FRM_PAYLOAD_IDX			6
-
-#define UBX_CHECKSUM_START_IDX			2
-#define UBX_CHECKSUM_STOP_IDX_FROM_END		2
-#define UBX_CHECKSUM_A_IDX_FROM_END		2
-#define UBX_CHECKSUM_B_IDX_FROM_END		1
-
-#define UBX_FRM_SZ_MAX				264
-#define UBX_PAYLOAD_SZ_MAX			256
-#define UBX_FRM_HEADER_SZ			6
-#define UBX_FRM_FOOTER_SZ			2
-#define UBX_FRM_SZ_WO_PAYLOAD			UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
 
 #define UBX_CFG_RST_WAIT_MS			10000
 

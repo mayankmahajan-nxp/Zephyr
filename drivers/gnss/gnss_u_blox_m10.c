@@ -161,7 +161,7 @@ static int ubx_m10_init_chat(const struct device *dev)
 		.argv_size = ARRAY_SIZE(data->chat_argv),
 		.unsol_matches = unsol_matches,
 		.unsol_matches_size = ARRAY_SIZE(unsol_matches),
-		.process_timeout = K_MSEC(2),
+		// .process_timeout = K_MSEC(2),
 	};
 
 	return modem_chat_init(&data->chat, &chat_config);
@@ -657,10 +657,10 @@ static int ubx_m10_ubx_gnss_id_to_gnss_system(const struct device *dev, enum ubx
 	};
 }
 
-static int ubx_m10_config_block_fill(const struct device *dev, gnss_systems_t system,
+static int ubx_m10_config_block_fill(const struct device *dev, gnss_systems_t gnss_system,
 	struct ubx_cfg_gnss_data *frame_data, uint8_t index, bool enable)
 {
-	switch (system) {
+	switch (gnss_system) {
 	case GNSS_SYSTEM_GPS:
 		frame_data->config_blocks[index].gnss_id = UBX_GNSS_ID_GPS;
 		frame_data->config_blocks[index].flags = enable |
@@ -760,12 +760,12 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 	gnss_systems_t supported_systems;
 	(void) ubx_m10_get_supported_systems(dev, &supported_systems);
 	for (int i = 0; i < UBX_M10_GNSS_SYS_CNT; ++i) {
-		gnss_systems_t system = 1 << i;
+		gnss_systems_t gnss_system = 1 << i;
 
-		if (system & supported_systems) {
-			bool enable = (systems & system) ? UBX_CFG_GNSS_FLAG_ENABLE :
+		if (gnss_system & supported_systems) {
+			bool enable = (systems & gnss_system) ? UBX_CFG_GNSS_FLAG_ENABLE :
 				      UBX_CFG_GNSS_FLAG_DISABLE;
-			ubx_m10_config_block_fill(dev, system, frame_data, filled_blocks++, enable);
+			ubx_m10_config_block_fill(dev, gnss_system, frame_data, filled_blocks++, enable);
 		}
 	}
 

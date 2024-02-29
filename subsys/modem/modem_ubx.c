@@ -47,7 +47,7 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 		return ret;
 	}
 
-	if (ubx->work_buf[UBX_FRM_MSG_ID_IDX] == UBX_ACK_ACK) {
+	if (ubx->work_buf[UBX_FRM_MSG_ID_IDX] == UBX_ACK_MSG_ID_ACK) {
 		/* The response of the ubx frame written was acknowledged. */
 		if (ubx->received_ubx_get_frame_response == true) {
 			/* The response of a "get" ubx frame was received. */
@@ -122,7 +122,7 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
-	if (ubx->work_buf[UBX_FRM_MSG_CLASS_IDX] == UBX_CLASS_ACK) {
+	if (ubx->work_buf[UBX_FRM_MSG_CLASS_IDX] == UBX_MSG_CLASS_ACK) {
 		k_sem_give(&ubx->script_stopped_sem);
 
 		return 0;

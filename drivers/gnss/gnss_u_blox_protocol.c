@@ -35,6 +35,9 @@ static int ubx_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, ui
 	switch (message_class) {
 	case UBX_CLASS_CFG:
 		switch (message_id) {
+		case UBX_CFG_RATE:
+			payload_size_expected = UBX_CFG_RATE_PAYLOAD_SZ;
+			break;
 		case UBX_CFG_PRT:
 			if (payload_size == UBX_CFG_PRT_POLL_PAYLOAD_SZ ||
 			    payload_size == UBX_CFG_PRT_SET_PAYLOAD_SZ) {
@@ -105,6 +108,13 @@ int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t messag
 	frame->payload_and_checksum[payload_size + 1] = ckB;
 
 	return ubx_frame_len;
+}
+
+void ubx_cfg_rate_data_default(struct ubx_cfg_rate_data *data)
+{
+	data->meas_rate = 1000;
+	data->nav_rate = 3;
+	data->time_ref = UBX_CFG_RATE_TIME_REF_UTC;
 }
 
 void ubx_cfg_prt_poll_data_default(struct ubx_cfg_prt_poll_data *const data)

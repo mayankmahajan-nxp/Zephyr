@@ -264,6 +264,37 @@ static int ubx_m10_modem_ubx_script_init(const struct device *dev, struct modem_
 	return ret;
 }
 
+static int ubx_m10_ubx_cfg_rate(const struct device *dev)
+{
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+	struct ubx_cfg_rate_data frame_data;
+	struct modem_ubx_script script;
+
+	key = k_spin_lock(&data->lock);
+
+	ubx_cfg_rate_data_default(&frame_data);
+
+	ret = ubx_m10_modem_ubx_script_init(dev, &script, data->ubx_frame_buf,
+		sizeof(data->ubx_frame_buf), MODEM_UBX_RETRY_DEFAULT, &frame_data,
+		UBX_CLASS_CFG, UBX_CFG_RATE, UBX_CFG_RATE_PAYLOAD_SZ);
+	if (ret < 0) {
+		goto out;
+	}
+
+	script.ubx_frame_size = ret;
+	ret = ubx_m10_modem_ubx_run_script(dev, &script);
+	if (ret < 0) {
+		goto out;
+	}
+
+out:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
+}
+
 static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_baudrate,
 				   uint8_t retry)
 {
@@ -817,17 +848,26 @@ static int ubx_m10_configure(const struct device *dev)
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
 	k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
 
+	ret = ubx_m10_ubx_cfg_rate(dev);
+	if (ret < 0) {
+		LOG_ERR("Configuring rate failed. Returned %d.", ret);
+		goto out;
+	}
+	LOG_INF("Configuring rate successful. Returned %d.", ret);
+
 	ret = ubx_m10_configure_gnss_device_baudrate(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring baudrate failed. Returned %d.", ret);
 		goto out;
 	}
+	LOG_INF("Configuring baudrate successful. Returned %d.", ret);
 
 	ret = ubx_m10_configure_messages(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring messages failed. Returned %d.", ret);
 		goto out;
 	}
+	LOG_INF("Configuring messages successful. Returned %d.", ret);
 
 out:
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);

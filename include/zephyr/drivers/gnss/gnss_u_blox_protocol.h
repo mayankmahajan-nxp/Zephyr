@@ -40,11 +40,12 @@
 #define UBX_FRM_FOOTER_SZ			2
 #define UBX_FRM_SZ_WO_PAYLOAD			UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
 
-#define UBX_CFG_RST_WAIT_MS			8000
+#define UBX_CFG_RST_WAIT_MS			10000
 
 extern const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT];
 
 #define UBX_FRM_GET_PAYLOAD_SZ			0
+#define UBX_CFG_RATE_PAYLOAD_SZ			6
 #define UBX_CFG_PRT_POLL_PAYLOAD_SZ		1
 #define UBX_CFG_PRT_POLL_FRM_SZ			UBX_FRM_SZ_WO_PAYLOAD + UBX_CFG_PRT_POLL_PAYLOAD_SZ
 #define UBX_CFG_PRT_SET_PAYLOAD_SZ		20
@@ -74,6 +75,20 @@ struct ubx_frame_t {
 int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size,
 			uint8_t message_class, uint8_t message_id,
 			const void *const data, uint16_t payload_size);
+
+#define UBX_CFG_RATE_TIME_REF_UTC	0	/* Align measurements to UTC time */
+#define UBX_CFG_RATE_TIME_REF_GPS	1	/* Align measurements to GPS time */
+#define UBX_CFG_RATE_TIME_REF_GLO	2	/* Align measurements to GLONASS time */
+#define UBX_CFG_RATE_TIME_REF_BDS	3	/* Align measurements to BeiDou time */
+#define UBX_CFG_RATE_TIME_REF_GAL	4	/* Align measurements to Galileo time */
+
+struct ubx_cfg_rate_data {
+	uint16_t meas_rate;
+	uint16_t nav_rate;
+	uint16_t time_ref;
+};
+
+void ubx_cfg_rate_data_default(struct ubx_cfg_rate_data *data);
 
 struct ubx_cfg_prt_poll_data {
 	uint8_t port_id;

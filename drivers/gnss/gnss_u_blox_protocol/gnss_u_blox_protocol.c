@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/drivers/gnss/gnss_u_blox_protocol.h>
+#include "gnss_u_blox_protocol.h"
 
 const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT] = {
 	4800,

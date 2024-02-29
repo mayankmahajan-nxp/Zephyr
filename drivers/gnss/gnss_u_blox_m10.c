@@ -17,7 +17,7 @@
 #include "gnss_nmea0183_match.h"
 #include "gnss_parse.h"
 
-#include <zephyr/drivers/gnss/gnss_u_blox_protocol.h>
+#include "gnss_u_blox_protocol/gnss_u_blox_protocol.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
@@ -161,7 +161,6 @@ static int ubx_m10_init_chat(const struct device *dev)
 		.argv_size = ARRAY_SIZE(data->chat_argv),
 		.unsol_matches = unsol_matches,
 		.unsol_matches_size = ARRAY_SIZE(unsol_matches),
-		// .process_timeout = K_MSEC(2),
 	};
 
 	return modem_chat_init(&data->chat, &chat_config);
@@ -306,7 +305,6 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 
 	key = k_spin_lock(&data->lock);
 
-	// UBX_CFG_PRT_SET_DATA_INIT(frame_data)
 	(void) ubx_cfg_prt_set_data_default(&frame_data);
 
 	frame_data.baudrate = target_baudrate;
@@ -342,7 +340,6 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 
 	int retry = 2;
 
-	// UBX_CFG_RST_DATA_INIT(frame_data)
 	(void) ubx_cfg_rst_data_default(&frame_data);
 
 	frame_data.nav_bbr_mask = UBX_CFG_RST_NAV_BBR_MASK_HOT_START;
@@ -465,7 +462,6 @@ static int ubx_m10_configure_messages(const struct device *dev)
 
 	key = k_spin_lock(&data->lock);
 
-	// UBX_CFG_MSG_DATA_INIT(frame_data)
 	(void) ubx_cfg_msg_data_default(&frame_data);
 
 	ubx_m10_modem_ubx_script_fill(dev, &script, data->ubx_frame_buf, MODEM_UBX_RETRY_DEFAULT);
@@ -560,7 +556,6 @@ static int ubx_m10_set_navigation_mode(const struct device *dev, enum gnss_navig
 
 	key = k_spin_lock(&data->lock);
 
-	// UBX_CFG_NAV5_DATA_INIT(frame_data)
 	(void) ubx_cfg_nav5_data_default(&frame_data);
 
 	ret = ubx_m10_navigation_mode_to_ubx_dynamic_model(dev, mode);

@@ -155,9 +155,11 @@ static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 		++ubx->work_buf_len;
 
 		if (ubx->work_buf_len == UBX_FRM_HEADER_SZ) {
-			received_ubx_frame_len = (ubx->work_buf[UBX_FRM_PAYLOAD_SZ_L_IDX]
-						 | ubx->work_buf[UBX_FRM_PAYLOAD_SZ_H_IDX] << 8)
-						 + UBX_FRM_SZ_WITHOUT_PAYLOAD;
+			uint16_t received_ubx_payload_len = ubx->work_buf[UBX_FRM_PAYLOAD_SZ_H_IDX];
+			received_ubx_payload_len = ubx->work_buf[UBX_FRM_PAYLOAD_SZ_H_IDX] << 8;
+			received_ubx_payload_len |= ubx->work_buf[UBX_FRM_PAYLOAD_SZ_L_IDX];
+
+			received_ubx_frame_len = received_ubx_payload_len + UBX_FRM_SZ_WITHOUT_PAYLOAD;
 		}
 
 		if (ubx->work_buf_len == received_ubx_frame_len) {

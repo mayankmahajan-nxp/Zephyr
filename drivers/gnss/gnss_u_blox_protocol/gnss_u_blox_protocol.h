@@ -15,6 +15,8 @@
 #define UBX_BAUDRATE_COUNT			8
 
 #define UBX_CFG_RST_WAIT_MS			10000
+#define UBX_CFG_GNSS_WAIT_MS			6000
+#define UBX_CFG_NAV5_WAIT_MS			6000
 
 extern const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT];
 

@@ -199,6 +199,13 @@ static int vl53l0x_start(const struct device *dev)
 		k_sleep(T_BOOT);
 	}
 #endif
+	ret = VL53L0X_RdWord(&drv_data->vl53l0x,
+			     VL53L0X_REG_WHO_AM_I,
+			     &vl53l0x_id);
+	if ((ret < 0) || (vl53l0x_id != VL53L0X_CHIP_ID)) {
+		LOG_ERR("[%s] Issue on device identification", dev->name);
+		return -ENOTSUP;
+	}
 
 	ret = VL53L0X_GetDeviceInfo(&drv_data->vl53l0x, &vl53l0x_dev_info);
 	if (ret < 0) {
@@ -215,13 +222,6 @@ static int vl53l0x_start(const struct device *dev)
 	LOG_DBG("   ProductRevisionMinor : %d",
 		vl53l0x_dev_info.ProductRevisionMinor);
 
-	ret = VL53L0X_RdWord(&drv_data->vl53l0x,
-			     VL53L0X_REG_WHO_AM_I,
-			     &vl53l0x_id);
-	if ((ret < 0) || (vl53l0x_id != VL53L0X_CHIP_ID)) {
-		LOG_ERR("[%s] Issue on device identification", dev->name);
-		return -ENOTSUP;
-	}
 
 	/* sensor init */
 	ret = VL53L0X_DataInit(&drv_data->vl53l0x);

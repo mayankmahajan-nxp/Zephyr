@@ -77,6 +77,9 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 		return ret;
 	}
 
+	ubx->response_buf = script->ubx_frame_response;
+	ubx->response_buf_size = script->ubx_frame_response_size;
+
 	for (int attempt = 0; attempt < script->retry_count; ++attempt) {
 		ret = modem_ubx_run_script_helper(ubx, script);
 		if (ret > -1) {
@@ -124,6 +127,13 @@ static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
 	if (ubx->work_buf[UBX_FRM_MSG_CLASS_IDX] == UBX_MSG_CLASS_ACK) {
 		k_sem_give(&ubx->script_stopped_sem);
+
+		if (ubx->response_buf_size == ubx->work_buf_len) {
+			int cmp = memcmp(ubx->work_buf, ubx->response_buf, ubx->response_buf_size);
+			if (cmp == 0) {
+				LOG_ERR("response matched successfully.");
+			}
+		}
 
 		return 0;
 	}

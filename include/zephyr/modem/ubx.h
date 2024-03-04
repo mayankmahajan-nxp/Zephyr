@@ -58,6 +58,8 @@ extern "C" {
 struct modem_ubx_script {
 	uint8_t *ubx_frame;
 	uint16_t ubx_frame_size;
+	uint8_t *ubx_frame_response;
+	uint16_t ubx_frame_response_size;
 	uint16_t retry_count;
 	k_timeout_t script_timeout;
 };
@@ -69,6 +71,8 @@ struct modem_ubx {
 
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
+	uint8_t *response_buf;
+	uint16_t response_buf_size;
 	bool received_ubx_preamble_sync_chars;
 	bool received_ubx_get_frame_response;
 

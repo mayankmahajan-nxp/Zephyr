@@ -75,6 +75,7 @@ struct ubx_m10_data {
 
 	/* Ubx frame */
 	uint8_t ubx_frame_buf[UBX_FRM_BUF_SZ];
+	uint8_t ubx_frame_buf_response[UBX_FRM_BUF_SZ];
 
 	struct k_spinlock lock;
 };
@@ -255,6 +256,22 @@ static int ubx_m10_modem_ubx_script_init(const struct device *dev, struct modem_
 	int ret;
 
 	(void) ubx_m10_modem_ubx_script_fill(dev, script, ubx_frame, retry);
+
+	struct ubx_m10_data *data = dev->data;
+
+	struct ubx_cfg_ack_data response_data = {
+		.message_class = msg_cls,
+		.message_id = msg_id,
+	};
+
+	ret = ubx_create_frame(data->ubx_frame_buf_response, sizeof(data->ubx_frame_buf_response), UBX_CLASS_ACK, UBX_ACK_ACK, &response_data, UBX_CFG_ACK_PAYLOAD_SZ);
+	printk("%d\n", ret);
+
+	script->ubx_frame_response = data->ubx_frame_buf_response;
+	script->ubx_frame_response_size = ret;
+	for (int i = 0; i < script->ubx_frame_response_size; i++)
+		printk("%x ", script->ubx_frame_response[i]);
+	printk("(%d)\n", script->ubx_frame_response_size);
 
 	ret = ubx_create_frame(ubx_frame, ubx_frame_size, msg_cls, msg_id, frame_data,
 			       payload_size);

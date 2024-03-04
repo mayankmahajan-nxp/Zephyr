@@ -33,6 +33,14 @@ static int ubx_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, ui
 	uint16_t payload_size_expected;
 
 	switch (message_class) {
+	case UBX_CLASS_ACK:
+		switch (message_id) {
+		case UBX_ACK_ACK:
+			payload_size_expected = UBX_CFG_ACK_PAYLOAD_SZ;
+			break;
+		default: return -1;
+		}
+		break;
 	case UBX_CLASS_CFG:
 		switch (message_id) {
 		case UBX_CFG_RATE:
@@ -108,6 +116,12 @@ int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t messag
 	frame->payload_and_checksum[payload_size + 1] = ckB;
 
 	return ubx_frame_len;
+}
+
+void ubx_cfg_ack_data_default(struct ubx_cfg_ack_data *data)
+{
+	data->message_class = UBX_CLASS_CFG;
+	data->message_id = UBX_CFG_PRT;
 }
 
 void ubx_cfg_rate_data_default(struct ubx_cfg_rate_data *data)

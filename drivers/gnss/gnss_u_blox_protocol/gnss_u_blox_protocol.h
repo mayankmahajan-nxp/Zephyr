@@ -39,16 +39,6 @@ extern const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT];
 	UBX_CFG_GNSS_PAYLOAD_INIT_SZ + UBX_CFG_GNSS_PAYLOAD_CFG_BLK_SZ * n
 #define UBX_CFG_GNSS_FRM_SZ(n)			UBX_FRM_SZ_WO_PAYLOAD + UBX_CFG_GNSS_PAYLOAD_SZ(n)
 
-struct ubx_frame_t {
-	uint8_t preamble_sync_char_1;
-	uint8_t preamble_sync_char_2;
-	uint8_t message_class;
-	uint8_t message_id;
-	uint8_t payload_size_low;
-	uint8_t payload_size_high;
-	uint8_t payload_and_checksum[];
-};
-
 int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t message_class,
 		     uint8_t message_id, const void *data, uint16_t payload_size);
 

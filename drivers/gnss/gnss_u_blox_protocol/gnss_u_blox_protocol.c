@@ -106,8 +106,8 @@ int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t messag
 
 	uint8_t ckA = 0, ckB = 0;
 
-	for (unsigned int i = UBX_CHECKSUM_START_IDX;
-	     i < (ubx_frame_len - UBX_CHECKSUM_STOP_IDX_FROM_END); i++) {
+	for (unsigned int i = UBX_FRM_CHECKSUM_START_IDX;
+	     i < (UBX_FRM_CHECKSUM_STOP_IDX(ubx_frame_len)); i++) {
 		ckA += ubx_frame[i];
 		ckB += ckA;
 	}

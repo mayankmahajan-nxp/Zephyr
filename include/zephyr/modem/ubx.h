@@ -24,6 +24,16 @@ extern "C" {
  * @{
  */
 
+struct ubx_frame_t {
+	uint8_t preamble_sync_char_1;
+	uint8_t preamble_sync_char_2;
+	uint8_t message_class;
+	uint8_t message_id;
+	uint8_t payload_size_low;
+	uint8_t payload_size_high;
+	uint8_t payload_and_checksum[];
+};
+
 #define UBX_FRM_HEADER_SZ			6
 #define UBX_FRM_FOOTER_SZ			2
 #define UBX_FRM_SZ_WITHOUT_PAYLOAD		UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
@@ -32,28 +42,18 @@ extern "C" {
 #define UBX_PREAMBLE_SYNC_CHAR_1		0xB5
 #define UBX_PREAMBLE_SYNC_CHAR_2		0x62
 
-#define UBX_PREAMBLE_SYNC_CHAR_1_IDX		0
-#define UBX_PREAMBLE_SYNC_CHAR_2_IDX		1
+#define UBX_FRM_PREAMBLE_SYNC_CHAR_1_IDX		0
+#define UBX_FRM_PREAMBLE_SYNC_CHAR_2_IDX		1
 #define UBX_FRM_MSG_CLASS_IDX			2
 #define UBX_FRM_MSG_ID_IDX			3
 #define UBX_FRM_PAYLOAD_SZ_L_IDX		4
 #define UBX_FRM_PAYLOAD_SZ_H_IDX		5
 #define UBX_FRM_PAYLOAD_IDX			6
+#define UBX_FRM_CHECKSUM_START_IDX		2
+#define UBX_FRM_CHECKSUM_STOP_IDX(frame_len)	frame_len - 2
 
-#define UBX_CHECKSUM_START_IDX			2
-#define UBX_CHECKSUM_STOP_IDX_FROM_END		2
-#define UBX_CHECKSUM_A_IDX_FROM_END		2
-#define UBX_CHECKSUM_B_IDX_FROM_END		1
-
-#define UBX_FRM_SZ_MAX				264
 #define UBX_PAYLOAD_SZ_MAX			256
-#define UBX_FRM_HEADER_SZ			6
-#define UBX_FRM_FOOTER_SZ			2
-#define UBX_FRM_SZ_WO_PAYLOAD			UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
-
-#define UBX_MSG_CLASS_ACK		0x05
-#define UBX_ACK_MSG_ID_ACK		0x01
-#define UBX_ACK_MSG_ID_NAK		0x00
+#define UBX_FRM_SZ_MAX				UBX_FRM_SZ(UBX_PAYLOAD_SZ_MAX)
 
 struct modem_ubx_script {
 	uint8_t *ubx_frame;
@@ -75,6 +75,7 @@ struct modem_ubx {
 	uint16_t response_buf_size;
 	bool received_ubx_preamble_sync_chars;
 	bool received_ubx_get_frame_response;
+	bool response_matched_successfully;
 
 	uint8_t *transfer_buf;
 	uint16_t transfer_buf_len;

@@ -16,7 +16,6 @@
 
 /* TODO: check what is the ideal waiting time for each message. */
 #define UBX_CFG_RST_WAIT_MS			12000
-#define UBX_CFG_PRT_WAIT_MS			2000
 #define UBX_CFG_GNSS_WAIT_MS			6000
 #define UBX_CFG_NAV5_WAIT_MS			6000
 

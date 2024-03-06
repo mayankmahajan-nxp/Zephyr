@@ -36,7 +36,7 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_FRM_BUF_SZ			UBX_FRM_SZ_MAX
 
-#define MODEM_UBX_SCRIPT_TIMEOUT_MS	500
+#define MODEM_UBX_SCRIPT_TIMEOUT_MS	1000
 #define RETRY_DEFAULT			10
 
 #define UBX_M10_GNSS_SYS_CNT		8
@@ -332,8 +332,6 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 	if (ret < 0) {
 		goto unlock;
 	}
-
-	k_sleep(K_MSEC(UBX_CFG_PRT_WAIT_MS));
 
 unlock:
 	k_spin_unlock(&data->lock, key);

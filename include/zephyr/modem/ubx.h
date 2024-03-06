@@ -56,10 +56,11 @@ struct ubx_frame_t {
 #define UBX_FRM_SZ_MAX				UBX_FRM_SZ(UBX_PAYLOAD_SZ_MAX)
 
 struct modem_ubx_script {
-	uint8_t *ubx_frame;
-	uint16_t ubx_frame_size;
-	uint8_t *ubx_frame_response;
-	uint16_t ubx_frame_response_size;
+	uint8_t *request;
+	uint16_t request_size;
+	uint8_t *response;
+	uint16_t response_size;
+
 	uint16_t retry_count;
 	k_timeout_t script_timeout;
 };

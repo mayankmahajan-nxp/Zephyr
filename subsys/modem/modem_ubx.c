@@ -35,8 +35,8 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 	k_sem_reset(&ubx->script_stopped_sem);
 
 	/* Initialize transfer buffer to the ubx frame in the script. */
-	ubx->transfer_buf = script->ubx_frame;
-	ubx->transfer_buf_len = script->ubx_frame_size;
+	ubx->transfer_buf = script->request;
+	ubx->transfer_buf_len = script->request_size;
 
 	(void) modem_ubx_reset_parser(ubx);
 
@@ -65,7 +65,7 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 {
 	int ret;
 
-	if (script->ubx_frame_size > UBX_FRM_SZ_MAX) {
+	if (script->request_size > UBX_FRM_SZ_MAX) {
 		return -EFBIG;
 	}
 
@@ -78,8 +78,8 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 		return ret;
 	}
 
-	ubx->response_buf = script->ubx_frame_response;
-	ubx->response_buf_size = script->ubx_frame_response_size;
+	ubx->response_buf = script->response;
+	ubx->response_buf_size = script->response_size;
 
 	for (int attempt = 0; attempt < script->retry_count; ++attempt) {
 		ret = modem_ubx_run_script_helper(ubx, script);

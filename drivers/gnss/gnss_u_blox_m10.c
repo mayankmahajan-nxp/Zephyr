@@ -36,7 +36,7 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_FRM_BUF_SZ			UBX_FRM_SZ_MAX
 
-#define MODEM_UBX_SCRIPT_TIMEOUT_MS	500
+#define MODEM_UBX_SCRIPT_TIMEOUT_MS	1000
 #define RETRY_DEFAULT			10
 
 #define UBX_M10_GNSS_SYS_CNT		8
@@ -334,6 +334,8 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 	if (ret < 0) {
 		goto unlock;
 	}
+
+	/* TODO: could add sleep here because the changes take time to come into effect. */
 
 unlock:
 	k_spin_unlock(&data->lock, key);
@@ -863,29 +865,35 @@ static int ubx_m10_configure(const struct device *dev)
 	int ret;
 
 	(void) ubx_m10_configure_gnss_device_baudrate_prerequisite(dev);
+	// LOG_INF("baudrate prerequisite finished.");
 
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
+	// LOG_INF("ubx_m10_ubx_cfg_rst finished.");
 
 	ret = ubx_m10_ubx_cfg_rate(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring rate failed. Returned %d.", ret);
 		goto reset;
 	}
+	// LOG_INF("ubx_m10_ubx_cfg_rate finished.");
 
 	ret = ubx_m10_configure_gnss_device_baudrate(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring baudrate failed. Returned %d.", ret);
 		goto reset;
 	}
+	// LOG_INF("ubx_m10_configure_gnss_device_baudrate finished.");
 
 	ret = ubx_m10_configure_messages(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring messages failed. Returned %d.", ret);
 		goto reset;
 	}
+	// LOG_INF("ubx_m10_configure_messages finished.");
 
 reset:
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
+	// LOG_INF("ubx_m10_ubx_cfg_rst finished.");
 
 	return ret;
 }

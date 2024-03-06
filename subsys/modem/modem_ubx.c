@@ -157,7 +157,13 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 	tx_frame_len = modem_ubx_get_frame_length(ubx->request);
 	ret = modem_pipe_transmit(ubx->pipe, (const uint8_t *) ubx->request, tx_frame_len);
+	// printk("transmitting frame: ");
+	// for (int i = 0; i < 20; ++i)
+	// 	printk("%x ", ((uint8_t *) ubx->request)[i]);
+	// printk("(%d)\n", tx_frame_len);
 	if (ret < tx_frame_len) {
+		// LOG_ERR("Ubx frame transmission failed. Returned %d %d.", ret, tx_frame_len);
+		// LOG_ERR("Ubx frame transmission failed. Returned %d %d.", ret, tx_frame_len);
 		LOG_ERR("Ubx frame transmission failed. Returned %d.", ret);
 		return;
 	}
@@ -167,20 +173,27 @@ static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
 	struct ubx_frame_t *received = (struct ubx_frame_t *) ubx->work_buf;
 
+	// for (int i = 0; i < ubx->work_buf_len; ++i)
+	// 	printk("%x ", ((uint8_t *) ubx->work_buf)[i]);
+	// printk("[%d]\n", ubx->work_buf_len);
+
 	/* TODO: think about the return values for the following cases. */
 	if (modem_ubx_match_frame_full(received, ubx->response) == true) {
 		ubx->response_matched_successfully = true;
 		k_sem_give(&ubx->script_stopped_sem);
 
-		// printk("12 (%d)\n", modem_ubx_get_frame_length(received));
+		// printk("12 (%d)\n", modem_ubx_get_frame_length(ubx->response));
 		return 0;
 	} else if (modem_ubx_match_frame_type(received, ubx->request) == true) {
 		ubx->received_ubx_get_frame_response = true;
 		memcpy(ubx->request, ubx->work_buf, ubx->work_buf_len);
 		(void) modem_ubx_reset_received_ubx_preamble_sync_chars(ubx);
 
-		// printk("34 (%d)\n", modem_ubx_get_frame_length(received));
+		// printk("34 (%d)\n", modem_ubx_get_frame_length(ubx->request));
 		return -1;
+	} else {
+		(void) modem_ubx_reset_received_ubx_preamble_sync_chars(ubx);
+		// printk("56 (%d)\n", modem_ubx_get_frame_length(ubx->request));
 	}
 
 	return -1;

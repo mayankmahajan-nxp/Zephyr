@@ -55,10 +55,10 @@ struct ubx_frame_t {
 	uint8_t payload_and_checksum[];
 };
 
-/* TODO: change whatever you can to struct ubx_frame_t from uint8_t*. */
 struct modem_ubx_script {
 	struct ubx_frame_t *request;
 	struct ubx_frame_t *response;
+	struct ubx_frame_t *match;
 
 	uint16_t retry_count;
 	k_timeout_t timeout;
@@ -72,19 +72,14 @@ struct modem_ubx {
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
 
-	/* TODO: change the name of the following. */
-	/* Receiving and matching ubx frames. */
-	bool received_ubx_preamble_sync_chars;
-	bool received_ubx_get_frame_response;
-	bool response_matched_successfully;
-
-	/* TODO: response of 'get' frames shouldn't be written to 'request'. */
-	struct ubx_frame_t *request;
-	struct ubx_frame_t *response;
-
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
 	uint16_t work_buf_len;
+	bool ubx_preamble_sync_chars_received;
+
+	struct ubx_frame_t *request;
+	struct ubx_frame_t *response;
+	struct ubx_frame_t *match;
 
 	struct modem_pipe *pipe;
 
@@ -96,7 +91,6 @@ struct modem_ubx {
 
 struct modem_ubx_config {
 	void *user_data;
-
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
 	uint8_t *work_buf;
@@ -129,28 +123,28 @@ void modem_ubx_release(struct modem_ubx *ubx);
  */
 int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config);
 
-// TODO: change the description in the following comment.
 /**
- * @brief Writes the ubx frame in the script and reads it's response
- * @details For each ubx frame sent, the device responds with a UBX-ACK frame (class = 0x05).
- *	In case a "get" or "poll" ubx frame (used to get configuration of the device) is sent,
- *	the device responds with two back-to-back frames - first with the exact same ubx frame
- *	whose payload contains the desired configuration; then sends the UBX-ACK frame.
- *	In case a "set" ubx frame (used to set configuration of the device) is sent, the device
- *	only responds with a UBX-ACK frame.
- *	Ex: if "set" variant of UBX-CFG-GNSS was sent, then the device responds with UBX-ACK only.
- *	Ex: if "get" variant of UBX-CFG-GNSS was sent, then the device responds with UBX-CFG-GNSS
- *	then sends a UBX-ACK message.
+ * @brief Writes the ubx frame in script.request and reads back its response (if available)
+ * @details For each ubx frame sent, the device responds in 0, 1 or both of the following ways:
+ *	1. The device sends back a UBX-ACK frame to denote 'acknowledge' and 'not-acknowledge'.
+ *		Note: the message id of UBX-ACK frame determines whether the device acknowledged.
+ *		Ex: when we send a UBX-CFG frame, the device responds with a UBX-ACK frame.
+ *	2. The device sends back the same frame that we sent to it, with it's payload populated.
+ *		It's used to get the current configuration corresponding to the frame that we sent.
+ *		Ex: frame types such as "get" or "poll" ubx frames respond this way.
+ *		This response (if received) is written to script.response.
  *
- *	The message id of the UBX-ACK received determines whether the device acknowledged or not
- *	acknowledged the ubx frame that was sent to it.
+ *	This function writes the ubx frame in script.request then reads back it's response.
+ *	If script.match is not NULL, then every ubx frame received from the device is compared with
+ *	script.match to check if a match occurred. This could be used to match UBX-ACK frame sent
+ *	from the device by populating script.match with UBX-ACK that the script expects to receive.
  *
- *	This function writes the ubx frame in the script and reads it's response from the device.
- *	If a "get" response was received, then it's written back to the ubx_frame of the script,
- *	so that the caller could retrieve the information that it required.
+ *	The script terminates when either of the following happens:
+ *		1. script.match is successfully received and matched.
+ *		2. timeout (denoted by script.timeout) occurs.
  * @param ubx Modem Ubx instance
- * @param script Script (containing the ubx frame) to be executed
- * @note The length of ubx frame in the script should not exceed UBX_FRM_SZ_MAX
+ * @param script Script to be executed
+ * @note The length of ubx frame in the script.request should not exceed UBX_FRM_SZ_MAX
  * @note Modem Ubx instance must be attached to a pipe instance
  * @returns 0 if device acknowledged via UBX-ACK and no "get" response was received
  * @returns positive integer denoting the length of "get" response that was received

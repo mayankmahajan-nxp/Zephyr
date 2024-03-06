@@ -36,7 +36,7 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 
 #define UBX_FRM_BUF_SZ			UBX_FRM_SZ_MAX
 
-#define MODEM_UBX_SCRIPT_TIMEOUT_MS	1000
+#define MODEM_UBX_SCRIPT_TIMEOUT_MS	500
 #define RETRY_DEFAULT			10
 
 #define UBX_M10_GNSS_SYS_CNT		8
@@ -77,6 +77,7 @@ struct ubx_m10_data {
 	struct modem_ubx_script script;
 	uint8_t request_buf[UBX_FRM_BUF_SZ];
 	uint8_t response_buf[UBX_FRM_BUF_SZ];
+	uint8_t match_buf[UBX_FRM_BUF_SZ];
 
 	struct k_spinlock lock;
 };
@@ -241,33 +242,40 @@ reset_modem_module:
 	return ret;
 }
 
+static void ubx_m10_modem_ubx_script_fill(const struct device *dev)
+{
+	struct ubx_m10_data *data = dev->data;
+
+	data->script.request = (struct ubx_frame_t *) data->request_buf;
+	data->script.response = (struct ubx_frame_t *) data->response_buf;
+	data->script.match = (struct ubx_frame_t *) data->match_buf;
+	data->script.retry_count = RETRY_DEFAULT;
+	data->script.timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS);
+}
+
 static int ubx_m10_modem_ubx_script_init(const struct device *dev, void *payload, uint16_t payload_sz,
 					 enum ubx_msg_class msg_cls, enum ubx_config_message msg_id)
 {
 	int ret;
 	struct ubx_m10_data *data = dev->data;
-	struct ubx_cfg_ack_data response_payload = {
+	struct ubx_cfg_ack_data match_payload = {
 		.message_class = msg_cls,
 		.message_id = msg_id,
 	};
 
-	data->script.retry_count = RETRY_DEFAULT;
-	data->script.timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS);
-	// (void) ubx_m10_modem_ubx_script_fill(dev, script, request, response, retry);
+	(void) ubx_m10_modem_ubx_script_fill(dev);
 
-	ret = ubx_create_frame(data->response_buf, sizeof(data->response_buf), UBX_CLASS_ACK,
-			       UBX_ACK_ACK, &response_payload, UBX_CFG_ACK_PAYLOAD_SZ);
+	ret = ubx_create_frame(data->match_buf, sizeof(data->match_buf), UBX_CLASS_ACK,
+			       UBX_ACK_ACK, &match_payload, UBX_CFG_ACK_PAYLOAD_SZ);
 	if (ret < 0) {
 		return ret;
 	}
-	// printk("correct 3.\n");
 
 	ret = ubx_create_frame(data->request_buf, sizeof(data->request_buf), msg_cls, msg_id,
 			       payload, payload_sz);
 	if (ret < 0) {
 		return ret;
 	}
-	// printk("correct 4.\n");
 
 	return ret;
 }
@@ -278,7 +286,6 @@ static int ubx_m10_ubx_cfg_rate(const struct device *dev)
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
 	struct ubx_cfg_rate_data payload;
-	// struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
@@ -289,19 +296,11 @@ static int ubx_m10_ubx_cfg_rate(const struct device *dev)
 	if (ret < 0) {
 		goto unlock;
 	}
-	// printk("correct 1.\n");
-	// for (int i = 0; i < ret; ++i)
-	// 	printk("%x ", ((uint8_t *) data->script.request)[i]);
-	// printk("(%d)\n", ret);
-	// for (int i = 0; i < ret; ++i)
-	// 	printk("%x ", ((uint8_t *) data->script.response)[i]);
-	// printk("(%d)\n", ret);
 
 	ret = ubx_m10_modem_ubx_run_script(dev, &(data->script));
 	if (ret < 0) {
 		goto unlock;
 	}
-	// printk("correct 2.\n");
 
 unlock:
 	k_spin_unlock(&data->lock, key);
@@ -316,7 +315,6 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
 	struct ubx_cfg_prt_set_data payload;
-	// struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
@@ -335,7 +333,7 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 		goto unlock;
 	}
 
-	/* TODO: could add sleep here because the changes take time to come into effect. */
+	k_sleep(K_MSEC(UBX_CFG_PRT_WAIT_MS));
 
 unlock:
 	k_spin_unlock(&data->lock, key);
@@ -349,11 +347,8 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
 	struct ubx_cfg_rst_data payload;
-	// struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
-
-	int retry = 2;
 
 	(void) ubx_cfg_rst_data_default(&payload);
 
@@ -366,10 +361,15 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 		goto unlock;
 	}
 
-	data->script.timeout = K_MSEC(0);
-	data->script.retry_count = retry;
-	(void) ubx_m10_modem_ubx_run_script(dev, &(data->script));
-	k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
+	data->script.match = NULL;
+	ret = ubx_m10_modem_ubx_run_script(dev, &(data->script));
+	if (ret < 0) {
+		goto unlock;
+	}
+
+	if (reset_mode == UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP) {
+		k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
+	}
 
 unlock:
 	k_spin_unlock(&data->lock, key);
@@ -471,7 +471,6 @@ static int ubx_m10_configure_messages(const struct device *dev)
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
 	struct ubx_cfg_msg_data payload;
-	// struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
@@ -573,7 +572,6 @@ static int ubx_m10_set_navigation_mode(const struct device *dev, enum gnss_navig
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
 	struct ubx_cfg_nav5_data payload;
-	// struct modem_ubx_script script;
 
 	key = k_spin_lock(&data->lock);
 
@@ -613,8 +611,6 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 
 	key = k_spin_lock(&data->lock);
 
-	// struct modem_ubx_script script;
-
 	ret = ubx_m10_modem_ubx_script_init(dev, NULL, UBX_FRM_GET_PAYLOAD_SZ, UBX_CLASS_CFG,
 					    UBX_CFG_NAV5);
 	if (ret < 0) {
@@ -625,12 +621,11 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 	if (ret < 0) {
 		goto unlock;
 	}
-	// script.request_size = ret;
 
-	struct ubx_frame_t *frame = (struct ubx_frame_t *) data->request_buf;
+	struct ubx_frame_t *response = data->script.response;
 
 	enum ubx_dynamic_model dynamic_model =
-		((struct ubx_cfg_nav5_data *)frame->payload_and_checksum)->dyn_model;
+		((struct ubx_cfg_nav5_data *)response->payload_and_checksum)->dyn_model;
 	ret = ubx_m10_ubx_dynamic_model_to_navigation_mode(dev, dynamic_model);
 	if (ret < 0) {
 		goto unlock;
@@ -722,7 +717,6 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 	key = k_spin_lock(&data->lock);
 
 	struct ubx_cfg_gnss_data *payload;
-	// struct modem_ubx_script script;
 
 	/* Get number of tracking channels for each supported gnss system by sending CFG-GNSS. */
 	ret = ubx_m10_modem_ubx_script_init(dev, NULL, UBX_FRM_GET_PAYLOAD_SZ, UBX_CLASS_CFG,
@@ -735,15 +729,14 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 	if (ret < 0) {
 		goto unlock;
 	}
-	// script.request_size = ret;
 
-	struct ubx_frame_t *frame = (struct ubx_frame_t *) data->script.request;
+	struct ubx_frame_t *response = data->script.response;
 	uint16_t res_trk_ch_sum = 0, max_trk_ch_sum = 0;
 
 	/* Calculate sum of reserved and maximum tracking channels for each supported gnss system,
 	 * and assert that the sum is not greater than the number of tracking channels in use.
 	 */
-	payload = (struct ubx_cfg_gnss_data *) frame->payload_and_checksum;
+	payload = (struct ubx_cfg_gnss_data *) response->payload_and_checksum;
 	for (int i = 0; i < payload->num_config_blocks; ++i) {
 		ret = ubx_m10_ubx_gnss_id_to_gnss_system(dev, payload->config_blocks[i].gnss_id);
 		if (ret < 0) {
@@ -814,8 +807,6 @@ static int ubx_m10_get_enabled_systems(const struct device *dev, gnss_systems_t 
 
 	key = k_spin_lock(&data->lock);
 
-	// struct modem_ubx_script script;
-
 	ret = ubx_m10_modem_ubx_script_init(dev, NULL, UBX_FRM_GET_PAYLOAD_SZ, UBX_CLASS_CFG,
 					    UBX_CFG_GNSS);
 	if (ret < 0) {
@@ -826,11 +817,10 @@ static int ubx_m10_get_enabled_systems(const struct device *dev, gnss_systems_t 
 	if (ret < 0) {
 		goto unlock;
 	}
-	// script.request_size = ret;
 
-	struct ubx_frame_t *frame = (struct ubx_frame_t *) data->script.request;
+	struct ubx_frame_t *response = data->script.response;
 	struct ubx_cfg_gnss_data *payload =
-		(struct ubx_cfg_gnss_data *) frame->payload_and_checksum;
+		(struct ubx_cfg_gnss_data *) response->payload_and_checksum;
 
 	*systems = 0;
 	for (int i = 0; i < payload->num_config_blocks; ++i) {
@@ -865,35 +855,29 @@ static int ubx_m10_configure(const struct device *dev)
 	int ret;
 
 	(void) ubx_m10_configure_gnss_device_baudrate_prerequisite(dev);
-	// LOG_INF("baudrate prerequisite finished.");
 
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
-	// LOG_INF("ubx_m10_ubx_cfg_rst finished.");
 
 	ret = ubx_m10_ubx_cfg_rate(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring rate failed. Returned %d.", ret);
 		goto reset;
 	}
-	// LOG_INF("ubx_m10_ubx_cfg_rate finished.");
 
 	ret = ubx_m10_configure_gnss_device_baudrate(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring baudrate failed. Returned %d.", ret);
 		goto reset;
 	}
-	// LOG_INF("ubx_m10_configure_gnss_device_baudrate finished.");
 
 	ret = ubx_m10_configure_messages(dev);
 	if (ret < 0) {
 		LOG_ERR("Configuring messages failed. Returned %d.", ret);
 		goto reset;
 	}
-	// LOG_INF("ubx_m10_configure_messages finished.");
 
 reset:
 	(void) ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
-	// LOG_INF("ubx_m10_ubx_cfg_rst finished.");
 
 	return ret;
 }
@@ -932,25 +916,26 @@ static int ubx_m10_init(const struct device *dev)
 	return 0;
 }
 
-#define UBX_M10(inst)								\
-	static struct ubx_m10_config ubx_m10_cfg_##inst = {			\
-		.uart = DEVICE_DT_GET(DT_INST_BUS(inst)),			\
-	};									\
-										\
-	static struct ubx_m10_data ubx_m10_data_##inst = {			\
+#define UBX_M10(inst)										\
+	static struct ubx_m10_config ubx_m10_cfg_##inst = {					\
+		.uart = DEVICE_DT_GET(DT_INST_BUS(inst)),					\
+	};											\
+												\
+	static struct ubx_m10_data ubx_m10_data_##inst = {					\
 		.script.request = (struct ubx_frame_t *) ubx_m10_data_##inst.request_buf,	\
 		.script.response = (struct ubx_frame_t *) ubx_m10_data_##inst.response_buf,	\
-		.script.retry_count = RETRY_DEFAULT,				\
-		.script.timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS),	\
-	};									\
-										\
-	DEVICE_DT_INST_DEFINE(inst,						\
-			      ubx_m10_init,					\
-			      NULL,						\
-			      &ubx_m10_data_##inst,				\
-			      &ubx_m10_cfg_##inst,				\
-			      POST_KERNEL,					\
-			      CONFIG_GNSS_INIT_PRIORITY,			\
+		.script.match = (struct ubx_frame_t *) ubx_m10_data_##inst.match_buf,		\
+		.script.retry_count = RETRY_DEFAULT,						\
+		.script.timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS),				\
+	};											\
+												\
+	DEVICE_DT_INST_DEFINE(inst,								\
+			      ubx_m10_init,							\
+			      NULL,								\
+			      &ubx_m10_data_##inst,						\
+			      &ubx_m10_cfg_##inst,						\
+			      POST_KERNEL,							\
+			      CONFIG_GNSS_INIT_PRIORITY,					\
 			      &gnss_api);
 
 DT_INST_FOREACH_STATUS_OKAY(UBX_M10)

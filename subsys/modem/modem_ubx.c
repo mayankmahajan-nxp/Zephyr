@@ -12,16 +12,14 @@ LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 
 #define MODEM_UBX_STATE_ATTACHED_BIT		(0)
 
-void modem_ubx_reset_received_ubx_preamble_sync_chars(struct modem_ubx *ubx)
+static void modem_ubx_reset_received_ubx_preamble_sync_chars(struct modem_ubx *ubx)
 {
-	ubx->received_ubx_preamble_sync_chars = false;
+	ubx->ubx_preamble_sync_chars_received = false;
 }
 
-void modem_ubx_reset_parser(struct modem_ubx *ubx)
+static void modem_ubx_reset_parser(struct modem_ubx *ubx)
 {
 	(void) modem_ubx_reset_received_ubx_preamble_sync_chars(ubx);
-	ubx->received_ubx_get_frame_response = false;
-	ubx->response_matched_successfully = false;
 }
 
 static int modem_ubx_get_payload_length(struct ubx_frame_t *frame)
@@ -64,6 +62,7 @@ static void modem_ubx_script_init(struct modem_ubx *ubx, const struct modem_ubx_
 {
 	ubx->request = script->request;
 	ubx->response = script->response;
+	ubx->match = script->match;
 }
 
 int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_script *script)
@@ -80,29 +79,21 @@ int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_sc
 
 	k_work_submit(&ubx->send_work);
 
-	ret = k_sem_take(&ubx->script_stopped_sem, script->timeout);
+	if (ubx->match == NULL) {
+		return 0;
+	}
 
+	ret = k_sem_take(&ubx->script_stopped_sem, script->timeout);
 	if (ret < 0) {
 		return ret;
 	}
 
-	/* TODO: change comments in the following. */
-	if (ubx->response_matched_successfully == true) {
-		/* The response of the ubx frame that we sent, was matched successfully. */
-		if (ubx->received_ubx_get_frame_response == true) {
-			/* The response of a "get" type ubx frame was received successfully. */
-			return modem_ubx_get_frame_length(ubx->request);
-		} else {
-			return 0;
-		}
-	} else { /* Failed to match the response of the ubx frame that we sent. */
-		return -1;
-	}
+	return 0;
 }
 
 int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *script)
 {
-	int ret;
+	int ret, attempt;
 
 	if (modem_ubx_get_frame_length(script->request) > UBX_FRM_SZ_MAX) {
 		return -EFBIG;
@@ -119,7 +110,7 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 
 	(void) modem_ubx_script_init(ubx, script);
 
-	for (int attempt = 0; attempt < script->retry_count; ++attempt) {
+	for (attempt = 0; attempt < script->retry_count; ++attempt) {
 		ret = modem_ubx_run_script_helper(ubx, script);
 		if (ret > -1) {
 			LOG_INF("Successfully executed script on attempt: %d.", attempt);
@@ -130,7 +121,7 @@ int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *s
 	}
 
 	if (ret < 0) {
-		LOG_ERR("Failed to execute script successfully.");
+		LOG_ERR("Failed to execute script successfully. Attempts: %d.", attempt);
 		goto unlock;
 	}
 
@@ -157,13 +148,7 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 	tx_frame_len = modem_ubx_get_frame_length(ubx->request);
 	ret = modem_pipe_transmit(ubx->pipe, (const uint8_t *) ubx->request, tx_frame_len);
-	// printk("transmitting frame: ");
-	// for (int i = 0; i < 20; ++i)
-	// 	printk("%x ", ((uint8_t *) ubx->request)[i]);
-	// printk("(%d)\n", tx_frame_len);
 	if (ret < tx_frame_len) {
-		// LOG_ERR("Ubx frame transmission failed. Returned %d %d.", ret, tx_frame_len);
-		// LOG_ERR("Ubx frame transmission failed. Returned %d %d.", ret, tx_frame_len);
 		LOG_ERR("Ubx frame transmission failed. Returned %d.", ret);
 		return;
 	}
@@ -171,43 +156,30 @@ static void modem_ubx_send_handler(struct k_work *item)
 
 static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 {
+	int ret = -1;
 	struct ubx_frame_t *received = (struct ubx_frame_t *) ubx->work_buf;
 
-	// for (int i = 0; i < ubx->work_buf_len; ++i)
-	// 	printk("%x ", ((uint8_t *) ubx->work_buf)[i]);
-	// printk("[%d]\n", ubx->work_buf_len);
-
-	/* TODO: think about the return values for the following cases. */
-	if (modem_ubx_match_frame_full(received, ubx->response) == true) {
-		ubx->response_matched_successfully = true;
+	if (modem_ubx_match_frame_full(received, ubx->match) == true) {
 		k_sem_give(&ubx->script_stopped_sem);
-
-		// printk("12 (%d)\n", modem_ubx_get_frame_length(ubx->response));
-		return 0;
+		ret = 0; /* Frame matched successfully. Terminate the script. */
 	} else if (modem_ubx_match_frame_type(received, ubx->request) == true) {
-		ubx->received_ubx_get_frame_response = true;
-		memcpy(ubx->request, ubx->work_buf, ubx->work_buf_len);
-		(void) modem_ubx_reset_received_ubx_preamble_sync_chars(ubx);
-
-		// printk("34 (%d)\n", modem_ubx_get_frame_length(ubx->request));
-		return -1;
-	} else {
-		(void) modem_ubx_reset_received_ubx_preamble_sync_chars(ubx);
-		// printk("56 (%d)\n", modem_ubx_get_frame_length(ubx->request));
+		memcpy(ubx->response, ubx->work_buf, ubx->work_buf_len);
+		ret = -1; /* Response receveid successfully. Script not ended. */
 	}
 
-	return -1;
+	(void) modem_ubx_reset_parser(ubx);
+
+	return ret;
 }
 
 static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 {
 	static uint8_t prev_byte;
 	static uint16_t rx_ubx_frame_len;
-	// printk("%x ", byte);
 
-	if (ubx->received_ubx_preamble_sync_chars == false) {
+	if (ubx->ubx_preamble_sync_chars_received == false) {
 		if (prev_byte == UBX_PREAMBLE_SYNC_CHAR_1 && byte == UBX_PREAMBLE_SYNC_CHAR_2) {
-			ubx->received_ubx_preamble_sync_chars = true;
+			ubx->ubx_preamble_sync_chars_received = true;
 			ubx->work_buf[0] = UBX_PREAMBLE_SYNC_CHAR_1;
 			ubx->work_buf[1] = UBX_PREAMBLE_SYNC_CHAR_2;
 			ubx->work_buf_len = 2;
@@ -246,7 +218,7 @@ static void modem_ubx_process_handler(struct k_work *item)
 
 	for (int i = 0; i < ret; i++) {
 		ret = modem_ubx_process_received_byte(ubx, ubx->receive_buf[i]);
-		if (ret == 0) { /* TODO: add a comment for this break condition. */
+		if (ret == 0) { /* Frame matched successfully. Terminate the script. */
 			break;
 		}
 	}

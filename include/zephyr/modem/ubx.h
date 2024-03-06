@@ -57,13 +57,11 @@ struct ubx_frame_t {
 
 /* TODO: change whatever you can to struct ubx_frame_t from uint8_t*. */
 struct modem_ubx_script {
-	uint8_t *request;
-	uint16_t request_size;
-	uint8_t *response;
-	uint16_t response_size;
+	struct ubx_frame_t *request;
+	struct ubx_frame_t *response;
 
 	uint16_t retry_count;
-	k_timeout_t script_timeout;
+	k_timeout_t timeout;
 };
 
 struct modem_ubx {
@@ -80,7 +78,7 @@ struct modem_ubx {
 	bool received_ubx_get_frame_response;
 	bool response_matched_successfully;
 
-	/* TODO: response of get frames shouldn't be written to 'request'. */
+	/* TODO: response of 'get' frames shouldn't be written to 'request'. */
 	struct ubx_frame_t *request;
 	struct ubx_frame_t *response;
 

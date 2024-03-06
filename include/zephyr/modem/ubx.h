@@ -24,16 +24,6 @@ extern "C" {
  * @{
  */
 
-struct ubx_frame_t {
-	uint8_t preamble_sync_char_1;
-	uint8_t preamble_sync_char_2;
-	uint8_t message_class;
-	uint8_t message_id;
-	uint8_t payload_size_low;
-	uint8_t payload_size_high;
-	uint8_t payload_and_checksum[];
-};
-
 #define UBX_FRM_HEADER_SZ			6
 #define UBX_FRM_FOOTER_SZ			2
 #define UBX_FRM_SZ_WITHOUT_PAYLOAD		UBX_FRM_HEADER_SZ + UBX_FRM_FOOTER_SZ
@@ -42,8 +32,8 @@ struct ubx_frame_t {
 #define UBX_PREAMBLE_SYNC_CHAR_1		0xB5
 #define UBX_PREAMBLE_SYNC_CHAR_2		0x62
 
-#define UBX_FRM_PREAMBLE_SYNC_CHAR_1_IDX		0
-#define UBX_FRM_PREAMBLE_SYNC_CHAR_2_IDX		1
+#define UBX_FRM_PREAMBLE_SYNC_CHAR_1_IDX	0
+#define UBX_FRM_PREAMBLE_SYNC_CHAR_2_IDX	1
 #define UBX_FRM_MSG_CLASS_IDX			2
 #define UBX_FRM_MSG_ID_IDX			3
 #define UBX_FRM_PAYLOAD_SZ_L_IDX		4
@@ -55,6 +45,17 @@ struct ubx_frame_t {
 #define UBX_PAYLOAD_SZ_MAX			256
 #define UBX_FRM_SZ_MAX				UBX_FRM_SZ(UBX_PAYLOAD_SZ_MAX)
 
+struct ubx_frame_t {
+	uint8_t preamble_sync_char_1;
+	uint8_t preamble_sync_char_2;
+	uint8_t message_class;
+	uint8_t message_id;
+	uint8_t payload_size_low;
+	uint8_t payload_size_high;
+	uint8_t payload_and_checksum[];
+};
+
+/* TODO: change whatever you can to struct ubx_frame_t from uint8_t*. */
 struct modem_ubx_script {
 	uint8_t *request;
 	uint16_t request_size;
@@ -72,14 +73,16 @@ struct modem_ubx {
 
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
-	uint8_t *response_buf;
-	uint16_t response_buf_size;
+
+	/* TODO: change the name of the following. */
+	/* Receiving and matching ubx frames. */
 	bool received_ubx_preamble_sync_chars;
 	bool received_ubx_get_frame_response;
 	bool response_matched_successfully;
 
-	uint8_t *transfer_buf;
-	uint16_t transfer_buf_len;
+	/* TODO: response of get frames shouldn't be written to 'request'. */
+	struct ubx_frame_t *request;
+	struct ubx_frame_t *response;
 
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
@@ -100,10 +103,6 @@ struct modem_ubx_config {
 	uint16_t receive_buf_size;
 	uint8_t *work_buf;
 	uint16_t work_buf_size;
-	uint8_t *ubx_response_buf;
-	uint16_t ubx_response_buf_size;
-
-	k_timeout_t process_timeout;
 };
 
 /**
@@ -132,6 +131,7 @@ void modem_ubx_release(struct modem_ubx *ubx);
  */
 int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config);
 
+// TODO: change the description in the following comment.
 /**
  * @brief Writes the ubx frame in the script and reads it's response
  * @details For each ubx frame sent, the device responds with a UBX-ACK frame (class = 0x05).

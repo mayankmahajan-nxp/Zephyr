@@ -38,6 +38,9 @@ static int ubx_validate_frame(uint16_t ubx_frame_size, uint8_t message_class, ui
 		case UBX_ACK_ACK:
 			payload_size_expected = UBX_CFG_ACK_PAYLOAD_SZ;
 			break;
+		case UBX_ACK_NAK:
+			payload_size_expected = UBX_CFG_NAK_PAYLOAD_SZ;
+			break;
 		default: return -1;
 		}
 		break;
@@ -97,7 +100,7 @@ int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t messag
 	frame->preamble_sync_char_2 = UBX_PREAMBLE_SYNC_CHAR_2;
 	frame->message_class = message_class;
 	frame->message_id = message_id;
-	frame->payload_size_low = payload_size & 0xFF;
+	frame->payload_size_low = payload_size;
 	frame->payload_size_high = payload_size >> 8;
 
 	memcpy(frame->payload_and_checksum, (uint8_t *) data, payload_size);

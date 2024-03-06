@@ -374,6 +374,7 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 	}
 
 	// script.request_size = ret;
+	script.script_timeout = K_MSEC(0);
 	(void) ubx_m10_modem_ubx_run_script(dev, &script);
 	k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
 

@@ -45,7 +45,7 @@ extern "C" {
 #define UBX_PAYLOAD_SZ_MAX			256
 #define UBX_FRM_SZ_MAX				UBX_FRM_SZ(UBX_PAYLOAD_SZ_MAX)
 
-struct ubx_frame_t {
+typedef struct ubx_frame {
 	uint8_t preamble_sync_char_1;
 	uint8_t preamble_sync_char_2;
 	uint8_t message_class;
@@ -53,12 +53,12 @@ struct ubx_frame_t {
 	uint8_t payload_size_low;
 	uint8_t payload_size_high;
 	uint8_t payload_and_checksum[];
-};
+} ubx_frame_t;
 
 struct modem_ubx_script {
-	struct ubx_frame_t *request;
-	struct ubx_frame_t *response;
-	struct ubx_frame_t *match;
+	struct ubx_frame *request;
+	struct ubx_frame *response;
+	struct ubx_frame *match;
 
 	uint16_t retry_count;
 	k_timeout_t timeout;
@@ -77,9 +77,7 @@ struct modem_ubx {
 	uint16_t work_buf_len;
 	bool ubx_preamble_sync_chars_received;
 
-	struct ubx_frame_t *request;
-	struct ubx_frame_t *response;
-	struct ubx_frame_t *match;
+	const struct modem_ubx_script *script;
 
 	struct modem_pipe *pipe;
 
@@ -152,6 +150,19 @@ int modem_ubx_init(struct modem_ubx *ubx, const struct modem_ubx_config *config)
  */
 int modem_ubx_run_script(struct modem_ubx *ubx, const struct modem_ubx_script *script);
 
+/**
+ * @brief Initialize ubx frame
+ * @param ubx_frame Ubx frame buffer
+ * @param ubx_frame_size Ubx frame buffer size
+ * @param msg_cls Message class
+ * @param msg_id Message id
+ * @param payload Payload buffer
+ * @param payload_size Payload buffer size
+ * @returns positive integer denoting the length of the ubx frame created
+ * @returns negative errno code if failure
+ */
+int modem_ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_cls,
+			   uint8_t msg_id, const void *payload, uint16_t payload_size);
 /**
  * @}
  */

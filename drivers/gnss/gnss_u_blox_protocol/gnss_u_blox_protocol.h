@@ -14,7 +14,8 @@
 
 #define UBX_BAUDRATE_COUNT			8
 
-/* TODO: check what is the ideal waiting time for each message. */
+/* When a configuration frame is sent, the device requires some delay to reflect the changes. */
+/* TODO: check what is the precise waiting time for each message. */
 #define UBX_CFG_RST_WAIT_MS			12000
 #define UBX_CFG_GNSS_WAIT_MS			6000
 #define UBX_CFG_NAV5_WAIT_MS			6000
@@ -42,15 +43,15 @@ extern const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT];
 #define UBX_CFG_GNSS_FRM_SZ(n)			UBX_FRM_SZ_WO_PAYLOAD + UBX_CFG_GNSS_PAYLOAD_SZ(n)
 
 
-int ubx_create_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t message_class,
-		     uint8_t message_id, const void *data, uint16_t payload_size);
+int ubx_create_and_validate_frame(uint8_t *ubx_frame, uint16_t ubx_frame_size, uint8_t msg_cls,
+				  uint8_t msg_id, const void *payload, uint16_t payload_size);
 
-struct ubx_cfg_ack_data {
+struct ubx_cfg_ack_payload {
 	uint8_t message_class;
 	uint8_t message_id;
 };
 
-void ubx_cfg_ack_data_default(struct ubx_cfg_ack_data *data);
+void ubx_cfg_ack_payload_default(struct ubx_cfg_ack_payload *payload);
 
 #define UBX_CFG_RATE_TIME_REF_UTC	0	/* Align measurements to UTC time. */
 #define UBX_CFG_RATE_TIME_REF_GPS	1	/* Align measurements to GPS time. */
@@ -58,19 +59,19 @@ void ubx_cfg_ack_data_default(struct ubx_cfg_ack_data *data);
 #define UBX_CFG_RATE_TIME_REF_BDS	3	/* Align measurements to BeiDou time. */
 #define UBX_CFG_RATE_TIME_REF_GAL	4	/* Align measurements to Galileo time. */
 
-struct ubx_cfg_rate_data {
+struct ubx_cfg_rate_payload {
 	uint16_t meas_rate;
 	uint16_t nav_rate;
 	uint16_t time_ref;
 };
 
-void ubx_cfg_rate_data_default(struct ubx_cfg_rate_data *data);
+void ubx_cfg_rate_payload_default(struct ubx_cfg_rate_payload *payload);
 
-struct ubx_cfg_prt_poll_data {
+struct ubx_cfg_prt_poll_payload {
 	uint8_t port_id;
 };
 
-void ubx_cfg_prt_poll_data_default(struct ubx_cfg_prt_poll_data *data);
+void ubx_cfg_prt_poll_payload_default(struct ubx_cfg_prt_poll_payload *payload);
 
 #define UBX_CFG_PRT_IN_PROTO_UBX			BIT(0)
 #define UBX_CFG_PRT_IN_PROTO_NMEA			BIT(1)
@@ -103,7 +104,7 @@ void ubx_cfg_prt_poll_data_default(struct ubx_cfg_prt_poll_data *data);
 #define UBX_CFG_PRT_FLAGS_DEFAULT			0x0000
 #define UBX_CFG_PRT_FLAGS_EXTENDED_TX_TIMEOUT		BIT(0)
 
-struct ubx_cfg_prt_set_data {
+struct ubx_cfg_prt_set_payload {
 	uint8_t port_id;
 	uint8_t reserved0;
 	uint16_t tx_ready_pin_conf;
@@ -115,7 +116,7 @@ struct ubx_cfg_prt_set_data {
 	uint8_t reserved1;
 };
 
-void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *data);
+void ubx_cfg_prt_set_payload_default(struct ubx_cfg_prt_set_payload *payload);
 
 #define UBX_CFG_RST_NAV_BBR_MASK_HOT_START				0x0000
 #define UBX_CFG_RST_NAV_BBR_MASK_WARM_START				0x0001
@@ -130,13 +131,13 @@ void ubx_cfg_prt_set_data_default(struct ubx_cfg_prt_set_data *data);
 
 #define UBX_CFG_RST_RESERVED0						0x00
 
-struct ubx_cfg_rst_data {
+struct ubx_cfg_rst_payload {
 	uint16_t nav_bbr_mask;
 	uint8_t reset_mode;
 	uint8_t reserved0;
 };
 
-void ubx_cfg_rst_data_default(struct ubx_cfg_rst_data *data);
+void ubx_cfg_rst_payload_default(struct ubx_cfg_rst_payload *payload);
 
 #define UBX_CFG_NAV5_MASK_ALL				0x05FF
 #define UBX_CFG_NAV5_FIX_MODE_DEFAULT			UBX_FIX_AUTO_FIX
@@ -156,7 +157,7 @@ void ubx_cfg_rst_data_default(struct ubx_cfg_rst_data *data);
 #define UBX_CFG_NAV5_STATIC_HOLD_DIST_THRESHOLD		0U
 #define UBX_CFG_NAV5_UTC_STANDARD_DEFAULT		UBX_UTC_AutoUTC
 
-struct ubx_cfg_nav5_data {
+struct ubx_cfg_nav5_payload {
 	uint16_t mask;
 	uint8_t dyn_model;
 
@@ -184,7 +185,7 @@ struct ubx_cfg_nav5_data {
 	uint8_t utc_standard;
 };
 
-void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *data);
+void ubx_cfg_nav5_payload_default(struct ubx_cfg_nav5_payload *payload);
 
 #define UBX_CFG_GNSS_MSG_VER			0x00
 #define UBX_CFG_GNSS_NUM_TRK_CH_HW_DEFAULT	0x31
@@ -219,7 +220,7 @@ void ubx_cfg_nav5_data_default(struct ubx_cfg_nav5_data *data);
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L1	0x01 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 #define UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L2	0x10 << UBX_CFG_GNSS_FLAG_SGN_CNF_SHIFT
 
-struct ubx_cfg_gnss_data_config_block {
+struct ubx_cfg_gnss_payload_config_block {
 	uint8_t gnss_id;
 	uint8_t num_res_trk_ch;
 	uint8_t max_num_trk_ch;
@@ -227,24 +228,24 @@ struct ubx_cfg_gnss_data_config_block {
 	uint32_t flags;
 };
 
-struct ubx_cfg_gnss_data {
+struct ubx_cfg_gnss_payload {
 	uint8_t msg_ver;
 	uint8_t num_trk_ch_hw;
 	uint8_t num_trk_ch_use;
 	uint8_t num_config_blocks;
-	struct ubx_cfg_gnss_data_config_block config_blocks[];
+	struct ubx_cfg_gnss_payload_config_block config_blocks[];
 };
 
-void ubx_cfg_gnss_data_default(struct ubx_cfg_gnss_data *data);
+void ubx_cfg_gnss_payload_default(struct ubx_cfg_gnss_payload *payload);
 
 #define UBX_CFG_MSG_RATE_DEFAULT			1
 
-struct ubx_cfg_msg_data {
+struct ubx_cfg_msg_payload {
 	uint8_t message_class;
 	uint8_t message_id;
 	uint8_t rate;
 };
 
-void ubx_cfg_msg_data_default(struct ubx_cfg_msg_data *data);
+void ubx_cfg_msg_payload_default(struct ubx_cfg_msg_payload *payload);
 
 #endif /* ZEPHYR_U_BLOX_PROTOCOL_ */

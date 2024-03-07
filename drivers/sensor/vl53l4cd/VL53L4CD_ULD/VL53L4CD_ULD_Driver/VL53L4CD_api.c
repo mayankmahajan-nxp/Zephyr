@@ -218,6 +218,7 @@ VL53L4CD_Error VL53L4CD_SensorInit(
 	uint8_t continue_loop = 1;
 	uint16_t i = 0;
 
+	printk("safe 1.\n");
 	do{
 		status |= VL53L4CD_RdByte(dev,
 				VL53L4CD_FIRMWARE__SYSTEM_STATUS, &tmp);
@@ -245,6 +246,7 @@ VL53L4CD_Error VL53L4CD_SensorInit(
 				VL53L4CD_DEFAULT_CONFIGURATION[
                                   Addr - (uint8_t)0x2D]);
 	}
+	printk("safe 2.\n");
 
 	/* Start VHV */
 	status |= VL53L4CD_WrByte(dev, VL53L4CD_SYSTEM_START, (uint8_t)0x40);
@@ -268,15 +270,20 @@ VL53L4CD_Error VL53L4CD_SensorInit(
 		WaitMs(dev, 1);
 	}while(continue_loop == (uint8_t)1);
 
+	printk("safe 3.\n");
 	status |= VL53L4CD_ClearInterrupt(dev);
 	status |= VL53L4CD_StopRanging(dev);
+	printk("safe 5.\n");
 	status |= VL53L4CD_WrByte(dev,
 			VL53L4CD_VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND,
                         (uint8_t)0x09);
+	printk("safe 6.\n");
 	status |= VL53L4CD_WrByte(dev, 0x0B, (uint8_t)0);
 	status |= VL53L4CD_WrWord(dev, 0x0024, 0x500);
+	printk("safe 7.\n");
 
 	status |= VL53L4CD_SetRangeTiming(dev, 50, 0);
+	printk("safe 4.\n");
 
 	return status;
 }
@@ -365,6 +372,7 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 	uint16_t clock_pll, osc_frequency, ms_byte;
 	uint32_t macro_period_us = 0, timing_budget_us = 0, ls_byte, tmp;
 	float_t inter_measurement_factor = (float_t)1.055;
+	printk("safe 5.\n");
 
 	status |= VL53L4CD_RdWord(dev, 0x0006, &osc_frequency);
 	if(osc_frequency != (uint16_t)0)
@@ -377,6 +385,7 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 	{
 		status |= (uint8_t)VL53L4CD_ERROR_INVALID_ARGUMENT;
 	}
+	printk("safe 0.\n");
 
 	/* Timing budget check validity */
 	if ((timing_budget_ms < (uint32_t)10)
@@ -412,13 +421,16 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 		status |= (uint8_t)VL53L4CD_ERROR_INVALID_ARGUMENT;
 	}
 
+	printk("safe 9.\n");
 	if(status != (uint8_t)VL53L4CD_ERROR_INVALID_ARGUMENT)
 	{
 				ms_byte = 0;
 				timing_budget_us = timing_budget_us << 12;
 				tmp = macro_period_us*(uint32_t)16;
+				printk("safe 15.\n");
 				ls_byte = ((timing_budget_us + ((tmp >> 6)>>1)) /(tmp>> 6))
 				  - (uint32_t)1;
+				printk("safe 13.\n");
 
 				while ((ls_byte & 0xFFFFFF00U) > 0U) {
 						 ls_byte = ls_byte >> 1;
@@ -426,10 +438,12 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 				}
 				ms_byte = (uint16_t)(ms_byte << 8)
 			+ (uint16_t) (ls_byte & (uint32_t)0xFF);
+				printk("safe 11.\n");
 				status |= VL53L4CD_WrWord(dev, VL53L4CD_RANGE_CONFIG_A,ms_byte);
 
 				ms_byte = 0;
 				tmp = macro_period_us*(uint32_t)12;
+				printk("safe 14.\n");
 				ls_byte = ((timing_budget_us + ((tmp >> 6)>>1)) /(tmp>> 6))
 				  - (uint32_t)1;
 
@@ -440,7 +454,9 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 				ms_byte = (uint16_t)(ms_byte << 8)
 			+ (uint16_t) (ls_byte & (uint32_t)0xFF);
 				status |= VL53L4CD_WrWord(dev, VL53L4CD_RANGE_CONFIG_B,ms_byte);
+				printk("safe 12.\n");
 	}
+	printk("safe 10.\n");
 
 	return status;
 }

@@ -122,8 +122,8 @@ uint8_t VL53L4CD_WrByte(const struct device *dev, uint16_t RegisterAdress, uint8
 
 	RegisterAdress = BSWAP_16(RegisterAdress);
 	uint8_t buf[3];
-	memcpy(buf, RegisterAdress, 2);
-	memcpy(buf + 2, value, 1);
+	memcpy(buf, &RegisterAdress, 2);
+	memcpy(buf + 2, &value, 1);
 	ret = i2c_write(dev, buf, 3, 0x29);
 
 	return status;
@@ -139,9 +139,9 @@ uint8_t VL53L4CD_WrWord(const struct device *dev, uint16_t RegisterAdress, uint1
 
 	value = BSWAP_16(value);
 	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[3];
-	memcpy(buf, RegisterAdress, 2);
-	memcpy(buf + 2, value, 2);
+	uint8_t buf[4];
+	memcpy(buf, &RegisterAdress, 2);
+	memcpy(buf + 2, &value, 2);
 	ret = i2c_write(dev, buf, 4, 0x29);
 
 	return status;
@@ -157,9 +157,9 @@ uint8_t VL53L4CD_WrDWord(const struct device *dev, uint16_t RegisterAdress, uint
 
 	value = BSWAP_32(value);
 	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[3];
-	memcpy(buf, RegisterAdress, 2);
-	memcpy(buf + 2, value, 4);
+	uint8_t buf[6];
+	memcpy(buf, &RegisterAdress, 2);
+	memcpy(buf + 2, &value, 4);
 	ret = i2c_write(dev, buf, 6, 0x29);
 
 	return status;

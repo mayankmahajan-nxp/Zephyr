@@ -51,10 +51,20 @@ static int vl53l4cd_init(const struct device *dev)
 	VL53L4CD_GetSensorId(i2c, &id);
 	printk("%x\n", id);
 
-	// VL53L4CD_SensorInit(i2c);
 	id = 0x9999;
 	VL53L4CD_CheckForDataReady(i2c, &id);
 	printk("%x\n", id);
+
+	VL53L4CD_SensorInit(i2c);
+
+	VL53L4CD_StartRanging(i2c);
+
+	VL53L4CD_ResultsData_t p_result;
+	while (true) {
+		VL53L4CD_GetResult(i2c, &p_result);
+		printk("p_result->distance_mm = %d\n", p_result.distance_mm);
+		k_sleep(K_MSEC(250));
+	}
 
 	return 0;
 }

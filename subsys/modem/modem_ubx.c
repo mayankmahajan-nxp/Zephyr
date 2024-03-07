@@ -108,9 +108,6 @@ static bool modem_ubx_match_frame_full(ubx_frame_t *frame_1, ubx_frame_t *frame_
 static void modem_ubx_script_init(struct modem_ubx *ubx, const struct modem_ubx_script *script)
 {
 	ubx->script = script;
-	// ubx->script->request = script->request;
-	// ubx->script->response = script->response;
-	// ubx->script->match = script->match;
 }
 
 static int modem_ubx_run_script_helper(struct modem_ubx *ubx, const struct modem_ubx_script *script)
@@ -229,8 +226,6 @@ static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 
 static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 {
-	// printk("%x ", byte);
-
 	static uint8_t prev_byte;
 	static uint16_t rx_ubx_frame_len;
 

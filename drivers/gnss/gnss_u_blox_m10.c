@@ -328,6 +328,11 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 	}
 
 	data->script.retry_count = retry;
+	/* Returns failure if "target_baudrate" is different than device's currently set baudrate,
+	 * because the device will change its baudrate and respond with UBX-ACK with new baudrate,
+	 * which we will miss. Hence, we need to change uart's baudrate after sending the frame,
+	 * which we are not doing right now.
+	 */
 	ret = ubx_m10_modem_ubx_run_script(dev, &(data->script));
 	if (ret < 0) {
 		goto unlock;
@@ -422,13 +427,20 @@ unlock:
 	return ret;
 }
 
+/* This function will return failure if "target_baudrate" != device's current baudrate.
+ * Refer the function description of ubx_m10_ubx_cfg_prt_set for a detailed explanation.
+ */
 static int ubx_m10_configure_gnss_device_baudrate_prerequisite(const struct device *dev)
 {
+	/* Retry = 1 should be enough, but setting 2 just to be safe. */
 	int ret, retry = 2;
 
 	int target_baudrate = ubx_m10_get_uart_baudrate(dev);
 
-	/* Try communication with device with all possible baudrates. */
+	/* Try communication with device with all possible baudrates, because initially we don't
+	 * know the currently set baudrate of the device. We will match the baudrate in one of the
+	 * following attempts and the device will thus change its baudrate to "target_baudrate".
+	 */
 	for (int i = 0; i < UBX_BAUDRATE_COUNT; ++i) {
 		/* Set baudrate of UART pipe as ubx_baudrate[i]. */
 		ret = ubx_m10_set_uart_baudrate(dev, ubx_baudrate[i]);
@@ -927,7 +939,7 @@ static int ubx_m10_configure(const struct device *dev)
 {
 	int ret;
 
-	/* TODO: change logic such that the following returns success everytime. */
+	/* The return value could be ignored. See function description for more details. */
 	(void) ubx_m10_configure_gnss_device_baudrate_prerequisite(dev);
 
 	ret = ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);

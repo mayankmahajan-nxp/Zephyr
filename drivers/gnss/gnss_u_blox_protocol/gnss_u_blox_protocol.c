@@ -90,8 +90,8 @@ void ubx_cfg_ack_payload_default(struct ubx_cfg_ack_payload *payload)
 
 void ubx_cfg_rate_payload_default(struct ubx_cfg_rate_payload *payload)
 {
-	payload->meas_rate = 1000;
-	payload->nav_rate = 3;
+	payload->meas_rate_ms = 1000;
+	payload->nav_rate = 1;
 	payload->time_ref = UBX_CFG_RATE_TIME_REF_UTC;
 }
 

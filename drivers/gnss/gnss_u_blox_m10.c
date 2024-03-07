@@ -609,6 +609,7 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 	int ret;
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
+	enum ubx_dynamic_model dynamic_model;
 
 	key = k_spin_lock(&data->lock);
 
@@ -625,8 +626,7 @@ static int ubx_m10_get_navigation_mode(const struct device *dev, enum gnss_navig
 
 	ubx_frame_t *response = data->script.response;
 
-	enum ubx_dynamic_model dynamic_model =
-		((struct ubx_cfg_nav5_payload *)response->payload_and_checksum)->dyn_model;
+	dynamic_model = ((struct ubx_cfg_nav5_payload *) response->payload_and_checksum)->dyn_model;
 	ret = ubx_m10_ubx_dynamic_model_to_navigation_mode(dev, dynamic_model);
 	if (ret < 0) {
 		goto unlock;
@@ -849,7 +849,73 @@ unlock:
 	return ret;
 }
 
+static int ubx_m10_set_fix_rate(const struct device *dev, uint32_t fix_interval_ms)
+{
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+	struct ubx_cfg_rate_payload payload;
+
+	if (fix_interval_ms < 50) {
+		return -1;
+	}
+
+	key = k_spin_lock(&data->lock);
+
+	ubx_cfg_rate_payload_default(&payload);
+	payload.meas_rate_ms = fix_interval_ms;
+
+	ret = ubx_m10_modem_ubx_script_init(dev, &payload, UBX_CFG_RATE_PAYLOAD_SZ, UBX_CLASS_CFG,
+					    UBX_CFG_RATE);
+	if (ret < 0) {
+		goto unlock;
+	}
+
+	ret = ubx_m10_modem_ubx_run_script(dev, &(data->script));
+	if (ret < 0) {
+		goto unlock;
+	}
+
+unlock:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
+}
+
+static int ubx_m10_get_fix_rate(const struct device *dev, uint32_t *fix_interval_ms)
+{
+	int ret;
+	k_spinlock_key_t key;
+	struct ubx_m10_data *data = dev->data;
+	struct ubx_cfg_rate_payload *payload;
+
+	key = k_spin_lock(&data->lock);
+
+	ret = ubx_m10_modem_ubx_script_init(dev, NULL, UBX_FRM_GET_PAYLOAD_SZ, UBX_CLASS_CFG,
+					    UBX_CFG_RATE);
+	if (ret < 0) {
+		goto unlock;
+	}
+
+	ret = ubx_m10_modem_ubx_run_script(dev, &(data->script));
+	if (ret < 0) {
+		goto unlock;
+	}
+
+	ubx_frame_t *response = data->script.response;
+
+	payload = (struct ubx_cfg_rate_payload *) response->payload_and_checksum;
+	*fix_interval_ms = payload->meas_rate_ms;
+
+unlock:
+	k_spin_unlock(&data->lock, key);
+
+	return ret;
+}
+
 static struct gnss_driver_api gnss_api = {
+	.set_fix_rate = ubx_m10_set_fix_rate,
+	.get_fix_rate = ubx_m10_get_fix_rate,
 	.set_navigation_mode = ubx_m10_set_navigation_mode,
 	.get_navigation_mode = ubx_m10_get_navigation_mode,
 	.set_enabled_systems = ubx_m10_set_enabled_systems,
@@ -861,9 +927,13 @@ static int ubx_m10_configure(const struct device *dev)
 {
 	int ret;
 
+	/* TODO: change logic such that the following returns success everytime. */
 	(void) ubx_m10_configure_gnss_device_baudrate_prerequisite(dev);
 
-	ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
+	ret = ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
+	if (ret < 0) {
+		goto reset;
+	}
 
 	ret = ubx_m10_ubx_cfg_rate(dev);
 	if (ret < 0) {
@@ -884,7 +954,10 @@ static int ubx_m10_configure(const struct device *dev)
 	}
 
 reset:
-	ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
+	ret = ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_START);
+	if (ret < 0) {
+		goto reset;
+	}
 
 	return ret;
 }

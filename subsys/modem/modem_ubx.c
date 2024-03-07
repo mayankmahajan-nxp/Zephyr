@@ -229,6 +229,8 @@ static int modem_ubx_process_received_ubx_frame(struct modem_ubx *ubx)
 
 static int modem_ubx_process_received_byte(struct modem_ubx *ubx, uint8_t byte)
 {
+	// printk("%x ", byte);
+
 	static uint8_t prev_byte;
 	static uint16_t rx_ubx_frame_len;
 

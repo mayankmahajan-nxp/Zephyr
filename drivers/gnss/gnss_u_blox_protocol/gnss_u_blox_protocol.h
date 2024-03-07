@@ -60,7 +60,7 @@ void ubx_cfg_ack_payload_default(struct ubx_cfg_ack_payload *payload);
 #define UBX_CFG_RATE_TIME_REF_GAL	4	/* Align measurements to Galileo time. */
 
 struct ubx_cfg_rate_payload {
-	uint16_t meas_rate;
+	uint16_t meas_rate_ms;
 	uint16_t nav_rate;
 	uint16_t time_ref;
 };

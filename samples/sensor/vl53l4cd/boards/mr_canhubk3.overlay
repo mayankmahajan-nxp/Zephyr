@@ -1,0 +1,14 @@
+/*
+ * Copyright 2024 NXP
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+&lpi2c1 {
+	status = "okay";
+
+	st_vl53l4cd@29 {
+		compatible = "st,vl53l4cd";
+		reg = <0x29>;
+	};
+};

@@ -57,71 +57,118 @@
 */
 
 #include "platform.h"
+#include <zephyr/sys/byteorder.h>
 
-
-uint8_t VL53L4CD_RdDWord(Dev_t dev, uint16_t RegisterAdress, uint32_t *value)
+uint8_t VL53L4CD_RdDWord(const struct device *dev, uint16_t RegisterAdress, uint32_t *value)
 {
 	uint8_t status = 255;
 
 	/* To be filled by customer. Return 0 if OK */
 	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
-	
+	int ret;
+
+	RegisterAdress = BSWAP_16(RegisterAdress);
+	ret = i2c_write_read(dev, 0x29, &RegisterAdress, 2, (uint8_t *) value, 4);
+	if (ret < 0) {
+		printk("i2c_write_read failed (%d)\n", ret);
+	}
+	*value = BSWAP_32(*value);
+
 	return status;
 }
 
-uint8_t VL53L4CD_RdWord(Dev_t dev, uint16_t RegisterAdress, uint16_t *value)
+uint8_t VL53L4CD_RdWord(const struct device *dev, uint16_t RegisterAdress, uint16_t *value)
 {
 	uint8_t status = 255;
 
 	/* To be filled by customer. Return 0 if OK */
 	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
+	int ret;
+
+	RegisterAdress = BSWAP_16(RegisterAdress);
+	ret = i2c_write_read(dev, 0x29, &RegisterAdress, 2, (uint8_t *) value, 2);
+	if (ret < 0) {
+		printk("i2c_write_read failed (%d)\n", ret);
+	}
+	*value = BSWAP_16(*value);
 
 	return status;
 }
 
-uint8_t VL53L4CD_RdByte(Dev_t dev, uint16_t RegisterAdress, uint8_t *value)
+uint8_t VL53L4CD_RdByte(const struct device *dev, uint16_t RegisterAdress, uint8_t *value)
 {
 	uint8_t status = 255;
 
 	/* To be filled by customer. Return 0 if OK */
 	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
+	int ret;
+
+	RegisterAdress = BSWAP_16(RegisterAdress);
+	ret = i2c_write_read(dev, 0x29, &RegisterAdress, 2, value, 1);
+	if (ret < 0) {
+		printk("i2c_write_read failed (%d)\n", ret);
+	}
 
 	return status;
 }
 
-uint8_t VL53L4CD_WrByte(Dev_t dev, uint16_t RegisterAdress, uint8_t value)
+uint8_t VL53L4CD_WrByte(const struct device *dev, uint16_t RegisterAdress, uint8_t value)
 {
 	uint8_t status = 255;
 
 	/* To be filled by customer. Return 0 if OK */
 	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
+	int ret;
+
+	RegisterAdress = BSWAP_16(RegisterAdress);
+	uint8_t buf[3];
+	memcpy(buf, RegisterAdress, 2);
+	memcpy(buf + 2, value, 1);
+	ret = i2c_write(dev, buf, 3, 0x29);
 
 	return status;
 }
 
-uint8_t VL53L4CD_WrWord(Dev_t dev, uint16_t RegisterAdress, uint16_t value)
+uint8_t VL53L4CD_WrWord(const struct device *dev, uint16_t RegisterAdress, uint16_t value)
 {
 	uint8_t status = 255;
 
 	/* To be filled by customer. Return 0 if OK */
 	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
+	int ret;
+
+	value = BSWAP_16(value);
+	RegisterAdress = BSWAP_16(RegisterAdress);
+	uint8_t buf[3];
+	memcpy(buf, RegisterAdress, 2);
+	memcpy(buf + 2, value, 2);
+	ret = i2c_write(dev, buf, 4, 0x29);
 
 	return status;
 }
 
-uint8_t VL53L4CD_WrDWord(Dev_t dev, uint16_t RegisterAdress, uint32_t value)
+uint8_t VL53L4CD_WrDWord(const struct device *dev, uint16_t RegisterAdress, uint32_t value)
 {
 	uint8_t status = 255;
 
 	/* To be filled by customer. Return 0 if OK */
 	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
+	int ret;
+
+	value = BSWAP_32(value);
+	RegisterAdress = BSWAP_16(RegisterAdress);
+	uint8_t buf[3];
+	memcpy(buf, RegisterAdress, 2);
+	memcpy(buf + 2, value, 4);
+	ret = i2c_write(dev, buf, 6, 0x29);
 
 	return status;
 }
 
-uint8_t WaitMs(Dev_t dev, uint32_t TimeMs)
+uint8_t WaitMs(const struct device *dev, uint32_t TimeMs)
 {
 	uint8_t status = 255;
 	/* To be filled by customer */
+	k_sleep(K_MSEC(TimeMs));
 	return status;
 }

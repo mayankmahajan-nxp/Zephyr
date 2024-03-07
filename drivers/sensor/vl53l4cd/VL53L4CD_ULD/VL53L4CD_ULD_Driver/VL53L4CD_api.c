@@ -190,7 +190,7 @@ VL53L4CD_Error VL53L4CD_GetSWVersion(
 }
 
 VL53L4CD_Error VL53L4CD_SetI2CAddress(
-		Dev_t dev,
+		const struct device *dev,
 		uint8_t new_address)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -201,7 +201,7 @@ VL53L4CD_Error VL53L4CD_SetI2CAddress(
 }
 
 VL53L4CD_Error VL53L4CD_GetSensorId(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t *p_id)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -211,7 +211,7 @@ VL53L4CD_Error VL53L4CD_GetSensorId(
 }
 
 VL53L4CD_Error VL53L4CD_SensorInit(
-		Dev_t dev)
+		const struct device *dev)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
 	uint8_t Addr, tmp;
@@ -271,7 +271,7 @@ VL53L4CD_Error VL53L4CD_SensorInit(
 	status |= VL53L4CD_ClearInterrupt(dev);
 	status |= VL53L4CD_StopRanging(dev);
 	status |= VL53L4CD_WrByte(dev,
-			VL53L4CD_VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND, 
+			VL53L4CD_VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND,
                         (uint8_t)0x09);
 	status |= VL53L4CD_WrByte(dev, 0x0B, (uint8_t)0);
 	status |= VL53L4CD_WrWord(dev, 0x0024, 0x500);
@@ -282,7 +282,7 @@ VL53L4CD_Error VL53L4CD_SensorInit(
 }
 
 VL53L4CD_Error VL53L4CD_ClearInterrupt(
-		Dev_t dev)
+		const struct device *dev)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
 
@@ -291,7 +291,7 @@ VL53L4CD_Error VL53L4CD_ClearInterrupt(
 }
 
 VL53L4CD_Error VL53L4CD_StartRanging(
-		Dev_t dev)
+		const struct device *dev)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
 	uint32_t tmp;
@@ -313,7 +313,7 @@ VL53L4CD_Error VL53L4CD_StartRanging(
 }
 
 VL53L4CD_Error VL53L4CD_StopRanging(
-		Dev_t dev)
+		const struct device *dev)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
 
@@ -322,7 +322,7 @@ VL53L4CD_Error VL53L4CD_StopRanging(
 }
 
 VL53L4CD_Error VL53L4CD_CheckForDataReady(
-		Dev_t dev,
+		const struct device *dev,
 		uint8_t *p_is_data_ready)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -357,7 +357,7 @@ VL53L4CD_Error VL53L4CD_CheckForDataReady(
 }
 
 VL53L4CD_Error VL53L4CD_SetRangeTiming(
-		Dev_t dev,
+		const struct device *dev,
 		uint32_t timing_budget_ms,
 		uint32_t inter_measurement_ms)
 {
@@ -379,7 +379,7 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 	}
 
 	/* Timing budget check validity */
-	if ((timing_budget_ms < (uint32_t)10) 
+	if ((timing_budget_ms < (uint32_t)10)
 			|| (timing_budget_ms > (uint32_t)200) || (status != (uint8_t)0))
 	{
 		status |= VL53L4CD_ERROR_INVALID_ARGUMENT;
@@ -446,7 +446,7 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 }
 
 VL53L4CD_Error VL53L4CD_GetRangeTiming(
-		Dev_t dev,
+		const struct device *dev,
 		uint32_t *p_timing_budget_ms,
 		uint32_t *p_inter_measurement_ms)
 {
@@ -484,7 +484,7 @@ VL53L4CD_Error VL53L4CD_GetRangeTiming(
 		  *p_timing_budget_ms = (uint32_t)(*p_timing_budget_ms
 				   >> (uint8_t)ms_byte);
 	}
-	 
+
 	 /* Mode continuous */
 	 if(tmp == (uint32_t)0)
 	 {
@@ -503,7 +503,7 @@ VL53L4CD_Error VL53L4CD_GetRangeTiming(
 }
 
 VL53L4CD_Error VL53L4CD_GetResult(
-		Dev_t dev,
+		const struct device *dev,
 		VL53L4CD_ResultsData_t *p_result)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -551,7 +551,7 @@ VL53L4CD_Error VL53L4CD_GetResult(
 }
 
 VL53L4CD_Error VL53L4CD_SetOffset(
-		Dev_t dev,
+		const struct device *dev,
 		int16_t OffsetValueInMm)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -566,7 +566,7 @@ VL53L4CD_Error VL53L4CD_SetOffset(
 }
 
 VL53L4CD_Error  VL53L4CD_GetOffset(
-		Dev_t dev,
+		const struct device *dev,
 		int16_t *p_offset)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -587,7 +587,7 @@ VL53L4CD_Error  VL53L4CD_GetOffset(
 }
 
 VL53L4CD_Error VL53L4CD_SetXtalk(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t XtalkValueKcps)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -599,12 +599,12 @@ VL53L4CD_Error VL53L4CD_SetXtalk(
 	status |= VL53L4CD_WrWord(dev,
 		VL53L4CD_XTALK_PLANE_OFFSET_KCPS,
 		(XtalkValueKcps<<9));
-        
+
 	return status;
 }
 
 VL53L4CD_Error VL53L4CD_GetXtalk(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t *p_xtalk_kcps)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -612,7 +612,7 @@ VL53L4CD_Error VL53L4CD_GetXtalk(
 
 	status |= VL53L4CD_RdWord(dev,
 		VL53L4CD_XTALK_PLANE_OFFSET_KCPS, p_xtalk_kcps);
-		
+
 	tmp_xtalk = (float_t)*p_xtalk_kcps / (float_t)512.0;
 	*p_xtalk_kcps = (uint16_t)(round(tmp_xtalk));
 
@@ -620,7 +620,7 @@ VL53L4CD_Error VL53L4CD_GetXtalk(
 }
 
 VL53L4CD_Error VL53L4CD_SetDetectionThresholds(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t distance_low_mm,
 		uint16_t distance_high_mm,
 		uint8_t window)
@@ -633,7 +633,7 @@ VL53L4CD_Error VL53L4CD_SetDetectionThresholds(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetDetectionThresholds(Dev_t dev,
+VL53L4CD_Error VL53L4CD_GetDetectionThresholds(const struct device *dev,
 		uint16_t *p_distance_low_mm,
 		uint16_t *p_distance_high_mm,
 		uint8_t *p_window)
@@ -649,7 +649,7 @@ VL53L4CD_Error VL53L4CD_GetDetectionThresholds(Dev_t dev,
 }
 
 VL53L4CD_Error VL53L4CD_SetSignalThreshold(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t signal_kcps)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -660,7 +660,7 @@ VL53L4CD_Error VL53L4CD_SetSignalThreshold(
 }
 
 VL53L4CD_Error VL53L4CD_GetSignalThreshold(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t 	*p_signal_kcps)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -674,7 +674,7 @@ VL53L4CD_Error VL53L4CD_GetSignalThreshold(
 }
 
 VL53L4CD_Error VL53L4CD_SetSigmaThreshold(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t 	sigma_mm)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -693,7 +693,7 @@ VL53L4CD_Error VL53L4CD_SetSigmaThreshold(
 }
 
 VL53L4CD_Error VL53L4CD_GetSigmaThreshold(
-		Dev_t dev,
+		const struct device *dev,
 		uint16_t 	*p_sigma_mm)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
@@ -706,7 +706,7 @@ VL53L4CD_Error VL53L4CD_GetSigmaThreshold(
 }
 
 VL53L4CD_Error VL53L4CD_StartTemperatureUpdate(
-		Dev_t dev)
+		const struct device *dev)
 {
 	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
 	uint8_t tmp = 0, continue_loop = 1;

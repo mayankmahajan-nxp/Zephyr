@@ -66,6 +66,14 @@
 
 #include "../Platform/platform.h"
 
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/types.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/i2c.h>
+
 /**
  * @brief This function can be used to perform an offset calibration. Offset
  * corresponds to the difference in millimeters between real distance and
@@ -85,7 +93,7 @@
  */
 
 VL53L4CD_Error VL53L4CD_CalibrateOffset(
-		Dev_t dev,
+		const struct device *dev,
 		int16_t TargetDistInMm,
 		int16_t *p_measured_offset_mm,
 		int16_t nb_samples);
@@ -111,7 +119,7 @@ VL53L4CD_Error VL53L4CD_CalibrateOffset(
  */
 
 VL53L4CD_Error VL53L4CD_CalibrateXtalk(
-		Dev_t dev,
+		const struct device *dev,
 		int16_t TargetDistInMm,
 		uint16_t *p_measured_xtalk_kcps,
 		int16_t nb_samples);

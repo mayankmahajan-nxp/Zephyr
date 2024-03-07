@@ -63,6 +63,14 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/types.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/i2c.h>
+
 /**
 * VL53L4CD device instance.
 */
@@ -85,42 +93,42 @@ typedef uint8_t VL53L4CD_Error;
  * @brief Read 32 bits through I2C.
  */
 
-uint8_t VL53L4CD_RdDWord(Dev_t dev, uint16_t registerAddr, uint32_t *value);
+uint8_t VL53L4CD_RdDWord(const struct device *dev, uint16_t registerAddr, uint32_t *value);
 
 /**
  * @brief Read 16 bits through I2C.
  */
 
-uint8_t VL53L4CD_RdWord(Dev_t dev, uint16_t registerAddr, uint16_t *value);
+uint8_t VL53L4CD_RdWord(const struct device *dev, uint16_t registerAddr, uint16_t *value);
 
 /**
  * @brief Read 8 bits through I2C.
  */
 
-uint8_t VL53L4CD_RdByte(Dev_t dev, uint16_t registerAddr, uint8_t *value);
+uint8_t VL53L4CD_RdByte(const struct device *dev, uint16_t registerAddr, uint8_t *value);
 
 /**
  * @brief Write 8 bits through I2C.
  */
 
-uint8_t VL53L4CD_WrByte(Dev_t dev, uint16_t registerAddr, uint8_t value);
+uint8_t VL53L4CD_WrByte(const struct device *dev, uint16_t registerAddr, uint8_t value);
 
 /**
  * @brief Write 16 bits through I2C.
  */
 
-uint8_t VL53L4CD_WrWord(Dev_t dev, uint16_t RegisterAdress, uint16_t value);
+uint8_t VL53L4CD_WrWord(const struct device *dev, uint16_t RegisterAdress, uint16_t value);
 
 /**
  * @brief Write 32 bits through I2C.
  */
 
-uint8_t VL53L4CD_WrDWord(Dev_t dev, uint16_t RegisterAdress, uint32_t value);
+uint8_t VL53L4CD_WrDWord(const struct device *dev, uint16_t RegisterAdress, uint32_t value);
 
 /**
  * @brief Wait during N milliseconds.
  */
 
-uint8_t WaitMs(Dev_t dev, uint32_t TimeMs);
+uint8_t WaitMs(const struct device *dev, uint32_t TimeMs);
 
 #endif	// _PLATFORM_H_

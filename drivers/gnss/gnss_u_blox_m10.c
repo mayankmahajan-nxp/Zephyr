@@ -673,7 +673,7 @@ static int ubx_m10_ubx_gnss_id_to_gnss_system(const struct device *dev, enum ubx
 		return GNSS_SYSTEM_BEIDOU;
 	case UBX_GNSS_ID_QZSS:
 		return GNSS_SYSTEM_QZSS;
-	case UBX_GNSS_ID_GLONAS:
+	case UBX_GNSS_ID_GLONASS:
 		return GNSS_SYSTEM_GLONASS;
 	default:
 		return -EINVAL;
@@ -681,42 +681,41 @@ static int ubx_m10_ubx_gnss_id_to_gnss_system(const struct device *dev, enum ubx
 }
 
 static int ubx_m10_config_block_fill(const struct device *dev, gnss_systems_t gnss_system,
-	struct ubx_cfg_gnss_payload *payload, uint8_t index, bool enable)
+				     struct ubx_cfg_gnss_payload *payload, uint8_t index,
+				     uint32_t enable)
 {
+	uint32_t signal_config;
+
 	switch (gnss_system) {
 	case GNSS_SYSTEM_GPS:
 		payload->config_blocks[index].gnss_id = UBX_GNSS_ID_GPS;
-		payload->config_blocks[index].flags = enable |
-			UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L1C_A;
+		signal_config = UBX_CFG_GNSS_FLAG_SGN_CNF_GPS_L1C_A;
 		break;
 	case GNSS_SYSTEM_GLONASS:
-		payload->config_blocks[index].gnss_id = UBX_GNSS_ID_GLONAS;
-		payload->config_blocks[index].flags = enable |
-			UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L1;
+		payload->config_blocks[index].gnss_id = UBX_GNSS_ID_GLONASS;
+		signal_config = UBX_CFG_GNSS_FLAG_SGN_CNF_GLONASS_L1;
 		break;
 	case GNSS_SYSTEM_GALILEO:
 		payload->config_blocks[index].gnss_id = UBX_GNSS_ID_GALILEO;
-		payload->config_blocks[index].flags = enable |
-			UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E1;
+		signal_config = UBX_CFG_GNSS_FLAG_SGN_CNF_GALILEO_E1;
 		break;
 	case GNSS_SYSTEM_BEIDOU:
 		payload->config_blocks[index].gnss_id = UBX_GNSS_ID_BEIDOU;
-		payload->config_blocks[index].flags = enable |
-			UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B1I;
+		signal_config = UBX_CFG_GNSS_FLAG_SGN_CNF_BEIDOU_B1I;
 		break;
 	case GNSS_SYSTEM_QZSS:
 		payload->config_blocks[index].gnss_id = UBX_GNSS_ID_QZSS;
-		payload->config_blocks[index].flags = enable |
-			UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L1C_A;
+		signal_config = UBX_CFG_GNSS_FLAG_SGN_CNF_QZSS_L1C_A;
 		break;
 	case GNSS_SYSTEM_SBAS:
 		payload->config_blocks[index].gnss_id = UBX_GNSS_ID_SBAS;
-		payload->config_blocks[index].flags = enable |
-			UBX_CFG_GNSS_FLAG_SGN_CNF_SBAS_L1C_A;
+		signal_config = UBX_CFG_GNSS_FLAG_SGN_CNF_SBAS_L1C_A;
 		break;
 	default:
 		return -EINVAL;
 	};
+
+	payload->config_blocks[index].flags = enable | signal_config;
 
 	return 0;
 }
@@ -788,10 +787,16 @@ static int ubx_m10_set_enabled_systems(const struct device *dev, gnss_systems_t 
 		gnss_systems_t gnss_system = 1 << i;
 
 		if (gnss_system & supported_systems) {
-			bool enable = (systems & gnss_system) ?
-				      UBX_CFG_GNSS_FLAG_ENABLE : UBX_CFG_GNSS_FLAG_DISABLE;
-			ubx_m10_config_block_fill(dev, gnss_system, payload, filled_blocks++,
-						  enable);
+			uint32_t enable = (systems & gnss_system) ?
+					  UBX_CFG_GNSS_FLAG_ENABLE : UBX_CFG_GNSS_FLAG_DISABLE;
+
+			ret = ubx_m10_config_block_fill(dev, gnss_system, payload, filled_blocks,
+							enable);
+			if (ret < 0) {
+				goto free_and_unlock;
+			}
+
+			++filled_blocks;
 		}
 	}
 
@@ -940,7 +945,7 @@ static int ubx_m10_configure(const struct device *dev)
 	int ret;
 
 	/* The return value could be ignored. See function description for more details. */
-	(void) ubx_m10_configure_gnss_device_baudrate_prerequisite(dev);
+	(void)ubx_m10_configure_gnss_device_baudrate_prerequisite(dev);
 
 	ret = ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
 	if (ret < 0) {
@@ -1014,9 +1019,9 @@ static int ubx_m10_init(const struct device *dev)
 	};										\
 											\
 	static struct ubx_m10_data ubx_m10_data_##inst = {				\
-		.script.request = (ubx_frame_t *) ubx_m10_data_##inst.request_buf,	\
-		.script.response = (ubx_frame_t *) ubx_m10_data_##inst.response_buf,	\
-		.script.match = (ubx_frame_t *) ubx_m10_data_##inst.match_buf,		\
+		.script.request = (ubx_frame_t *)ubx_m10_data_##inst.request_buf,	\
+		.script.response = (ubx_frame_t *)ubx_m10_data_##inst.response_buf,	\
+		.script.match = (ubx_frame_t *)ubx_m10_data_##inst.match_buf,		\
 		.script.retry_count = RETRY_DEFAULT,					\
 		.script.timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS),			\
 	};										\

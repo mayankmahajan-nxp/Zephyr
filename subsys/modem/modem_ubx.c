@@ -10,7 +10,7 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(modem_ubx, CONFIG_MODEM_MODULES_LOG_LEVEL);
 
-#define MODEM_UBX_STATE_ATTACHED_BIT		(0)
+#define MODEM_UBX_STATE_ATTACHED_BIT		0
 
 static int modem_ubx_validate_frame_size(uint16_t ubx_frame_size, uint8_t msg_cls, uint8_t msg_id,
 					 uint16_t payload_size)

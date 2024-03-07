@@ -155,7 +155,7 @@ void ubx_cfg_rst_payload_default(struct ubx_cfg_rst_payload *payload);
 #define UBX_CFG_NAV5_CNO_THRESHOLD_DEFAULT		0U
 #define UBX_CFG_NAV5_RESERVED0				0U
 #define UBX_CFG_NAV5_STATIC_HOLD_DIST_THRESHOLD		0U
-#define UBX_CFG_NAV5_UTC_STANDARD_DEFAULT		UBX_UTC_AutoUTC
+#define UBX_CFG_NAV5_UTC_STANDARD_DEFAULT		UBX_UTC_AUTOUTC
 
 struct ubx_cfg_nav5_payload {
 	uint16_t mask;

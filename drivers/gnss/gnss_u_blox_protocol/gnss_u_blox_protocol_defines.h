@@ -18,7 +18,7 @@ enum ubx_gnss_id {
 	UBX_GNSS_ID_BEIDOU = 3,
 	UBX_GNSS_ID_IMES = 4,
 	UBX_GNSS_ID_QZSS = 5,
-	UBX_GNSS_ID_GLONAS = 6,
+	UBX_GNSS_ID_GLONASS = 6,
 };
 
 enum ubx_port_number {
@@ -48,7 +48,7 @@ enum ubx_fix_mode {
 };
 
 enum ubx_utc_standard {
-	UBX_UTC_AutoUTC = 0,
+	UBX_UTC_AUTOUTC = 0,
 	UBX_UTC_GPS = 3,
 	UBX_UTC_GALILEO = 5,
 	UBX_UTC_GLONASS,

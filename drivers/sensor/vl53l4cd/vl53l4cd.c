@@ -1,0 +1,55 @@
+/*
+ * Copyright 2023 NXP
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#define DT_DRV_COMPAT st_vl53l4cd
+
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/types.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/i2c.h>
+
+struct vl53l4cd_data {
+	struct k_sem lock;
+};
+
+struct vl53l4cd_config {
+	const struct i2c_dt_spec i2c;
+};
+
+static int vl53l4cd_init(const struct device *dev)
+{
+	const struct vl53l4cd_config *config = dev->config;
+
+	uint8_t reg[2] = {0x01, 0x0F};
+	i2c_write(config->i2c.bus, reg, 2, 0x29);
+	uint8_t buf;
+	i2c_read(config->i2c.bus, &buf, 1, 0x29);
+	printk("%x\n", buf);
+
+	return 0;
+}
+
+#define VL53l4CD_INIT(inst)						\
+	struct vl53l4cd_data vl53l4cd_data_##inst = {			\
+	};								\
+	struct vl53l4cd_config vl53l4cd_config_##inst = {		\
+		.i2c = I2C_DT_SPEC_INST_GET(inst),			\
+	};								\
+	DEVICE_DT_INST_DEFINE(						\
+		inst,							\
+		vl53l4cd_init,						\
+		NULL,							\
+		&vl53l4cd_data_##inst,					\
+		&vl53l4cd_config_##inst,				\
+		POST_KERNEL,						\
+		CONFIG_SENSOR_INIT_PRIORITY,				\
+		NULL							\
+	);
+
+DT_INST_FOREACH_STATUS_OKAY(VL53l4CD_INIT);

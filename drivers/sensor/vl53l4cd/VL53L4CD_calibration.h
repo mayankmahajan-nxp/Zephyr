@@ -61,8 +61,8 @@
  * @brief Calibration Functions definition
  */
 
-#ifndef VL53L4CD_CALIBRATION_H_
-#define VL53L4CD_CALIBRATION_H_
+#ifndef ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_CALIBRATION_H_
+#define ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_CALIBRATION_H_
 
 #include "platform.h"
 
@@ -80,11 +80,11 @@
  * @param (int16_t) nb_samples : Number of samples (between 5 and 255). A higher
  * number of samples increases the accuracy, but it also takes more time. ST
  * recommend to use at least 10 samples.
- * @return (VL53L4CD_ERROR) status : 0 if OK, or 255 if something occurred (e.g
+ * @return (VL53L4CD_Error_t) status : 0 if OK, or 255 if something occurred (e.g
  * invalid nb of samples).
  */
 
-VL53L4CD_Error VL53L4CD_CalibrateOffset(
+VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
 		VL53L4CD_Dev_t *dev,
 		int16_t TargetDistInMm,
 		int16_t *p_measured_offset_mm,
@@ -106,14 +106,14 @@ VL53L4CD_Error VL53L4CD_CalibrateOffset(
  * @param (int16_t) nb_samples : Number of samples (between 5 and 255). A higher
  * number of samples increases the accuracy, but it also takes more time. ST
  * recommend to use at least 10 samples.
- * @return (VL53L4CD_ERROR) status : 0 if OK, or 255 if something occurred (e.g
+ * @return (VL53L4CD_Error_t) status : 0 if OK, or 255 if something occurred (e.g
  * invalid nb of samples).
  */
 
-VL53L4CD_Error VL53L4CD_CalibrateXtalk(
+VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
 		VL53L4CD_Dev_t *dev,
 		int16_t TargetDistInMm,
 		uint16_t *p_measured_xtalk_kcps,
 		int16_t nb_samples);
 
-#endif //VL53L4CD_CALIBRATION_H_
+#endif /* ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_CALIBRATION_H_ */

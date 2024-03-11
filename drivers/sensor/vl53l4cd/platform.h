@@ -68,24 +68,24 @@
 #include <zephyr/kernel.h>
 
 /**
- * @struct VL53L4CD_Dev_t
+ * @struct VL53L4CD_Dev
  * @brief  Generic PAL device type that links API and platform abstraction layer.
  */
-typedef struct {
+typedef struct VL53L4CD_Dev {
 	const struct device *i2c_bus;
 	uint8_t i2c_dev_addr;
 } VL53L4CD_Dev_t;
 
 /**
-* VL53L4CD device instance.
-*/
-
-typedef uint16_t Dev_t;
-
-/**
- * @brief Error instance.
+ *  @brief Driver error type
  */
-typedef uint8_t VL53L4CD_Error;
+
+typedef enum VL53L4CD_Error {
+	VL53L4CD_ERROR_NONE = 0U,
+	VL53L4CD_ERROR_XTALK_FAILED = 253U,
+	VL53L4CD_ERROR_INVALID_ARGUMENT = 254U,
+	VL53L4CD_ERROR_TIMEOUT = 255U,
+} VL53L4CD_Error_t;
 
 /**
  * @brief If the macro below is defined, the device will be programmed to run
@@ -94,46 +94,46 @@ typedef uint8_t VL53L4CD_Error;
 
 // #define VL53L4CD_I2C_FAST_MODE_PLUS
 
-
 /**
  * @brief Read 32 bits through I2C.
  */
 
-uint8_t VL53L4CD_RdDWord(VL53L4CD_Dev_t *dev, uint16_t registerAddr, uint32_t *value);
+VL53L4CD_Error_t VL53L4CD_RdDWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint32_t *value);
+
 /**
  * @brief Read 16 bits through I2C.
  */
 
-uint8_t VL53L4CD_RdWord(VL53L4CD_Dev_t *dev, uint16_t registerAddr, uint16_t *value);
+VL53L4CD_Error_t VL53L4CD_RdWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint16_t *value);
 
 /**
  * @brief Read 8 bits through I2C.
  */
 
-uint8_t VL53L4CD_RdByte(VL53L4CD_Dev_t *dev, uint16_t registerAddr, uint8_t *value);
+VL53L4CD_Error_t VL53L4CD_RdByte(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint8_t *value);
 
 /**
  * @brief Write 8 bits through I2C.
  */
 
-uint8_t VL53L4CD_WrByte(VL53L4CD_Dev_t *dev, uint16_t registerAddr, uint8_t value);
+VL53L4CD_Error_t VL53L4CD_WrByte(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint8_t value);
 
 /**
  * @brief Write 16 bits through I2C.
  */
 
-uint8_t VL53L4CD_WrWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint16_t value);
+VL53L4CD_Error_t VL53L4CD_WrWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint16_t value);
 
 /**
  * @brief Write 32 bits through I2C.
  */
 
-uint8_t VL53L4CD_WrDWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint32_t value);
+VL53L4CD_Error_t VL53L4CD_WrDWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint32_t value);
 
 /**
  * @brief Wait during N milliseconds.
  */
 
-uint8_t VL53L4CD_PollingDelay(VL53L4CD_Dev_t *dev, uint32_t TimeMs);
+VL53L4CD_Error_t VL53L4CD_PollingDelay(VL53L4CD_Dev_t *dev, uint32_t TimeMs);
 
 #endif  /* ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_PLATFORM_H_ */

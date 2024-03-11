@@ -56,8 +56,8 @@
 *******************************************************************************
 */
 
-#ifndef VL53L4CD_API_H_
-#define VL53L4CD_API_H_
+#ifndef ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_API_H_
+#define ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_API_H_
 
 #include "platform.h"
 
@@ -71,63 +71,50 @@
 #define VL53L4CD_IMPLEMENTATION_VER_REVISION	0
 
 /**
- *  @brief Driver error type
- */
-
-typedef uint8_t VL53L4CD_Error;
-
-#define VL53L4CD_ERROR_NONE			((uint8_t)0U)
-#define VL53L4CD_ERROR_XTALK_FAILED		((uint8_t)253U)
-#define VL53L4CD_ERROR_INVALID_ARGUMENT		((uint8_t)254U)
-#define VL53L4CD_ERROR_TIMEOUT			((uint8_t)255U)
-
-
-/**
  *  @brief Inner Macro for API. Not for user, only for development.
  */
 
-#define VL53L4CD_SOFT_RESET     ((uint16_t)0x0000))
-#define VL53L4CD_I2C_SLAVE__DEVICE_ADDRESS      ((uint16_t)0x0001)
-#define VL53L4CD_VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND  ((uint16_t)0x0008)
-#define VL53L4CD_XTALK_PLANE_OFFSET_KCPS ((uint16_t)0x0016)
-#define VL53L4CD_XTALK_X_PLANE_GRADIENT_KCPS     ((uint16_t)0x0018)
-#define VL53L4CD_XTALK_Y_PLANE_GRADIENT_KCPS     ((uint16_t)0x001A)
-#define VL53L4CD_RANGE_OFFSET_MM     ((uint16_t)0x001E)
-#define VL53L4CD_INNER_OFFSET_MM     ((uint16_t)0x0020)
-#define VL53L4CD_OUTER_OFFSET_MM     ((uint16_t)0x0022)
-#define VL53L4CD_GPIO_HV_MUX__CTRL      ((uint16_t)0x0030)
-#define VL53L4CD_GPIO__TIO_HV_STATUS    ((uint16_t)0x0031)
-#define VL53L4CD_SYSTEM__INTERRUPT  ((uint16_t)0x0046)
-#define VL53L4CD_RANGE_CONFIG_A     ((uint16_t)0x005E)
-#define VL53L4CD_RANGE_CONFIG_B      ((uint16_t)0x0061)
-#define VL53L4CD_RANGE_CONFIG__SIGMA_THRESH     ((uint16_t)0x0064)
-#define VL53L4CD_MIN_COUNT_RATE_RTN_LIMIT_MCPS    ((uint16_t)0x0066)
-#define VL53L4CD_INTERMEASUREMENT_MS ((uint16_t)0x006C)
-#define VL53L4CD_THRESH_HIGH    ((uint16_t)0x0072)
-#define VL53L4CD_THRESH_LOW     ((uint16_t)0x0074)
-#define VL53L4CD_SYSTEM__INTERRUPT_CLEAR        ((uint16_t)0x0086)
-#define VL53L4CD_SYSTEM_START     ((uint16_t)0x0087)
-#define VL53L4CD_RESULT__RANGE_STATUS   ((uint16_t)0x0089)
-#define VL53L4CD_RESULT__SPAD_NB   ((uint16_t)0x008C)
-#define VL53L4CD_RESULT__SIGNAL_RATE   ((uint16_t)0x008E)
-#define VL53L4CD_RESULT__AMBIENT_RATE   ((uint16_t)0x0090)
-#define VL53L4CD_RESULT__SIGMA   ((uint16_t)0x0092)
-#define VL53L4CD_RESULT__DISTANCE   ((uint16_t)0x0096)
+#define VL53L4CD_SOFT_RESET				((uint16_t)0x0000)
+#define VL53L4CD_I2C_SLAVE__DEVICE_ADDRESS		((uint16_t)0x0001)
+#define VL53L4CD_VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND	((uint16_t)0x0008)
+#define VL53L4CD_XTALK_PLANE_OFFSET_KCPS		((uint16_t)0x0016)
+#define VL53L4CD_XTALK_X_PLANE_GRADIENT_KCPS		((uint16_t)0x0018)
+#define VL53L4CD_XTALK_Y_PLANE_GRADIENT_KCPS		((uint16_t)0x001A)
+#define VL53L4CD_RANGE_OFFSET_MM			((uint16_t)0x001E)
+#define VL53L4CD_INNER_OFFSET_MM			((uint16_t)0x0020)
+#define VL53L4CD_OUTER_OFFSET_MM			((uint16_t)0x0022)
+#define VL53L4CD_GPIO_HV_MUX__CTRL			((uint16_t)0x0030)
+#define VL53L4CD_GPIO__TIO_HV_STATUS			((uint16_t)0x0031)
+#define VL53L4CD_SYSTEM__INTERRUPT			((uint16_t)0x0046)
+#define VL53L4CD_RANGE_CONFIG_A				((uint16_t)0x005E)
+#define VL53L4CD_RANGE_CONFIG_B				((uint16_t)0x0061)
+#define VL53L4CD_RANGE_CONFIG__SIGMA_THRESH		((uint16_t)0x0064)
+#define VL53L4CD_MIN_COUNT_RATE_RTN_LIMIT_MCPS		((uint16_t)0x0066)
+#define VL53L4CD_INTERMEASUREMENT_MS			((uint16_t)0x006C)
+#define VL53L4CD_THRESH_HIGH				((uint16_t)0x0072)
+#define VL53L4CD_THRESH_LOW				((uint16_t)0x0074)
+#define VL53L4CD_SYSTEM__INTERRUPT_CLEAR		((uint16_t)0x0086)
+#define VL53L4CD_SYSTEM_START				((uint16_t)0x0087)
+#define VL53L4CD_RESULT__RANGE_STATUS			((uint16_t)0x0089)
+#define VL53L4CD_RESULT__SPAD_NB			((uint16_t)0x008C)
+#define VL53L4CD_RESULT__SIGNAL_RATE			((uint16_t)0x008E)
+#define VL53L4CD_RESULT__AMBIENT_RATE			((uint16_t)0x0090)
+#define VL53L4CD_RESULT__SIGMA				((uint16_t)0x0092)
+#define VL53L4CD_RESULT__DISTANCE			((uint16_t)0x0096)
 
-
-#define VL53L4CD_RESULT__OSC_CALIBRATE_VAL      ((uint16_t)0x00DE)
-#define VL53L4CD_FIRMWARE__SYSTEM_STATUS        ((uint16_t)0x00E5)
-#define VL53L4CD_IDENTIFICATION__MODEL_ID       ((uint16_t)0x010F)
+#define VL53L4CD_RESULT__OSC_CALIBRATE_VAL	((uint16_t)0x00DE)
+#define VL53L4CD_FIRMWARE__SYSTEM_STATUS	((uint16_t)0x00E5)
+#define VL53L4CD_IDENTIFICATION__MODEL_ID	((uint16_t)0x010F)
 
 /**
  *  @brief defines Software Version
  */
 
 typedef struct {
-	uint8_t      major;    /*!< major number */
-	uint8_t      minor;    /*!< minor number */
-	uint8_t      build;    /*!< build number */
-	uint32_t     revision; /*!< revision number */
+	uint8_t major;		/* !< major number */
+	uint8_t minor;		/* !< minor number */
+	uint8_t build;		/* !< build number */
+	uint32_t revision;	/* !< revision number */
 } VL53L4CD_Version_t;
 
 /**
@@ -135,46 +122,36 @@ typedef struct {
  */
 
 typedef struct {
-
-	/* Status of measurements. If the status is equal to 0, the data are valid*/
-	uint8_t range_status;
-	/* Measured distance in millimeters */
-	uint16_t distance_mm;
-	/* Ambient noise in kcps */
-	uint16_t ambient_rate_kcps;
-	/* Ambient noise in kcps/SPAD */
-	uint16_t ambient_per_spad_kcps;
-	/* Measured signal of the target in kcps */
-	uint16_t signal_rate_kcps;
-	/* Measured signal of the target in kcps/SPAD */
-	uint16_t signal_per_spad_kcps;
-	/* Number of SPADs enabled */
-	uint16_t number_of_spad;
-	/* Estimated measurements std deviation in mm */
-	uint16_t sigma_mm;
+	uint8_t range_status;		/* Status of measurements; if status == 0, data are valid */
+	uint16_t distance_mm;		/* Measured distance in millimeters */
+	uint16_t ambient_rate_kcps;	/* Ambient noise in kcps */
+	uint16_t ambient_per_spad_kcps;	/* Ambient noise in kcps/SPAD */
+	uint16_t signal_rate_kcps;	/* Measured signal of the target in kcps */
+	uint16_t signal_per_spad_kcps;	/* Measured signal of the target in kcps/SPAD */
+	uint16_t number_of_spad;	/* Number of SPADs enabled */
+	uint16_t sigma_mm;		/* Estimated measurements std deviation in mm */
 } VL53L4CD_ResultsData_t;
 
 /**
  * @brief This function programs the software driver version.
  * @param (VL53L4CD_Version_t) pVersion : Pointer of structure, containing the
  * software version.
- * @return (VL53L4CD_ERROR) status : 0 if SW version is OK.
+ * @return (VL53L4CD_Error_t) status : 0 if SW version is OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetSWVersion(
+VL53L4CD_Error_t VL53L4CD_GetSWVersion(
 		VL53L4CD_Version_t *pVersion);
-
 
 /**
  * @brief This function sets a new I2C address to a sensor. It can be used for
  * example when multiple sensors share the same I2C bus.
  * @param (Dev_t) dev : Device instance to update.
  * @param (uint8_t) new_address : New I2C address.
- * @return (VL53L4CD_ERROR) status : 0 if I2C address has been correctly
+ * @return (VL53L4CD_Error_t) status : 0 if I2C address has been correctly
  * programmed.
  */
 
-VL53L4CD_Error VL53L4CD_SetI2CAddress(
+VL53L4CD_Error_t VL53L4CD_SetI2CAddress(
 		VL53L4CD_Dev_t *dev,
 		uint8_t new_address);
 
@@ -183,30 +160,30 @@ VL53L4CD_Error VL53L4CD_SetI2CAddress(
  * should be 0xEBAA.
  * @param (Dev_t) dev : Device instance.
  * @param (uint16_t) *p_id : Sensor id.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetSensorId(
+VL53L4CD_Error_t VL53L4CD_GetSensorId(
 		VL53L4CD_Dev_t *dev,
 		uint16_t *p_id);
 
 /**
  * @brief This function is used to initialize the sensor.
  * @param (Dev_t) dev : Device instance to initialize.
- * @return (VL53L4CD_ERROR) status : 0 if init is OK.
+ * @return (VL53L4CD_Error_t) status : 0 if init is OK.
  */
 
-VL53L4CD_Error VL53L4CD_SensorInit(
+VL53L4CD_Error_t VL53L4CD_SensorInit(
 		VL53L4CD_Dev_t *dev);
 
 /**
  * @brief This function clears the interrupt. It needs to be called after a
  * ranging data reading to arm the interrupt for the next data ready event.
  * @param (Dev_t) dev : Device instance.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_ClearInterrupt(
+VL53L4CD_Error_t VL53L4CD_ClearInterrupt(
 		VL53L4CD_Dev_t *dev);
 
 /**
@@ -214,19 +191,19 @@ VL53L4CD_Error VL53L4CD_ClearInterrupt(
  * continuous. The clear interrupt has to be done after each get data to allow
  * the interrupt to raise when the next data is ready.
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_StartRanging(
+VL53L4CD_Error_t VL53L4CD_StartRanging(
 		VL53L4CD_Dev_t *dev);
 
 /**
  * @brief This function stops the ranging in progress.
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_StopRanging(
+VL53L4CD_Error_t VL53L4CD_StopRanging(
 		VL53L4CD_Dev_t *dev);
 
 /**
@@ -235,10 +212,10 @@ VL53L4CD_Error VL53L4CD_StopRanging(
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
  * @param (uint8_t) *p_is_data_ready : Pointer containing a flag to know if a
  * data is ready : 0 = no data ready, 1 = data ready.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_CheckForDataReady(
+VL53L4CD_Error_t VL53L4CD_CheckForDataReady(
 		VL53L4CD_Dev_t *dev,
 		uint8_t *p_is_data_ready);
 
@@ -259,7 +236,7 @@ VL53L4CD_Error VL53L4CD_CheckForDataReady(
  * @return (uint8_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_SetRangeTiming(
+VL53L4CD_Error_t VL53L4CD_SetRangeTiming(
 		VL53L4CD_Dev_t *dev,
 		uint32_t timing_budget_ms,
 		uint32_t inter_measurement_ms);
@@ -278,7 +255,7 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
  * @return (uint8_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetRangeTiming(
+VL53L4CD_Error_t VL53L4CD_GetRangeTiming(
 		VL53L4CD_Dev_t *dev,
 		uint32_t *p_timing_budget_ms,
 		uint32_t *p_inter_measurement_ms);
@@ -291,7 +268,7 @@ VL53L4CD_Error VL53L4CD_GetRangeTiming(
  * @return (uint8_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetResult(VL53L4CD_Dev_t *dev, VL53L4CD_ResultsData_t *pResult);
+VL53L4CD_Error_t VL53L4CD_GetResult(VL53L4CD_Dev_t *dev, VL53L4CD_ResultsData_t *pResult);
 
 /**
  * @brief This function sets a new offset correction in mm. Offset corresponds
@@ -302,7 +279,7 @@ VL53L4CD_Error VL53L4CD_GetResult(VL53L4CD_Dev_t *dev, VL53L4CD_ResultsData_t *p
  * @return (uint8_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_SetOffset(VL53L4CD_Dev_t *dev, int16_t OffsetValueInMm);
+VL53L4CD_Error_t VL53L4CD_SetOffset(VL53L4CD_Dev_t *dev, int16_t OffsetValueInMm);
 
 /**
  * @brief This function gets the current offset correction in mm. Offset
@@ -314,7 +291,7 @@ VL53L4CD_Error VL53L4CD_SetOffset(VL53L4CD_Dev_t *dev, int16_t OffsetValueInMm);
  * @return (uint8_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetOffset(VL53L4CD_Dev_t *dev, int16_t *Offset);
+VL53L4CD_Error_t VL53L4CD_GetOffset(VL53L4CD_Dev_t *dev, int16_t *Offset);
 
 /**
  * @brief This function sets a new Xtalk value in kcps. Xtalk represents the
@@ -324,10 +301,10 @@ VL53L4CD_Error VL53L4CD_GetOffset(VL53L4CD_Dev_t *dev, int16_t *Offset);
  * @param (uint16_t) XtalkValueKcps : New xtalk value in kcps. The default
  * value is 0 kcps (no coverglass). Minimum is 0 kcps , and maximum is 128
  * kcps.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_SetXtalk(VL53L4CD_Dev_t *dev, uint16_t XtalkValueKcps);
+VL53L4CD_Error_t VL53L4CD_SetXtalk(VL53L4CD_Dev_t *dev, uint16_t XtalkValueKcps);
 
 /**
  * @brief This function gets the current Xtalk value in kcps. Xtalk represents
@@ -335,10 +312,10 @@ VL53L4CD_Error VL53L4CD_SetXtalk(VL53L4CD_Dev_t *dev, uint16_t XtalkValueKcps);
  * at the top of the sensor.
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
  * @param (uint16_t) p_xtalk_kcps : Pointer of current xtalk value in kcps.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetXtalk(VL53L4CD_Dev_t *dev, uint16_t *p_xtalk_kcps);
+VL53L4CD_Error_t VL53L4CD_GetXtalk(VL53L4CD_Dev_t *dev, uint16_t *p_xtalk_kcps);
 
 /**
  * @brief This function sets new detection thresholds. The detection
@@ -353,10 +330,10 @@ VL53L4CD_Error VL53L4CD_GetXtalk(VL53L4CD_Dev_t *dev, uint16_t *p_xtalk_kcps);
  * @param (uint16_t) distance_high_mm : High distance threshold in millimeters.
  * @param (uint8_t) window : Interrupt windows (0=below low threshold;
  * 1=above high threshold; 2=out of low/high windows; 3=in low/high windows)
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_SetDetectionThresholds(VL53L4CD_Dev_t *dev,
+VL53L4CD_Error_t VL53L4CD_SetDetectionThresholds(VL53L4CD_Dev_t *dev,
 		uint16_t distance_low_mm,
 		uint16_t distance_high_mm,
 		uint8_t window);
@@ -373,10 +350,10 @@ VL53L4CD_Error VL53L4CD_SetDetectionThresholds(VL53L4CD_Dev_t *dev,
  * millimeters.
  * @param (uint8_t) *p_window : Interrupt windows (0=below low threshold;
  * 1=above high threshold; 2=out of low/high windows; 3=in low/high windows)
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetDetectionThresholds(VL53L4CD_Dev_t *dev,
+VL53L4CD_Error_t VL53L4CD_GetDetectionThresholds(VL53L4CD_Dev_t *dev,
 		uint16_t *p_distance_low_mm,
 		uint16_t *p_distance_high_mm,
 		uint8_t *p_window);
@@ -389,10 +366,10 @@ VL53L4CD_Error VL53L4CD_GetDetectionThresholds(VL53L4CD_Dev_t *dev,
  * @param (uint16_t) signal_kcps : New signal threshold in kcps. The default
  * value is 1024 kcps. Minimum is 0 kcps (no threshold), and maximum is 16384
  * kcps.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_SetSignalThreshold(VL53L4CD_Dev_t *dev, uint16_t signal_kcps);
+VL53L4CD_Error_t VL53L4CD_SetSignalThreshold(VL53L4CD_Dev_t *dev, uint16_t signal_kcps);
 
 /**
  * @brief This function returns the current signal threshold in kcps. If a
@@ -400,10 +377,10 @@ VL53L4CD_Error VL53L4CD_SetSignalThreshold(VL53L4CD_Dev_t *dev, uint16_t signal_
  * structure 'VL53L4CD_ResultsData_t' will be equal to 2.
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
  * @param (uint16_t) *p_signal_kcps : Pointer of signal threshold in kcps.
- * @return (VL53L4CD_ERROR) status : 0 if OK.
+ * @return (VL53L4CD_Error_t) status : 0 if OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetSignalThreshold(VL53L4CD_Dev_t *dev,
+VL53L4CD_Error_t VL53L4CD_GetSignalThreshold(VL53L4CD_Dev_t *dev,
 		uint16_t *p_signal_kcps);
 
 /**
@@ -414,11 +391,11 @@ VL53L4CD_Error VL53L4CD_GetSignalThreshold(VL53L4CD_Dev_t *dev,
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
  * @param (uint16_t) sigma_mm : New sigma threshold in mm. The default value is
  * 15mm. Minimum is 0mm (not threshold), and maximum is 16383mm.
- * @return (VL53L4CD_ERROR) status : 0 if programming is or 255 if value is too
+ * @return (VL53L4CD_Error_t) status : 0 if programming is or 255 if value is too
  * high.
  */
 
-VL53L4CD_Error VL53L4CD_SetSigmaThreshold(
+VL53L4CD_Error_t VL53L4CD_SetSigmaThreshold(
 		VL53L4CD_Dev_t *dev,
 		uint16_t 	sigma_mm);
 
@@ -429,10 +406,10 @@ VL53L4CD_Error VL53L4CD_SetSigmaThreshold(
  * 'VL53L4CD_ResultsData_t' will be equal to 1.
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
  * @param (uint16_t) *p_sigma_mm : Current sigma threshold in mm.
- * @return (VL53L4CD_ERROR) status : 0 if programming is OK.
+ * @return (VL53L4CD_Error_t) status : 0 if programming is OK.
  */
 
-VL53L4CD_Error VL53L4CD_GetSigmaThreshold(
+VL53L4CD_Error_t VL53L4CD_GetSigmaThreshold(
 		VL53L4CD_Dev_t *dev,
 		uint16_t 	*p_sigma_mm);
 
@@ -443,9 +420,9 @@ VL53L4CD_Error VL53L4CD_GetSigmaThreshold(
  * 'VL53L4CD_StopRanging()'. After calling this function, the ranging can
  * restart normally.
  * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
- * @return (VL53L4CD_ERROR) status : 0 if update is OK.
+ * @return (VL53L4CD_Error_t) status : 0 if update is OK.
  */
 
-VL53L4CD_Error VL53L4CD_StartTemperatureUpdate(VL53L4CD_Dev_t *dev);
+VL53L4CD_Error_t VL53L4CD_StartTemperatureUpdate(VL53L4CD_Dev_t *dev);
 
-#endif  //VL53L4CD_API_H_
+#endif  /* ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_API_H_ */

@@ -177,10 +177,10 @@ static const uint8_t VL53L4CD_DEFAULT_CONFIGURATION[] = {
 	  put 0x40 in location 0x87 */
 };
 
-VL53L4CD_Error VL53L4CD_GetSWVersion(
+VL53L4CD_Error_t VL53L4CD_GetSWVersion(
 		VL53L4CD_Version_t *p_Version)
 {
-	VL53L4CD_Error Status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t Status = VL53L4CD_ERROR_NONE;
 
 	p_Version->major = VL53L4CD_IMPLEMENTATION_VER_MAJOR;
 	p_Version->minor = VL53L4CD_IMPLEMENTATION_VER_MINOR;
@@ -189,31 +189,31 @@ VL53L4CD_Error VL53L4CD_GetSWVersion(
 	return Status;
 }
 
-VL53L4CD_Error VL53L4CD_SetI2CAddress(
+VL53L4CD_Error_t VL53L4CD_SetI2CAddress(
 		VL53L4CD_Dev_t *dev,
 		uint8_t new_address)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_WrByte(dev, VL53L4CD_I2C_SLAVE__DEVICE_ADDRESS,
 			(uint8_t)(new_address >> (uint8_t)1));
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetSensorId(
+VL53L4CD_Error_t VL53L4CD_GetSensorId(
 		VL53L4CD_Dev_t *dev,
 		uint16_t *p_id)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_RdWord(dev, VL53L4CD_IDENTIFICATION__MODEL_ID, p_id);
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_SensorInit(
+VL53L4CD_Error_t VL53L4CD_SensorInit(
 		VL53L4CD_Dev_t *dev)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint8_t Addr, tmp;
 	uint8_t continue_loop = 1;
 	uint16_t i = 0;
@@ -281,19 +281,19 @@ VL53L4CD_Error VL53L4CD_SensorInit(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_ClearInterrupt(
+VL53L4CD_Error_t VL53L4CD_ClearInterrupt(
 		VL53L4CD_Dev_t *dev)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_WrByte(dev, VL53L4CD_SYSTEM__INTERRUPT_CLEAR, 0x01);
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_StartRanging(
+VL53L4CD_Error_t VL53L4CD_StartRanging(
 		VL53L4CD_Dev_t *dev)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint32_t tmp;
 
 	status |= VL53L4CD_RdDWord(dev, VL53L4CD_INTERMEASUREMENT_MS, &tmp);
@@ -312,20 +312,20 @@ VL53L4CD_Error VL53L4CD_StartRanging(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_StopRanging(
+VL53L4CD_Error_t VL53L4CD_StopRanging(
 		VL53L4CD_Dev_t *dev)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_WrByte(dev, VL53L4CD_SYSTEM_START, 0x00);
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_CheckForDataReady(
+VL53L4CD_Error_t VL53L4CD_CheckForDataReady(
 		VL53L4CD_Dev_t *dev,
 		uint8_t *p_is_data_ready)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint8_t temp;
 	uint8_t int_pol;
 
@@ -356,12 +356,12 @@ VL53L4CD_Error VL53L4CD_CheckForDataReady(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_SetRangeTiming(
+VL53L4CD_Error_t VL53L4CD_SetRangeTiming(
 		VL53L4CD_Dev_t *dev,
 		uint32_t timing_budget_ms,
 		uint32_t inter_measurement_ms)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint16_t clock_pll, osc_frequency, ms_byte;
 	uint32_t macro_period_us = 0, timing_budget_us = 0, ls_byte, tmp;
 	float_t inter_measurement_factor = (float_t)1.055;
@@ -445,12 +445,12 @@ VL53L4CD_Error VL53L4CD_SetRangeTiming(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetRangeTiming(
+VL53L4CD_Error_t VL53L4CD_GetRangeTiming(
 		VL53L4CD_Dev_t *dev,
 		uint32_t *p_timing_budget_ms,
 		uint32_t *p_inter_measurement_ms)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint16_t osc_frequency = 1, range_config_macrop_high, clock_pll = 1;
 	uint32_t tmp, ls_byte, ms_byte, macro_period_us;
 	float_t clock_pll_factor = (float_t)1.065;
@@ -502,11 +502,11 @@ VL53L4CD_Error VL53L4CD_GetRangeTiming(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetResult(
+VL53L4CD_Error_t VL53L4CD_GetResult(
 		VL53L4CD_Dev_t *dev,
 		VL53L4CD_ResultsData_t *p_result)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint16_t temp_16;
 	uint8_t temp_8;
 	uint8_t status_rtn[24] = { 255, 255, 255, 5, 2, 4, 1, 7, 3,
@@ -550,11 +550,11 @@ VL53L4CD_Error VL53L4CD_GetResult(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_SetOffset(
+VL53L4CD_Error_t VL53L4CD_SetOffset(
 		VL53L4CD_Dev_t *dev,
 		int16_t OffsetValueInMm)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint16_t temp;
 
 	temp = (uint16_t)((uint16_t)OffsetValueInMm*(uint16_t)4);
@@ -565,11 +565,11 @@ VL53L4CD_Error VL53L4CD_SetOffset(
 	return status;
 }
 
-VL53L4CD_Error  VL53L4CD_GetOffset(
+VL53L4CD_Error_t  VL53L4CD_GetOffset(
 		VL53L4CD_Dev_t *dev,
 		int16_t *p_offset)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint16_t temp;
 
 	status |= VL53L4CD_RdWord(dev,VL53L4CD_RANGE_OFFSET_MM, &temp);
@@ -586,11 +586,11 @@ VL53L4CD_Error  VL53L4CD_GetOffset(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_SetXtalk(
+VL53L4CD_Error_t VL53L4CD_SetXtalk(
 		VL53L4CD_Dev_t *dev,
 		uint16_t XtalkValueKcps)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_WrWord(dev,
 		VL53L4CD_XTALK_X_PLANE_GRADIENT_KCPS, 0x0000);
@@ -603,11 +603,11 @@ VL53L4CD_Error VL53L4CD_SetXtalk(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetXtalk(
+VL53L4CD_Error_t VL53L4CD_GetXtalk(
 		VL53L4CD_Dev_t *dev,
 		uint16_t *p_xtalk_kcps)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	float_t tmp_xtalk;
 
 	status |= VL53L4CD_RdWord(dev,
@@ -619,13 +619,13 @@ VL53L4CD_Error VL53L4CD_GetXtalk(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_SetDetectionThresholds(
+VL53L4CD_Error_t VL53L4CD_SetDetectionThresholds(
 		VL53L4CD_Dev_t *dev,
 		uint16_t distance_low_mm,
 		uint16_t distance_high_mm,
 		uint8_t window)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_WrByte(dev, VL53L4CD_SYSTEM__INTERRUPT, window);
 	status |= VL53L4CD_WrWord(dev, VL53L4CD_THRESH_HIGH, distance_high_mm);
@@ -633,12 +633,12 @@ VL53L4CD_Error VL53L4CD_SetDetectionThresholds(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetDetectionThresholds(VL53L4CD_Dev_t *dev,
+VL53L4CD_Error_t VL53L4CD_GetDetectionThresholds(VL53L4CD_Dev_t *dev,
 		uint16_t *p_distance_low_mm,
 		uint16_t *p_distance_high_mm,
 		uint8_t *p_window)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_RdWord(dev, VL53L4CD_THRESH_HIGH,p_distance_high_mm);
 	status |= VL53L4CD_RdWord(dev, VL53L4CD_THRESH_LOW, p_distance_low_mm);
@@ -648,22 +648,22 @@ VL53L4CD_Error VL53L4CD_GetDetectionThresholds(VL53L4CD_Dev_t *dev,
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_SetSignalThreshold(
+VL53L4CD_Error_t VL53L4CD_SetSignalThreshold(
 		VL53L4CD_Dev_t *dev,
 		uint16_t signal_kcps)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status |= VL53L4CD_WrWord(dev,
 			VL53L4CD_MIN_COUNT_RATE_RTN_LIMIT_MCPS,signal_kcps>>3);
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetSignalThreshold(
+VL53L4CD_Error_t VL53L4CD_GetSignalThreshold(
 		VL53L4CD_Dev_t *dev,
 		uint16_t 	*p_signal_kcps)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint16_t tmp = 0;
 
 	status |= VL53L4CD_RdWord(dev,
@@ -673,11 +673,11 @@ VL53L4CD_Error VL53L4CD_GetSignalThreshold(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_SetSigmaThreshold(
+VL53L4CD_Error_t VL53L4CD_SetSigmaThreshold(
 		VL53L4CD_Dev_t *dev,
 		uint16_t 	sigma_mm)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	if(sigma_mm>(uint16_t)((uint16_t)0xFFFF>>2))
 	{
@@ -692,11 +692,11 @@ VL53L4CD_Error VL53L4CD_SetSigmaThreshold(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_GetSigmaThreshold(
+VL53L4CD_Error_t VL53L4CD_GetSigmaThreshold(
 		VL53L4CD_Dev_t *dev,
 		uint16_t 	*p_sigma_mm)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 
 	status += VL53L4CD_RdWord(dev,
 			VL53L4CD_RANGE_CONFIG__SIGMA_THRESH, p_sigma_mm);
@@ -705,10 +705,10 @@ VL53L4CD_Error VL53L4CD_GetSigmaThreshold(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_StartTemperatureUpdate(
+VL53L4CD_Error_t VL53L4CD_StartTemperatureUpdate(
 		VL53L4CD_Dev_t *dev)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint8_t tmp = 0, continue_loop = 1;
 	uint16_t i = 0;
 

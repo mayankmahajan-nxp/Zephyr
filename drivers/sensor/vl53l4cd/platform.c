@@ -58,131 +58,125 @@
 
 #include "platform.h"
 
-uint8_t VL53L4CD_RdDWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint32_t *value)
+/* TODO: create a generic read function for the following three read functions for code reusability.
+ * the three read functions will BSWAP_n after getting data. similarly for three write functions.
+ */
+
+VL53L4CD_Error_t VL53L4CD_RdDWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint32_t *value)
 {
-	uint8_t status = 255;
-
-	/* To be filled by customer. Return 0 if OK */
-	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
-
 	int ret;
+	uint8_t register_addr_sz = sizeof(register_addr), value_sz = sizeof(*value);
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &RegisterAdress, 2, (uint8_t *) value, 4);
+	register_addr = BSWAP_16(register_addr);
+
+	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &register_addr, register_addr_sz,
+			     value, value_sz);
 	if (ret < 0) {
-		printk("i2c_write_read failed (%d)\n", ret);
-	} else {
-		printk("success %d\n", ret);
+		return VL53L4CD_ERROR_XTALK_FAILED;
 	}
+
 	*value = BSWAP_32(*value);
 
-	return 0;
+	return VL53L4CD_ERROR_NONE;
 }
 
-uint8_t VL53L4CD_RdWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint16_t *value)
+VL53L4CD_Error_t VL53L4CD_RdWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint16_t *value)
 {
-	uint8_t status = 255;
-
-	/* To be filled by customer. Return 0 if OK */
-	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
-
 	int ret;
+	uint8_t register_addr_sz = sizeof(register_addr), value_sz = sizeof(*value);
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &RegisterAdress, 2, (uint8_t *) value, 2);
+	register_addr = BSWAP_16(register_addr);
+
+	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &register_addr, register_addr_sz,
+			     value, value_sz);
 	if (ret < 0) {
-		printk("i2c_write_read failed (%d)\n", ret);
-	} else {
-		printk("success %d\n", ret);
+		return VL53L4CD_ERROR_XTALK_FAILED;
 	}
+
 	*value = BSWAP_16(*value);
 
-	return status;
+	return VL53L4CD_ERROR_NONE;
 }
 
-uint8_t VL53L4CD_RdByte(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint8_t *value)
+VL53L4CD_Error_t VL53L4CD_RdByte(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint8_t *value)
 {
-	uint8_t status = 255;
-
-	/* To be filled by customer. Return 0 if OK */
-	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
-
 	int ret;
+	uint8_t register_addr_sz = sizeof(register_addr), value_sz = sizeof(*value);
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &RegisterAdress, 2, value, 1);
+	register_addr = BSWAP_16(register_addr);
+	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &register_addr, register_addr_sz,
+			     value, value_sz);
 	if (ret < 0) {
-		printk("i2c_write_read failed (%d)\n", ret);
-	} else {
-		printk("success %d\n", ret);
+		return VL53L4CD_ERROR_XTALK_FAILED;
 	}
 
-	return 0;
+	return VL53L4CD_ERROR_NONE;
 }
 
-uint8_t VL53L4CD_WrByte(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint8_t value)
+VL53L4CD_Error_t VL53L4CD_WrByte(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint8_t value)
 {
-	uint8_t status = 255;
-
-	/* To be filled by customer. Return 0 if OK */
-	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
-
 	int ret;
+	uint8_t register_addr_sz = sizeof(register_addr), value_sz = sizeof(value);
+	uint8_t buf_size = register_addr_sz + value_sz, buf[buf_size];
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[3];
-	memcpy(buf, &RegisterAdress, 2);
-	memcpy(buf + 2, &value, 1);
+	register_addr = BSWAP_16(register_addr);
+	memcpy(buf, &register_addr, register_addr_sz);
+	memcpy(buf + register_addr_sz, &value, value_sz);
+
 	ret = i2c_write(dev->i2c_bus, buf, 3, dev->i2c_dev_addr);
-	printk("success %d\n", ret);
+	if (ret < 0) {
+		return VL53L4CD_ERROR_XTALK_FAILED;
+	}
 
-	return 0;
+	return VL53L4CD_ERROR_NONE;
 }
 
-uint8_t VL53L4CD_WrWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint16_t value)
+VL53L4CD_Error_t VL53L4CD_WrWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint16_t value)
 {
-	uint8_t status = 255;
-
-	/* To be filled by customer. Return 0 if OK */
-	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
-
 	int ret;
+	uint8_t register_addr_sz = sizeof(register_addr), value_sz = sizeof(value);
+	uint8_t buf_size = register_addr_sz + value_sz, buf[buf_size];
 
+	register_addr = BSWAP_16(register_addr);
 	value = BSWAP_16(value);
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[4];
-	memcpy(buf, &RegisterAdress, 2);
-	memcpy(buf + 2, &value, 2);
-	ret = i2c_write(dev->i2c_bus, buf, 4, dev->i2c_dev_addr);
-	printk("success %d\n", ret);
+	memcpy(buf, &register_addr, register_addr_sz);
+	memcpy(buf + register_addr_sz, &value, value_sz);
 
-	return 0;
+	ret = i2c_write(dev->i2c_bus, buf, buf_size, dev->i2c_dev_addr);
+	if (ret < 0) {
+		return VL53L4CD_ERROR_XTALK_FAILED;
+	}
+
+	return VL53L4CD_ERROR_NONE;
 }
 
-uint8_t VL53L4CD_WrDWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint32_t value)
+VL53L4CD_Error_t VL53L4CD_WrDWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint32_t value)
 {
-	uint8_t status = 255;
+	int ret;
+	uint8_t register_addr_sz = sizeof(register_addr), value_sz = sizeof(value);
+	uint8_t buf_size = register_addr_sz + value_sz, buf[buf_size];
 
-	/* To be filled by customer. Return 0 if OK */
-	/* Warning : For big endian platforms, fields 'RegisterAdress' and 'value' need to be swapped. */
+	register_addr = BSWAP_16(register_addr);
+	value = BSWAP_32(value);
+	memcpy(buf, &register_addr, register_addr_sz);
+	memcpy(buf + register_addr_sz, &value, value_sz);
 
+	ret = i2c_write(dev->i2c_bus, buf, buf_size, dev->i2c_dev_addr);
+	if (ret < 0) {
+		return VL53L4CD_ERROR_XTALK_FAILED;
+	}
+
+	return VL53L4CD_ERROR_NONE;
+}
+
+VL53L4CD_Error_t VL53L4CD_PollingDelay(VL53L4CD_Dev_t *dev, uint32_t TimeMs)
+{
 	int ret;
 
-	value = BSWAP_32(value);
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[6];
-	memcpy(buf, &RegisterAdress, 2);
-	memcpy(buf + 2, &value, 4);
-	ret = i2c_write(dev->i2c_bus, buf, 6, dev->i2c_dev_addr);
-	printk("success %d\n", ret);
+	ret = k_sleep(K_MSEC(TimeMs));
+	if (ret != 0) {
+		return VL53L4CD_ERROR_TIMEOUT;
+	}
 
-	return 0;
-}
-
-uint8_t VL53L4CD_PollingDelay(VL53L4CD_Dev_t *dev, uint32_t TimeMs)
-{
-	uint8_t status = 255;
-	/* To be filled by customer */
-	k_sleep(K_MSEC(TimeMs));
-	return 0;
+	return VL53L4CD_ERROR_NONE;
 }

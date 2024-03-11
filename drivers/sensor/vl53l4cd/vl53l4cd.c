@@ -20,48 +20,55 @@
 LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
 
 #define VL53L4CD_INITIAL_ADDR		0x29
+#define T_BOOT				K_USEC(1200) /* VL53L4CD firmware boot period = 1.2 ms */
 
 struct vl53l4cd_data {
 	struct k_sem lock;
 	VL53L4CD_Dev_t vl53l4cd;
+	VL53L4CD_ResultsData_t result_data;
 };
 
 struct vl53l4cd_config {
 	const struct i2c_dt_spec i2c;
 };
 
+static int vl53l4cd_sample_fetch(const struct device *dev, enum sensor_channel chan)
+{
+	int ret;
+
+}
+
+static int vl53l4cd_channel_get(const struct device *dev, enum sensor_channel chan,
+			        struct sensor_value *val)
+{
+	int ret;
+
+}
+
+static const struct sensor_driver_api vl53l4cd_api = {
+	.sample_fetch = vl53l4cd_sample_fetch,
+	.channel_get = vl53l4cd_channel_get,
+};
+
+static int vl53l4cd_start(const struct device *dev)
+{
+	int ret;
+	struct vl53l4cd_data *data = dev->data;
+
+	ret = VL53L4CD_StartRanging(&(data->vl53l4cd));
+
+}
+
 static int vl53l4cd_init(const struct device *dev)
 {
+	int ret;
 	struct vl53l4cd_data *data = dev->data;
 	const struct vl53l4cd_config *config = dev->config;
 
 	data->vl53l4cd.i2c_bus = config->i2c.bus;
 	data->vl53l4cd.i2c_dev_addr = VL53L4CD_INITIAL_ADDR;
 
-{ // testing.
-	uint8_t reg[2] = {0x01, 0x0F};
-	i2c_write(config->i2c.bus, reg, 2, 0x29);
-	uint8_t buf;
-	i2c_read(config->i2c.bus, &buf, 1, 0x29);
-	printk("%x\n", buf);
-
-	uint8_t buf_2 = 0;
-	VL53L4CD_RdByte(&(data->vl53l4cd), 0x0110, &buf_2);
-	printk("%x\n", buf_2);
-	uint16_t buf_3 = 0;
-	VL53L4CD_RdWord(&(data->vl53l4cd), 0x0110, &buf_3);
-	printk("%x\n", buf_3);
-	uint32_t buf_4 = 0;
-	VL53L4CD_RdDWord(&(data->vl53l4cd), 0x010F, &buf_4);
-	printk("%x\n", buf_4);
-
-	uint16_t id;
-	VL53L4CD_GetSensorId(&(data->vl53l4cd), &id);
-	printk("%x\n", id);
-
-	uint8_t id_2;
-	VL53L4CD_CheckForDataReady(&(data->vl53l4cd), &id_2);
-	printk("%x\n", id_2);
+	k_sleep(T_BOOT);
 
 	VL53L4CD_SensorInit(&(data->vl53l4cd));
 
@@ -74,9 +81,9 @@ static int vl53l4cd_init(const struct device *dev)
 		printk("p_result->range_status = %d\n", p_result.range_status);
 		printk("p_result->signal_rate_kcps = %d\n", p_result.signal_rate_kcps);
 		printk("\n");
-		k_sleep(K_MSEC(500));
+		VL53L4CD_ClearInterrupt(&(data->vl53l4cd));
+		k_sleep(K_MSEC(250));
 	}
-}
 
 	return 0;
 }
@@ -95,7 +102,7 @@ static int vl53l4cd_init(const struct device *dev)
 		&vl53l4cd_config_##inst,				\
 		POST_KERNEL,						\
 		CONFIG_SENSOR_INIT_PRIORITY,				\
-		NULL							\
+		&vl53l4cd_api							\
 	);
 
 DT_INST_FOREACH_STATUS_OKAY(VL53l4CD_INIT);

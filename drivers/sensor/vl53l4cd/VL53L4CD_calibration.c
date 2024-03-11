@@ -65,13 +65,13 @@
 #include "VL53L4CD_api.h"
 #include "VL53L4CD_calibration.h"
 
-VL53L4CD_Error VL53L4CD_CalibrateOffset(
+VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
 		VL53L4CD_Dev_t *dev,
 		int16_t TargetDistInMm,
 		int16_t *p_measured_offset_mm,
 		int16_t nb_samples)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint8_t i, tmp, continue_loop;
 	uint16_t j, tmpOff;
 	int16_t AvgDistance = 0;
@@ -156,13 +156,13 @@ VL53L4CD_Error VL53L4CD_CalibrateOffset(
 	return status;
 }
 
-VL53L4CD_Error VL53L4CD_CalibrateXtalk(
+VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
 		VL53L4CD_Dev_t *dev,
 		int16_t TargetDistInMm,
 		uint16_t *p_measured_xtalk_kcps,
 		int16_t nb_samples)
 {
-	VL53L4CD_Error status = VL53L4CD_ERROR_NONE;
+	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint8_t i, tmp, continue_loop;
 	float_t AverageSignal = (float_t)0.0;
 	float_t AvgDistance = (float_t)0.0;

@@ -73,7 +73,7 @@
  * reflective target, but any other distance and reflectance can be used.
  * The function returns the offset value found and programs the offset
  * compensation into the device.
- * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
+ * @param (VL53L4CD_Dev_t) dev : instance of selected VL53L4CD sensor.
  * @param (int16_t) TargetDistInMm : Real distance between the sensor and the
  * target in millimeters. ST recommend 100mm. Min distance is 10mm and max is
  * 1000mm.
@@ -84,12 +84,8 @@
  * invalid nb of samples).
  */
 
-VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
-		VL53L4CD_Dev_t *dev,
-		int16_t TargetDistInMm,
-		int16_t *p_measured_offset_mm,
-		int16_t nb_samples);
-
+VL53L4CD_Error_t VL53L4CD_CalibrateOffset(VL53L4CD_Dev_t *dev, int16_t TargetDistInMm,
+					  int16_t *p_measured_offset_mm, int16_t nb_samples);
 
 /**
  * @brief This function can be used to perform a Xtalk calibration. Xtalk
@@ -99,7 +95,7 @@ VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
  * for more information.
  * The function returns the Xtalk value found and programs the Xtalk
  * compensation into the device.
- * @param (Dev_t) dev : instance of selected VL53L4CD sensor.
+ * @param (VL53L4CD_Dev_t) dev : instance of selected VL53L4CD sensor.
  * @param uint16_t) TargetDistInMm : Real distance between the sensor and the
  * target in millimeters. This distance needs to be characterized, as described
  * into the User Manual.
@@ -110,10 +106,7 @@ VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
  * invalid nb of samples).
  */
 
-VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
-		VL53L4CD_Dev_t *dev,
-		int16_t TargetDistInMm,
-		uint16_t *p_measured_xtalk_kcps,
-		int16_t nb_samples);
+VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(VL53L4CD_Dev_t *dev, int16_t TargetDistInMm,
+					 uint16_t *p_measured_xtalk_kcps, int16_t nb_samples);
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_CALIBRATION_H_ */

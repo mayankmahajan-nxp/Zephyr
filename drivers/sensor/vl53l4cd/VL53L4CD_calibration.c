@@ -65,11 +65,9 @@
 #include "VL53L4CD_api.h"
 #include "VL53L4CD_calibration.h"
 
-VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
-		VL53L4CD_Dev_t *dev,
-		int16_t TargetDistInMm,
-		int16_t *p_measured_offset_mm,
-		int16_t nb_samples)
+
+VL53L4CD_Error_t VL53L4CD_CalibrateOffset(VL53L4CD_Dev_t *dev, int16_t TargetDistInMm,
+					  int16_t *p_measured_offset_mm, int16_t nb_samples)
 {
 	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint8_t i, tmp, continue_loop;
@@ -77,9 +75,8 @@ VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
 	int16_t AvgDistance = 0;
 	VL53L4CD_ResultsData_t results;
 
-	if(((nb_samples < (int16_t)5) || (nb_samples > (int16_t)255))
-			|| ((TargetDistInMm < (int16_t)10)
-				|| (TargetDistInMm > (int16_t)1000)))
+	if (((nb_samples < (int16_t)5) || (nb_samples > (int16_t)255))
+	    || ((TargetDistInMm < (int16_t)10) || (TargetDistInMm > (int16_t)1000)))
 	{
 		status |= (uint8_t)VL53L4CD_ERROR_INVALID_ARGUMENT;
 	}
@@ -95,17 +92,17 @@ VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
 			tmp = (uint8_t)0;
 			j = (uint16_t)0;
 			continue_loop = (uint8_t)1;
-			do{
+			do {
 				status |= VL53L4CD_CheckForDataReady(dev, &tmp);
-				if(tmp == (uint8_t)1) /* Data ready */
+				if (tmp == (uint8_t)1) /* Data ready */
 				{
 					continue_loop = (uint8_t)0;
 				}
-				else if(j < (uint16_t)5000) /* Wait for answer*/
+				else if (j < (uint16_t)5000) /* Wait for answer */
 				{
 					j++;
 				}
-				else /* Timeout 5000ms reached */
+				else /* Timeout 5000 ms reached */
 				{
 					continue_loop = (uint8_t)0;
 					status |= (uint8_t)VL53L4CD_ERROR_TIMEOUT;
@@ -123,13 +120,13 @@ VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
 			tmp = (uint8_t)0;
 			j = (uint16_t)0;
 			continue_loop = (uint8_t)1;
-			do{
+			do {
 				status |= VL53L4CD_CheckForDataReady(dev, &tmp);
-				if(tmp == (uint8_t)1) /* Data ready */
+				if (tmp == (uint8_t)1) /* Data ready */
 				{
 					continue_loop = (uint8_t)0;
 				}
-				else if(j < (uint16_t)5000) /* Wait for answer*/
+				else if (j < (uint16_t)5000) /* Wait for answer*/
 				{
 					j++;
 				}
@@ -156,11 +153,9 @@ VL53L4CD_Error_t VL53L4CD_CalibrateOffset(
 	return status;
 }
 
-VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
-		VL53L4CD_Dev_t *dev,
-		int16_t TargetDistInMm,
-		uint16_t *p_measured_xtalk_kcps,
-		int16_t nb_samples)
+
+VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(VL53L4CD_Dev_t *dev, int16_t TargetDistInMm,
+					 uint16_t *p_measured_xtalk_kcps, int16_t nb_samples)
 {
 	VL53L4CD_Error_t status = VL53L4CD_ERROR_NONE;
 	uint8_t i, tmp, continue_loop;
@@ -174,7 +169,7 @@ VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
 	uint16_t calXtalk, j;
 
 	*p_measured_xtalk_kcps = 0;
-	if(((nb_samples < (int16_t)5) || (nb_samples > (int16_t)255))
+	if (((nb_samples < (int16_t)5) || (nb_samples > (int16_t)255))
 			|| ((TargetDistInMm < (int16_t)10)
 				|| (TargetDistInMm > (int16_t)5000)))
 	{
@@ -192,13 +187,13 @@ VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
 			tmp = (uint8_t)0;
 			j = (uint16_t)0;
 			continue_loop = (uint8_t)1;
-			do{
+			do {
 				status |= VL53L4CD_CheckForDataReady(dev, &tmp);
-				if(tmp == (uint8_t)1) /* Data ready */
+				if (tmp == (uint8_t)1) /* Data ready */
 				{
 					continue_loop = (uint8_t)0;
 				}
-				else if(j < (uint16_t)5000) /* Wait for answer*/
+				else if (j < (uint16_t)5000) /* Wait for answer*/
 				{
 					j++;
 				}
@@ -221,13 +216,13 @@ VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
 			tmp = (uint8_t)0;
 			j = (uint16_t)0;
 			continue_loop = (uint8_t)1;
-			do{
+			do {
 				status |= VL53L4CD_CheckForDataReady(dev, &tmp);
-				if(tmp == (uint8_t)1) /* Data ready */
+				if (tmp == (uint8_t)1) /* Data ready */
 				{
 					continue_loop = (uint8_t)0;
 				}
-				else if(j < (uint16_t)5000) /* Wait for answer*/
+				else if (j < (uint16_t)5000) /* Wait for answer*/
 				{
 					j++;
 				}
@@ -268,7 +263,7 @@ VL53L4CD_Error_t VL53L4CD_CalibrateXtalk(
 			tmp_xtalk *= (AverageSignal/AverageSpadNb);
 
 			/* 127kcps is the max Xtalk value (65536/512) */
-			if(tmp_xtalk > (uint16_t)127)
+			if (tmp_xtalk > (uint16_t)127)
 			{
 				status = VL53L4CD_ERROR_XTALK_FAILED;
 			}

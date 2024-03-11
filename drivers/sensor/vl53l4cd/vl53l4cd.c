@@ -20,10 +20,13 @@
 LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
 
 #define VL53L4CD_INITIAL_ADDR		0x29
-#define T_BOOT				K_USEC(1200) /* VL53L4CD firmware boot period = 1.2 ms */
+#define VL53L4CD_BOOT_TIME		K_USEC(1200) /* VL53L4CD firmware boot period = 1.2 ms */
+#define VL53L4CD_REG_WHO_AM_I		0x010F
+#define VL53L4CD_CHIP_ID		0xEBAA
 
 struct vl53l4cd_data {
 	struct k_sem lock;
+	bool started;
 	VL53L4CD_Dev_t vl53l4cd;
 	VL53L4CD_ResultsData_t result_data;
 };
@@ -32,17 +35,66 @@ struct vl53l4cd_config {
 	const struct i2c_dt_spec i2c;
 };
 
+static int vl53l4cd_start(const struct device *dev)
+{
+	int ret;
+	struct vl53l4cd_data *data = dev->data;
+	uint16_t vl53l4cd_id = 0;
+
+	ret = VL53L4CD_RdWord(&(data->vl53l4cd), VL53L4CD_REG_WHO_AM_I, &vl53l4cd_id);
+	if ((ret < 0) || (vl53l4cd_id != VL53L4CD_CHIP_ID)) {
+		LOG_ERR("[%s] issue with device identification.", dev->name);
+		return -ENOTSUP;
+	}
+
+	ret = VL53L4CD_StartRanging(&(data->vl53l4cd));
+	if (ret < 0) {
+		return ret;
+	}
+
+	data->started = true;
+
+	return 0;
+}
+
 static int vl53l4cd_sample_fetch(const struct device *dev, enum sensor_channel chan)
 {
 	int ret;
+	struct vl53l4cd_data *data = dev->data;
 
+	__ASSERT_NO_MSG((chan == SENSOR_CHAN_DISTANCE) || (chan == SENSOR_CHAN_PROX));
+
+	if (data->started == false) {
+		ret = vl53l4cd_start(dev);
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	ret = VL53L4CD_GetResult(&(data->vl53l4cd), &(data->result_data));
+	if (ret < 0) {
+		LOG_ERR("[%s] could not perform measurement; error = %d.", dev->name, ret);
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static int vl53l4cd_channel_get(const struct device *dev, enum sensor_channel chan,
 			        struct sensor_value *val)
 {
-	int ret;
+	struct vl53l4cd_data *data = dev->data;
 
+	if (chan == SENSOR_CHAN_PROX) {
+
+	} else if (chan == SENSOR_CHAN_DISTANCE) {
+		val->val1 = data->result_data.distance_mm / 1000;
+		val->val2 = (data->result_data.distance_mm % 1000) * 1000;
+	} else {
+		return -ENOTSUP;
+	}
+
+	return 0;
 }
 
 static const struct sensor_driver_api vl53l4cd_api = {
@@ -50,40 +102,29 @@ static const struct sensor_driver_api vl53l4cd_api = {
 	.channel_get = vl53l4cd_channel_get,
 };
 
-static int vl53l4cd_start(const struct device *dev)
-{
-	int ret;
-	struct vl53l4cd_data *data = dev->data;
-
-	ret = VL53L4CD_StartRanging(&(data->vl53l4cd));
-
-}
-
 static int vl53l4cd_init(const struct device *dev)
 {
 	int ret;
 	struct vl53l4cd_data *data = dev->data;
 	const struct vl53l4cd_config *config = dev->config;
 
+	k_sleep(VL53L4CD_BOOT_TIME);
+
+	data->started = false;
 	data->vl53l4cd.i2c_bus = config->i2c.bus;
 	data->vl53l4cd.i2c_dev_addr = VL53L4CD_INITIAL_ADDR;
 
-	k_sleep(T_BOOT);
-
-	VL53L4CD_SensorInit(&(data->vl53l4cd));
-
-	VL53L4CD_StartRanging(&(data->vl53l4cd));
-
-	VL53L4CD_ResultsData_t p_result;
-	while (true) {
-		VL53L4CD_GetResult(&(data->vl53l4cd), &p_result);
-		printk("p_result->distance_mm = %d\n", p_result.distance_mm);
-		printk("p_result->range_status = %d\n", p_result.range_status);
-		printk("p_result->signal_rate_kcps = %d\n", p_result.signal_rate_kcps);
-		printk("\n");
-		VL53L4CD_ClearInterrupt(&(data->vl53l4cd));
-		k_sleep(K_MSEC(250));
+	ret = VL53L4CD_SensorInit(&(data->vl53l4cd));
+	if (ret < 0) {
+		return ret;
 	}
+
+	ret = vl53l4cd_start(dev);
+	if (ret < 0) {
+		return ret;
+	}
+
+	LOG_DBG("[%s] initialized successfully.", dev->name);
 
 	return 0;
 }

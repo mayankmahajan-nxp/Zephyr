@@ -21,23 +21,21 @@ int main(void)
 		return 0;
 	}
 
-	// while (1) {
-	// 	ret = sensor_sample_fetch(dev);
-	// 	if (ret) {
-	// 		printk("sensor_sample_fetch failed ret %d\n", ret);
-	// 		return 0;
-	// 	}
+	while (1) {
+		ret = sensor_sample_fetch(dev);
+		if (ret) {
+			printk("sensor_sample_fetch failed ret %d\n", ret);
+			return 0;
+		}
 
-	// 	ret = sensor_channel_get(dev, SENSOR_CHAN_PROX, &value);
-	// 	printk("prox is %d\n", value.val1);
+		// ret = sensor_channel_get(dev, SENSOR_CHAN_PROX, &value);
+		// printk("prox is %d\n", value.val1);
 
-	// 	ret = sensor_channel_get(dev,
-	// 				 SENSOR_CHAN_DISTANCE,
-	// 				 &value);
-	// 	printf("distance is %.3fm\n", sensor_value_to_double(&value));
+		ret = sensor_channel_get(dev, SENSOR_CHAN_DISTANCE, &value);
+		printf("distance = %.3f m\n", sensor_value_to_double(&value));
 
-	// 	k_sleep(K_MSEC(1000));
-	// }
+		k_sleep(K_MSEC(1000));
+	}
 
 	return 0;
 }

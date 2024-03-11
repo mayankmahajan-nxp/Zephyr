@@ -25,7 +25,7 @@ LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
 #define VL53L4CD_CHIP_ID		0xEBAA
 
 struct vl53l4cd_data {
-	struct k_sem lock;
+	// struct k_sem lock; /* TODO: implement spin lock for data. */
 	bool started;
 	VL53L4CD_Dev_t vl53l4cd;
 	VL53L4CD_ResultsData_t result_data;

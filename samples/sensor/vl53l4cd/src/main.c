@@ -28,8 +28,8 @@ int main(void)
 			return 0;
 		}
 
-		// ret = sensor_channel_get(dev, SENSOR_CHAN_PROX, &value);
-		// printk("prox is %d\n", value.val1);
+		ret = sensor_channel_get(dev, SENSOR_CHAN_PROX, &value);
+		printk("proximity = %d\n", value.val1);
 
 		ret = sensor_channel_get(dev, SENSOR_CHAN_DISTANCE, &value);
 		printf("distance = %.3f m\n", sensor_value_to_double(&value));

@@ -39,13 +39,6 @@ static int vl53l4cd_start(const struct device *dev)
 {
 	int ret;
 	struct vl53l4cd_data *data = dev->data;
-	uint16_t vl53l4cd_id = 0;
-
-	ret = VL53L4CD_RdWord(&(data->vl53l4cd), VL53L4CD_REG_WHO_AM_I, &vl53l4cd_id);
-	if ((ret < 0) || (vl53l4cd_id != VL53L4CD_CHIP_ID)) {
-		LOG_ERR("[%s] issue with device identification.", dev->name);
-		return -ENOTSUP;
-	}
 
 	ret = VL53L4CD_StartRanging(&(data->vl53l4cd));
 	if (ret < 0) {
@@ -74,10 +67,14 @@ static int vl53l4cd_sample_fetch(const struct device *dev, enum sensor_channel c
 	ret = VL53L4CD_GetResult(&(data->vl53l4cd), &(data->result_data));
 	if (ret < 0) {
 		LOG_ERR("[%s] could not perform measurement; error = %d.", dev->name, ret);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto clear_interrupt;
 	}
 
-	return 0;
+clear_interrupt:
+	VL53L4CD_ClearInterrupt(&(data->vl53l4cd));
+
+	return ret;
 }
 
 static int vl53l4cd_channel_get(const struct device *dev, enum sensor_channel chan,
@@ -86,7 +83,13 @@ static int vl53l4cd_channel_get(const struct device *dev, enum sensor_channel ch
 	struct vl53l4cd_data *data = dev->data;
 
 	if (chan == SENSOR_CHAN_PROX) {
+		if (data->result_data.distance_mm < CONFIG_VL53L4CD_PROXIMITY_THRESHOLD) {
+			val->val1 = 1;
+		} else {
+			val->val1 = 0;
+		}
 
+		val->val2 = 0;
 	} else if (chan == SENSOR_CHAN_DISTANCE) {
 		val->val1 = data->result_data.distance_mm / 1000;
 		val->val2 = (data->result_data.distance_mm % 1000) * 1000;
@@ -107,12 +110,19 @@ static int vl53l4cd_init(const struct device *dev)
 	int ret;
 	struct vl53l4cd_data *data = dev->data;
 	const struct vl53l4cd_config *config = dev->config;
+	uint16_t vl53l4cd_id = 0;
 
 	k_sleep(VL53L4CD_BOOT_TIME);
 
 	data->started = false;
 	data->vl53l4cd.i2c_bus = config->i2c.bus;
 	data->vl53l4cd.i2c_dev_addr = VL53L4CD_INITIAL_ADDR;
+
+	ret = VL53L4CD_RdWord(&(data->vl53l4cd), VL53L4CD_REG_WHO_AM_I, &vl53l4cd_id);
+	if ((ret < 0) || (vl53l4cd_id != VL53L4CD_CHIP_ID)) {
+		LOG_ERR("[%s] issue with device identification.", dev->name);
+		return -ENOTSUP;
+	}
 
 	ret = VL53L4CD_SensorInit(&(data->vl53l4cd));
 	if (ret < 0) {

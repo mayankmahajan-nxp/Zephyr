@@ -7,9 +7,9 @@ menuconfig VL53L4CD
 	bool "VL53L4CD time of flight sensor"
 	default y
 	depends on DT_HAS_ST_VL53L4CD_ENABLED
-	depends on ZEPHYR_HAL_ST_MODULE
+	# depends on ZEPHYR_HAL_ST_MODULE # check if this is necessary.
 	select I2C
-	select HAS_STLIB
+	# select HAS_STLIB # gives a warning. check if this is necessary.
 	help
 	  Enable driver for VL53L4CD I2C-based time of flight sensor.
 

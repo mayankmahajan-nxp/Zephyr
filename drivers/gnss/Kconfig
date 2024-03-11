@@ -62,6 +62,7 @@ config GNSS_INIT_PRIORITY
 
 config GNSS_U_BLOX_PROTOCOL
 	bool "GNSS U-BLOX protocol"
+	select MODEM_UBX
 	help
 	  Enable gnss u-blox protocol.
 

@@ -56,107 +56,96 @@
 *******************************************************************************
 */
 
-#include "vl53l4cd_platform.h"
-#include <zephyr/sys/byteorder.h>
+#ifndef ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_PLATFORM_H_
+#define ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_PLATFORM_H_
+#pragma once
 
-uint8_t VL53L4CD_RdDWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint32_t *value)
-{
-	uint8_t status = 255;
+#include <stdint.h>
+#include <string.h>
 
-	int ret;
+#include <zephyr/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/types.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/i2c.h>
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &RegisterAdress, 2, (uint8_t *) value, 4);
-	if (ret < 0) {
-		printk("i2c_write_read failed (%d)\n", ret);
-	}
-	*value = BSWAP_32(*value);
+/**
+ * @struct VL53L4CD_Dev_t
+ * @brief  Generic PAL device type that does link between API and platform
+ * abstraction layer
+ *
+ */
+typedef struct {
+	const struct device *i2c_bus;
+	uint8_t i2c_dev_addr;
+} VL53L4CD_Dev_t;
 
-	return status;
-}
+/**
+ * @brief Declare the device Handle as a pointer of the structure VL53L4CD_Dev_t
+ *
+ */
+typedef VL53L4CD_Dev_t *VL53L4CD_DEV;
 
-uint8_t VL53L4CD_RdWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint16_t *value)
-{
-	uint8_t status = 255;
+/**
+* VL53L4CD device instance.
+*/
 
-	int ret;
+typedef uint16_t Dev_t;
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &RegisterAdress, 2, (uint8_t *) value, 2);
-	if (ret < 0) {
-		printk("i2c_write_read failed (%d)\n", ret);
-	}
-	*value = BSWAP_16(*value);
+/**
+ * @brief Error instance.
+ */
+typedef uint8_t VL53L4CD_Error;
 
-	return status;
-}
+/**
+ * @brief If the macro below is defined, the device will be programmed to run
+ * with I2C Fast Mode Plus (up to 1MHz). Otherwise, default max value is 400kHz.
+ */
 
-uint8_t VL53L4CD_RdByte(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint8_t *value)
-{
-	uint8_t status = 255;
+// #define VL53L4CD_I2C_FAST_MODE_PLUS
 
-	int ret;
+/**
+ * @brief Read 32 bits through I2C.
+ */
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &RegisterAdress, 2, value, 1);
-	if (ret < 0) {
-		printk("i2c_write_read failed (%d)\n", ret);
-	}
+uint8_t VL53L4CD_RdDWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint32_t *data);
 
-	return status;
-}
+/**
+ * @brief Read 16 bits through I2C.
+ */
 
-uint8_t VL53L4CD_WrByte(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint8_t value)
-{
-	uint8_t status = 255;
+uint8_t VL53L4CD_RdWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint16_t *data);
 
-	int ret;
+/**
+ * @brief Read 8 bits through I2C.
+ */
 
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[3];
-	memcpy(buf, &RegisterAdress, 2);
-	memcpy(buf + 2, &value, 1);
-	ret = i2c_write(dev->i2c_bus, buf, 3, dev->i2c_dev_addr);
+uint8_t VL53L4CD_RdByte(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint8_t *data);
 
-	return status;
-}
+/**
+ * @brief Write 8 bits through I2C.
+ */
 
-uint8_t VL53L4CD_WrWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint16_t value)
-{
-	uint8_t status = 255;
+uint8_t VL53L4CD_WrByte(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint8_t data);
 
-	int ret;
+/**
+ * @brief Write 16 bits through I2C.
+ */
 
-	value = BSWAP_16(value);
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[4];
-	memcpy(buf, &RegisterAdress, 2);
-	memcpy(buf + 2, &value, 2);
-	ret = i2c_write(dev->i2c_bus, buf, 4, dev->i2c_dev_addr);
+uint8_t VL53L4CD_WrWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint16_t data);
 
-	return status;
-}
+/**
+ * @brief Write 32 bits through I2C.
+ */
 
-uint8_t VL53L4CD_WrDWord(VL53L4CD_Dev_t *dev, uint16_t RegisterAdress, uint32_t value)
-{
-	uint8_t status = 255;
+uint8_t VL53L4CD_WrDWord(VL53L4CD_Dev_t *dev, uint16_t register_addr, uint32_t data);
 
-	int ret;
+/**
+ * @brief Wait during N milliseconds.
+ */
 
-	value = BSWAP_32(value);
-	RegisterAdress = BSWAP_16(RegisterAdress);
-	uint8_t buf[6];
-	memcpy(buf, &RegisterAdress, 2);
-	memcpy(buf + 2, &value, 4);
-	ret = i2c_write(dev->i2c_bus, buf, 6, dev->i2c_dev_addr);
+uint8_t VL53L4CD_PollingDelay(VL53L4CD_Dev_t *dev, uint32_t TimeMs);
 
-	return status;
-}
-
-uint8_t WaitMs(VL53L4CD_Dev_t *dev, uint32_t TimeMs)
-{
-	uint8_t status = 255;
-	/* To be filled by customer */
-	k_sleep(K_MSEC(TimeMs));
-	return status;
-}
+#endif	// ZEPHYR_DRIVERS_SENSOR_VL53L4CD_VL53L4CD_PLATFORM_H_

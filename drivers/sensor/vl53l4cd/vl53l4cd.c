@@ -14,22 +14,20 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/i2c.h>
 
-#include "vl53l4cd_api.h"
-#include "vl53l4cd_platform.h"
+#include "VL53L4CD_api.h"
+#include "platform.h"
 
 LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
 
-#define VL53L4CD_INITIAL_ADDR			0x29
+#define VL53L4CD_INITIAL_ADDR		0x29
 
 struct vl53l4cd_data {
 	struct k_sem lock;
 	VL53L4CD_Dev_t vl53l4cd;
-	// VL53L4CD_RangingMeasurementData_t RangingMeasurementData;
 };
 
 struct vl53l4cd_config {
 	const struct i2c_dt_spec i2c;
-	// struct gpio_dt_spec xshut;
 };
 
 static int vl53l4cd_init(const struct device *dev)
@@ -75,7 +73,8 @@ static int vl53l4cd_init(const struct device *dev)
 		printk("p_result->distance_mm = %d\n", p_result.distance_mm);
 		printk("p_result->range_status = %d\n", p_result.range_status);
 		printk("p_result->signal_rate_kcps = %d\n", p_result.signal_rate_kcps);
-		k_sleep(K_MSEC(250));
+		printk("\n");
+		k_sleep(K_MSEC(500));
 	}
 }
 

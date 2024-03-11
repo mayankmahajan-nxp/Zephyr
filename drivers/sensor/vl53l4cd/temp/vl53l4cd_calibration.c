@@ -110,7 +110,7 @@ VL53L4CD_Error VL53L4CD_CalibrateOffset(
 					continue_loop = (uint8_t)0;
 					status |= (uint8_t)VL53L4CD_ERROR_TIMEOUT;
 				}
-				WaitMs(dev, 1);
+				VL53L4CD_PollingDelay(dev, 1);
 			}while(continue_loop == (uint8_t)1);
 			status |= VL53L4CD_GetResult(dev, &results);
 			status |= VL53L4CD_ClearInterrupt(dev);
@@ -138,7 +138,7 @@ VL53L4CD_Error VL53L4CD_CalibrateOffset(
  					continue_loop = (uint8_t)0;
 					status |= (uint8_t)VL53L4CD_ERROR_TIMEOUT;
 				}
-				WaitMs(dev, 1);
+				VL53L4CD_PollingDelay(dev, 1);
 			}while(continue_loop == (uint8_t)1);
 
 			status |= VL53L4CD_GetResult(dev, &results);
@@ -207,7 +207,7 @@ VL53L4CD_Error VL53L4CD_CalibrateXtalk(
 					continue_loop = (uint8_t)0;
 					status |= (uint8_t)VL53L4CD_ERROR_TIMEOUT;
 				}
-				WaitMs(dev, 1);
+				VL53L4CD_PollingDelay(dev, 1);
 			}while(continue_loop == (uint8_t)1);
 			status |= VL53L4CD_GetResult(dev, &results);
 			status |= VL53L4CD_ClearInterrupt(dev);
@@ -236,7 +236,7 @@ VL53L4CD_Error VL53L4CD_CalibrateXtalk(
  					continue_loop = (uint8_t)0;
 					status |= (uint8_t)VL53L4CD_ERROR_TIMEOUT;
 				}
-				WaitMs(dev, 1);
+				VL53L4CD_PollingDelay(dev, 1);
 			}while(continue_loop == (uint8_t)1);
 
 			status |= VL53L4CD_GetResult(dev, &results);

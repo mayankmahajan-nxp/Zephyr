@@ -4,11 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+&gpioa_l {
+	status = "okay";
+};
+
 &lpi2c1 {
 	status = "okay";
 
 	st_vl53l4cd@29 {
 		compatible = "st,vl53l4cd";
 		reg = <0x29>;
+
+		int-gpios = <&gpioa_l 11 GPIO_ACTIVE_LOW>;
+		// xshut-gpios = <&gpioc_h 8 GPIO_ACTIVE_HIGH>;
 	};
 };

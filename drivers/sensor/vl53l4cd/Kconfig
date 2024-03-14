@@ -13,6 +13,25 @@ menuconfig VL53L4CD
 	help
 	  Enable driver for VL53L4CD I2C-based time of flight sensor.
 
+if VL53L4CD
+
+config VL53L4CD_INTERRUPT_MODE
+	bool "Use interrupt mode for VL53L4CD time of flight sensor"
+	default y
+	depends on GPIO
+	help
+	  Enable interrupt mode for VL53L4CD time of flight sensor.
+	  Otherwise, the driver will use the polling method.
+
+config VL53L4CD_XSHUT
+	bool "Use xshut pin on VL53L4CD time of flight sensor"
+	depends on GPIO
+	help
+	  Enable to use the xshut pin on the VL53L4CD.
+	  If not, the pin should be connected to VDD.
+
+endif # VL53L4CD
+
 config VL53L4CD_PROXIMITY_THRESHOLD
 	int "Proximity threshold in millimeters"
 	default 100
@@ -20,7 +39,7 @@ config VL53L4CD_PROXIMITY_THRESHOLD
 	help
 	  Threshold used for proximity detection when sensor is used with SENSOR_CHAN_PROX.
 
-config VL53L4CD_RECONFIGURE_ADDRESS
+config VL53L4CD_RECONFIGURE_ADDRESS # TODO: implement this functionality in the driver.
 	bool "Support reconfigurable sensor address"
 	depends on VL53L4CD
 	help

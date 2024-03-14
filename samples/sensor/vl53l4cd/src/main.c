@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <zephyr/sys/printk.h>
 
+#define VL53L4CD_SAMPLE_MEASUREMENT_DELAY_MS	1000
+
 int main(void)
 {
 	const struct device *const dev = DEVICE_DT_GET_ONE(st_vl53l4cd);
@@ -34,7 +36,7 @@ int main(void)
 		ret = sensor_channel_get(dev, SENSOR_CHAN_DISTANCE, &value);
 		printf("distance = %.3f m\n", sensor_value_to_double(&value));
 
-		k_sleep(K_MSEC(1000));
+		k_sleep(K_MSEC(VL53L4CD_SAMPLE_MEASUREMENT_DELAY_MS));
 	}
 
 	return 0;

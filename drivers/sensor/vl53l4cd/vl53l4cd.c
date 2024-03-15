@@ -15,7 +15,7 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/gpio.h>
 
-#include "VL53L4CD_api.h"
+#include "vl53l4cd_api.h"
 #include "platform.h"
 
 LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
@@ -209,6 +209,41 @@ static int vl53l4cd_init_interrupt(const struct device *dev)
 	}
 
 	data->work.handler = vl53l4cd_worker;
+
+	return 0;
+}
+#endif
+
+/* TODO: the following two functions haven't been tested. */
+#ifdef CONFIG_VL53L4CD_XSHUT
+static int vl53l4cd_sensor_power_on(const struct device *dev) {
+	const struct vl53l4cd_config *const config = dev->config;
+	int ret;
+
+	if (config->xshut.port) {
+		ret = gpio_pin_set_dt(&config->xshut, VL53L4CD_XSHUT_ON);
+		if (ret < 0) {
+			LOG_ERR("[%s] Unable to set XSHUT GPIO. Returned %d.", dev->name, ret);
+			return -EIO;
+		}
+
+		k_sleep(K_USEC(VL53L4CD_BOOT_TIME_US)); /* Wait for device to boot up. */
+	}
+
+	return 0;
+}
+
+static int vl53l4cd_sensor_power_off(const struct device *dev) {
+	const struct vl53l4cd_config *const config = dev->config;
+	int ret;
+
+	if (config->xshut.port) {
+		ret = gpio_pin_set_dt(&config->xshut, VL53L4CD_XSHUT_OFF);
+		if (ret < 0) {
+			LOG_ERR("[%s] Unable to set XSHUT GPIO. Returned %d.", dev->name, ret);
+			return -EIO;
+		}
+	}
 
 	return 0;
 }

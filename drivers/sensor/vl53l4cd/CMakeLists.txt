@@ -4,7 +4,7 @@ zephyr_library()
 
 zephyr_library_sources(
 	vl53l4cd.c
-	VL53L4CD_api.c
+	vl53l4cd_api.c
 	platform.c
-	VL53L4CD_calibration.c
+	vl53l4cd_calibration.c
 )

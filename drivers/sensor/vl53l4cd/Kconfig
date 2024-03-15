@@ -38,15 +38,14 @@ config VL53L4CD_PROXIMITY_THRESHOLD
 	help
 	  Threshold used for proximity detection when sensor is used with SENSOR_CHAN_PROX.
 
-config VL53L4CD_RECONFIGURE_ADDRESS # TODO: implement this functionality in the driver.
+config VL53L4CD_RECONFIGURE_ADDRESS
 	bool "Support reconfigurable sensor address"
 	depends on VL53L4CD
 	help
 	  Enable support for reconfiguring the sensor address at runtime.
-	  When this option is enabled, all sensors declared in the device tree
+	  When this option is enabled, all sensors declared on the same i2c bus in the device tree
 	  must have an xshut-gpio property.
 
-	  All sensors are disabled during initialization. When reading the first
-	  value from a sensor, it is powered up and its I2C address is reconfigured
-	  from the manufacturer default (0x29) to the address specified in the
-	  device tree.
+	  All sensors are disabled during initialization. When read the first value from a sensor
+	  (by calling sample_fetch API), it is powered up and its I2C address is reconfigured from
+	  the manufacturer default '0x29' to the address specified in the device tree.

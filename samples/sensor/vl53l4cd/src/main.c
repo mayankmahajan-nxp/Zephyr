@@ -23,26 +23,35 @@ int main(void)
 		return -ENODEV;
 	}
 
+	/* If CONFIG_VL53L4CD_RECONFIGURE_ADDRESS=y, sensor is started at the first transaction. */
+#ifdef CONFIG_VL53L4CD_RECONFIGURE_ADDRESS
+	ret = sensor_sample_fetch(dev);
+	if (ret) {
+		printk("[%s] sensor_channel_get failed. Returned %d.\n", dev->name, ret);
+		return ret;
+	}
+#endif
+
 	while (1) {
-		/* If interrupt mode is not used, then call sensor_sample_fetch for polling mode.*/
+		/* If interrupt mode is used, then we don't need to call sensor_sample_fetch. */
 #ifndef CONFIG_VL53L4CD_INTERRUPT_MODE
 		ret = sensor_sample_fetch(dev);
 		if (ret) {
-			printk("[%s] sensor_sample_fetch failed. returned %d.\n", dev->name, ret);
+			printk("[%s] sensor_sample_fetch failed. Returned %d.\n", dev->name, ret);
 			return ret;
 		}
 #endif
 
 		ret = sensor_channel_get(dev, SENSOR_CHAN_PROX, &value);
 		if (ret) {
-			printk("[%s] sensor_channel_get failed. returned %d.\n", dev->name, ret);
+			printk("[%s] sensor_channel_get failed. Returned %d.\n", dev->name, ret);
 			return ret;
 		}
 		printk("proximity = %d\n", value.val1);
 
 		ret = sensor_channel_get(dev, SENSOR_CHAN_DISTANCE, &value);
 		if (ret) {
-			printk("[%s] sensor_channel_get failed. returned %d.\n", dev->name, ret);
+			printk("[%s] sensor_channel_get failed. Returned %d.\n", dev->name, ret);
 			return ret;
 		}
 		printf("distance = %.3f m\n", sensor_value_to_double(&value));

@@ -77,13 +77,13 @@ static int vl53l4cd_read_sensor(struct vl53l4cd_data *data)
 
 static int vl53l4cd_start(const struct device *dev)
 {
-	int ret;
+	VL53L4CD_Error_t ret;
 	struct vl53l4cd_data *data = dev->data;
 
 	ret = VL53L4CD_StartRanging(&(data->vl53l4cd));
 	if (ret != VL53L4CD_ERROR_NONE) {
 		LOG_ERR("[%s] Error while starting sensor. Returned %d.", dev->name, ret);
-		return ret;
+		return -EBUSY;
 	}
 
 	data->started = true;
@@ -113,16 +113,16 @@ static int vl53l4cd_sample_fetch(const struct device *dev, enum sensor_channel c
 	}
 	if (p_is_data_ready == VL53L4CD_DATA_NOT_READY) {
 		LOG_ERR("[%s] Data is not ready. Returned %d.", dev->name, ret);
-		return -EBUSY;
+		return -ENODATA;
 	}
 
 	ret = vl53l4cd_read_sensor(data);
 	if (ret < 0) {
 		LOG_ERR("[%s] Could not perform measurement; error = %d.", dev->name, ret);
-		return -ENODATA;
+		return ret;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int vl53l4cd_channel_get(const struct device *dev, enum sensor_channel chan,
@@ -214,7 +214,6 @@ static int vl53l4cd_init_interrupt(const struct device *dev)
 }
 #endif
 
-/* TODO: check return values everywhere because sensor returns positive return values. */
 static int vl53l4cd_init(const struct device *dev)
 {
 	int ret;
@@ -264,12 +263,14 @@ static int vl53l4cd_init(const struct device *dev)
 
 	ret = VL53L4CD_SensorInit(&(data->vl53l4cd));
 	if (ret != VL53L4CD_ERROR_NONE) {
-		return ret;
+		LOG_DBG("[%s] Failed to initialize the sensor.", dev->name);
+		return -EBUSY;
 	}
 
 	ret = vl53l4cd_start(dev);
 	if (ret < 0) {
-		return ret;
+		LOG_DBG("[%s] Failed to start the sensor.", dev->name);
+		return -EBUSY;
 	}
 
 	LOG_DBG("[%s] Initialized successfully.", dev->name);

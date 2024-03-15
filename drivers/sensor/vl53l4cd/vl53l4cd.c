@@ -21,7 +21,7 @@
 LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
 
 #define VL53L4CD_INITIAL_ADDR		0x29
-#define VL53L4CD_BOOT_TIME		K_USEC(1200)	/* VL53L4CD firmware boot period = 1.2 ms */
+#define VL53L4CD_BOOT_TIME_US		1200		/* VL53L4CD firmware boot period = 1.2 ms */
 #define VL53L4CD_REG_WHO_AM_I		0x010F		/* Register address for Model_ID */
 	/* Note: the register address for Module_Type = 0x0110.
 	 * Hence, reading 16 bits at VL53L4CD_REG_WHO_AM_I gives both Model_ID and Module_Type.
@@ -30,8 +30,11 @@ LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
 #define VL53L4CD_MODULE_TYPE		0xAA
 #define VL53L4CD_CHIP_ID		(((uint16_t) VL53L4CD_MODEL_ID) << 8 | VL53L4CD_MODULE_TYPE)
 
+#define VL53L4CD_XSHUT_ON		1
+#define VL53L4CD_XSHUT_OFF		0
+
 struct vl53l4cd_data {
-	// struct k_sem lock; /* TODO: implement spin lock for data. */
+	// struct k_sem lock; /* TODO: implement spin lock for data structure. */
 	bool started;
 	VL53L4CD_Dev_t vl53l4cd;
 	VL53L4CD_ResultsData_t result_data;
@@ -53,23 +56,23 @@ struct vl53l4cd_config {
 #endif
 };
 
-static VL53L4CD_Error_t vl53l4cd_read_sensor(struct vl53l4cd_data *data)
+static int vl53l4cd_read_sensor(struct vl53l4cd_data *data)
 {
 	VL53L4CD_Error_t ret;
 
 	ret = VL53L4CD_GetResult(&data->vl53l4cd, &data->result_data);
 	if (ret != VL53L4CD_ERROR_NONE) {
 		LOG_ERR("Error while getting data from sensor. Returned %d.", ret);
-		return ret;
+		return -EIO;
 	}
 
 	ret = VL53L4CD_ClearInterrupt(&data->vl53l4cd);
 	if (ret != VL53L4CD_ERROR_NONE) {
 		LOG_ERR("Error clearing interrupt on the sensor. Returned %d.", ret);
-		return ret;
+		return -EBUSY;
 	}
 
-	return VL53L4CD_ERROR_NONE;
+	return 0;
 }
 
 static int vl53l4cd_start(const struct device *dev)
@@ -78,7 +81,8 @@ static int vl53l4cd_start(const struct device *dev)
 	struct vl53l4cd_data *data = dev->data;
 
 	ret = VL53L4CD_StartRanging(&(data->vl53l4cd));
-	if (ret < 0) {
+	if (ret != VL53L4CD_ERROR_NONE) {
+		LOG_ERR("[%s] Error while starting sensor. Returned %d.", dev->name, ret);
 		return ret;
 	}
 
@@ -91,6 +95,7 @@ static int vl53l4cd_sample_fetch(const struct device *dev, enum sensor_channel c
 {
 	int ret;
 	struct vl53l4cd_data *data = dev->data;
+	uint8_t p_is_data_ready;
 
 	__ASSERT_NO_MSG((chan == SENSOR_CHAN_DISTANCE) || (chan == SENSOR_CHAN_PROX));
 
@@ -101,21 +106,20 @@ static int vl53l4cd_sample_fetch(const struct device *dev, enum sensor_channel c
 		}
 	}
 
-	uint8_t p_is_data_ready;
 	ret = VL53L4CD_CheckForDataReady(&data->vl53l4cd, &p_is_data_ready);
 	if (ret != VL53L4CD_ERROR_NONE) {
 		LOG_ERR("Error checking for data ready from sensor. Returned %d.", ret);
-		return ret;
+		return -EIO;
 	}
-	if (p_is_data_ready != VL53L4CD_DATA_READY_YES) {
+	if (p_is_data_ready == VL53L4CD_DATA_NOT_READY) {
 		LOG_ERR("[%s] Data is not ready. Returned %d.", dev->name, ret);
-		return ret;
+		return -EBUSY;
 	}
 
 	ret = vl53l4cd_read_sensor(data);
 	if (ret < 0) {
 		LOG_ERR("[%s] Could not perform measurement; error = %d.", dev->name, ret);
-		ret = -EINVAL;
+		return -ENODATA;
 	}
 
 	return ret;
@@ -144,6 +148,7 @@ static int vl53l4cd_channel_get(const struct device *dev, enum sensor_channel ch
 	return 0;
 }
 
+/* TODO: check if we need to implement other apis. */
 static const struct sensor_driver_api vl53l4cd_api = {
 	.sample_fetch = vl53l4cd_sample_fetch,
 	.channel_get = vl53l4cd_channel_get,
@@ -152,19 +157,21 @@ static const struct sensor_driver_api vl53l4cd_api = {
 #ifdef CONFIG_VL53L4CD_INTERRUPT_MODE
 static void vl53l4cd_worker(struct k_work *work)
 {
-	LOG_ERR("vl53l4cd_worker.");
 	struct vl53l4cd_data *data = CONTAINER_OF(work, struct vl53l4cd_data, work);
+	int ret;
 
-	vl53l4cd_read_sensor(data);
+	ret = vl53l4cd_read_sensor(data);
+	if (ret < 0) {
+		LOG_ERR("Reading data from sensor failed. Returned %d.\n", ret);
+	}
 }
 
 static void vl53l4cd_gpio_callback(const struct device *dev, struct gpio_callback *cb,
 				   uint32_t pins)
 {
-	LOG_ERR("callback arrived.");
 	struct vl53l4cd_data *data = CONTAINER_OF(cb, struct vl53l4cd_data, gpio_cb);
 
-	k_work_submit(&data->work);
+	(void) k_work_submit(&data->work);
 }
 
 static int vl53l4cd_init_interrupt(const struct device *dev)
@@ -195,19 +202,19 @@ static int vl53l4cd_init_interrupt(const struct device *dev)
 		return -EIO;
 	}
 
-	// ret = gpio_pin_interrupt_configure_dt(&config->gpio1, GPIO_INT_EDGE_TO_ACTIVE);
+	ret = gpio_pin_interrupt_configure_dt(&config->gpio1, GPIO_INT_EDGE_TO_ACTIVE);
 	if (ret < 0) {
 		LOG_ERR("[%s] Unable to config GPIO interrupt.", dev->name);
 		return -EIO;
 	}
 
 	data->work.handler = vl53l4cd_worker;
-	// k_work_init(&data->work, vl53l4cd_worker);
 
 	return 0;
 }
 #endif
 
+/* TODO: check return values everywhere because sensor returns positive return values. */
 static int vl53l4cd_init(const struct device *dev)
 {
 	int ret;
@@ -215,30 +222,24 @@ static int vl53l4cd_init(const struct device *dev)
 	const struct vl53l4cd_config *config = dev->config;
 	uint16_t vl53l4cd_id = 0;
 
-	k_sleep(VL53L4CD_BOOT_TIME); /* Wait for device to boot up. */
-
 	if (!device_is_ready(config->i2c.bus)) {
 		LOG_ERR("[%s] I2C bus is not ready. Exiting.", dev->name);
 		return -ENODEV;
 	}
+
+	k_sleep(K_USEC(VL53L4CD_BOOT_TIME_US)); /* Wait for device to boot up. */
 
 	/* Initialize device's data structure (struct vl53l4cd_data). */
 	data->started = false;
 	data->vl53l4cd.i2c_bus = config->i2c.bus;
 	data->vl53l4cd.i2c_dev_addr = VL53L4CD_INITIAL_ADDR;
 
-	/* Validate Chip ID (Model_ID and Module_Type). */
-	ret = VL53L4CD_RdWord(&(data->vl53l4cd), VL53L4CD_REG_WHO_AM_I, &vl53l4cd_id);
-	if ((ret < 0) || (vl53l4cd_id != VL53L4CD_CHIP_ID)) {
-		LOG_ERR("[%s] Issue with device identification.", dev->name);
-		return -ENOTSUP;
-	}
-
 #ifdef CONFIG_VL53L4CD_XSHUT
 	if (config->xshut.port) {
 		ret = gpio_pin_configure_dt(&config->xshut, GPIO_OUTPUT);
 		if (ret < 0) {
-			LOG_ERR("[%s] Unable to configure GPIO as output.", dev->name);
+			LOG_ERR("[%s] Unable to configure GPIO as output. Returned %d.", dev->name,
+				ret);
 			return -EIO;
 		}
 	}
@@ -253,29 +254,19 @@ static int vl53l4cd_init(const struct device *dev)
 		}
 	}
 #endif
-	/* Pull XSHUT high to start the sensor */
-#ifdef CONFIG_VL53L4CD_XSHUT
-	// const struct vl53l1x_config *const config = dev->config;
 
-	if (config->xshut.port) {
-		int gpio_ret = gpio_pin_set_dt(&config->xshut, 1);
-
-		if (gpio_ret < 0) {
-			LOG_ERR("[%s] Unable to set XSHUT gpio (error %d)", dev->name, gpio_ret);
-			return -EIO;
-		}
-		/* Boot duration is 1.2 ms max */
-		k_sleep(K_MSEC(2));
+	/* Validate Chip ID (Model_ID and Module_Type). */
+	ret = VL53L4CD_RdWord(&(data->vl53l4cd), VL53L4CD_REG_WHO_AM_I, &vl53l4cd_id);
+	if ((ret != VL53L4CD_ERROR_NONE) || (vl53l4cd_id != VL53L4CD_CHIP_ID)) {
+		LOG_ERR("[%s] Issue with device identification. Returned = %d.", dev->name, ret);
+		return -ENOTSUP;
 	}
-#endif
 
-	/* Initialize the device. */
 	ret = VL53L4CD_SensorInit(&(data->vl53l4cd));
-	if (ret < 0) {
+	if (ret != VL53L4CD_ERROR_NONE) {
 		return ret;
 	}
 
-	/* Start the device. */
 	ret = vl53l4cd_start(dev);
 	if (ret < 0) {
 		return ret;

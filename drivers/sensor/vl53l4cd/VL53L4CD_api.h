@@ -106,8 +106,8 @@
 #define VL53L4CD_FIRMWARE__SYSTEM_STATUS	((uint16_t)0x00E5)
 #define VL53L4CD_IDENTIFICATION__MODEL_ID	((uint16_t)0x010F)
 
-#define VL53L4CD_DATA_READY_YES			1
-#define VL53L4CD_DATA_READY_NOT			0
+#define VL53L4CD_DATA_READY			1
+#define VL53L4CD_DATA_NOT_READY			0
 
 /**
  *  @brief defines Software Version

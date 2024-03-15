@@ -29,6 +29,6 @@
 		status = "okay";
 
 		int-gpios = <&gpioa_l 11 GPIO_ACTIVE_LOW>; /* EXT_GPIO1 */
-		xshut-gpios = <&gpioe_l 1 GPIO_ACTIVE_HIGH>; /* EXT_GPIO2 */
+		xshut-gpios = <&gpioe_l 1 GPIO_ACTIVE_LOW>; /* EXT_GPIO2 */
 	};
 };

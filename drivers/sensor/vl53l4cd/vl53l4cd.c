@@ -11,6 +11,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/types.h>
 #include <zephyr/sys/__assert.h>
+#include <zephyr/pm/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/gpio.h>
@@ -21,11 +22,11 @@
 LOG_MODULE_REGISTER(VL53L4CD, CONFIG_SENSOR_LOG_LEVEL);
 
 #define VL53L4CD_INITIAL_ADDR		0x29
-#define VL53L4CD_BOOT_TIME_US		1200		/* VL53L4CD firmware boot period = 1.2 ms */
+#define VL53L4CD_BOOT_TIME_US		1200	/* VL53L4CD firmware boot period = 1.2 ms */
 
 #define VL53L4CD_MODEL_ID		0xEB
 #define VL53L4CD_MODULE_TYPE		0xAA
-#define VL53L4CD_CHIP_ID		(((uint16_t) VL53L4CD_MODEL_ID) << 8 | VL53L4CD_MODULE_TYPE)
+#define VL53L4CD_CHIP_ID		(((uint16_t)VL53L4CD_MODEL_ID) << 8 | VL53L4CD_MODULE_TYPE)
 
 #define VL53L4CD_XSHUT_ON		(uint8_t)1
 #define VL53L4CD_XSHUT_OFF		(uint8_t)0
@@ -104,11 +105,13 @@ static int vl53l4cd_start(const struct device *dev)
 	const struct vl53l4cd_config *config = dev->config;
 	uint16_t vl53l4cd_id;
 
+#ifdef CONFIG_VL53L4CD_XSHUT
 	ret = vl53l4cd_sensor_power(dev, VL53L4CD_XSHUT_ON);
 	if (ret < 0) {
 		LOG_ERR("[%s] Unable to resume sensor.", dev->name);
 		return -EIO;
 	}
+#endif
 
 #ifdef CONFIG_VL53L4CD_RECONFIGURE_ADDRESS
 	if (config->i2c.addr != VL53L4CD_INITIAL_ADDR) {
@@ -192,7 +195,7 @@ static int vl53l4cd_channel_get(const struct device *dev, enum sensor_channel ch
 	return 0;
 }
 
-/* TODO: check if we need to implement other apis. */
+/* TODO: check if we need to implement more apis. */
 static const struct sensor_driver_api vl53l4cd_api = {
 	.sample_fetch = vl53l4cd_sample_fetch,
 	.channel_get = vl53l4cd_channel_get,
@@ -310,7 +313,7 @@ static int vl53l4cd_init(const struct device *dev)
 	}
 
 	ret = vl53l4cd_start(dev);
-	if (ret) {
+	if (ret < 0) {
 		return ret;
 	}
 #endif
@@ -332,19 +335,21 @@ static int vl53l4cd_init(const struct device *dev)
 #ifdef CONFIG_PM_DEVICE
 static int vl53l4cd_pm_action(const struct device *dev, enum pm_device_action action)
 {
-	const struct vl53l4cd_config *const config = dev->config;
+	// const struct vl53l4cd_config *const config = dev->config;
 	int ret;
 
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
 		ret = vl53l4cd_init(dev); /* Resume Sensor. */
-		if (ret != 0) {
+		LOG_ERR("[%s] (temp) Success: resume sensor.", dev->name);
+		if (ret < 0) {
 			LOG_ERR("[%s] Unable to resume sensor.", dev->name);
 			return ret;
 		}
 		break;
 	case PM_DEVICE_ACTION_SUSPEND: /* HW Standby Mode. */
 		ret = vl53l4cd_sensor_power(dev, VL53L4CD_XSHUT_OFF);
+		LOG_ERR("[%s] (temp) Success: suspend sensor.", dev->name);
 		if (ret < 0) {
 			LOG_ERR("[%s] Unable to suspend sensor.", dev->name);
 			return ret;
@@ -362,6 +367,7 @@ static int vl53l4cd_pm_action(const struct device *dev, enum pm_device_action ac
 #define VL53L4CD_INIT(inst)								\
 	struct vl53l4cd_data vl53l4cd_data_##inst = {					\
 	};										\
+											\
 	struct vl53l4cd_config vl53l4cd_config_##inst = {				\
 		.i2c = I2C_DT_SPEC_INST_GET(inst),					\
 		IF_ENABLED(CONFIG_VL53L4CD_XSHUT, (					\
@@ -373,10 +379,13 @@ static int vl53l4cd_pm_action(const struct device *dev, enum pm_device_action ac
 			)								\
 		)									\
 	};										\
-	DEVICE_DT_INST_DEFINE(								\
+											\
+	PM_DEVICE_DT_INST_DEFINE(inst, vl53l4cd_pm_action);				\
+											\
+	SENSOR_DEVICE_DT_INST_DEFINE(							\
 		inst,									\
 		vl53l4cd_init,								\
-		NULL,									\
+		PM_DEVICE_DT_INST_GET(inst),						\
 		&vl53l4cd_data_##inst,							\
 		&vl53l4cd_config_##inst,						\
 		POST_KERNEL,								\

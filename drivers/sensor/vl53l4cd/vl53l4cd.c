@@ -11,7 +11,6 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/types.h>
 #include <zephyr/sys/__assert.h>
-#include <zephyr/pm/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/gpio.h>
@@ -102,7 +101,6 @@ static int vl53l4cd_start(const struct device *dev)
 {
 	enum VL53L4CD_Error ret;
 	struct vl53l4cd_data *data = dev->data;
-	const struct vl53l4cd_config *config = dev->config;
 	uint16_t vl53l4cd_id;
 
 #ifdef CONFIG_VL53L4CD_XSHUT
@@ -114,6 +112,8 @@ static int vl53l4cd_start(const struct device *dev)
 #endif
 
 #ifdef CONFIG_VL53L4CD_RECONFIGURE_ADDRESS
+	const struct vl53l4cd_config *config = dev->config;
+
 	if (config->i2c.addr != VL53L4CD_INITIAL_ADDR) {
 		ret = VL53L4CD_SetI2CAddress(&(data->vl53l4cd), config->i2c.addr << 1);
 		if (ret != 0) {
@@ -331,39 +331,6 @@ static int vl53l4cd_init(const struct device *dev)
 	return 0;
 }
 
-/* TODO: test and amend the following. */
-#ifdef CONFIG_PM_DEVICE
-static int vl53l4cd_pm_action(const struct device *dev, enum pm_device_action action)
-{
-	// const struct vl53l4cd_config *const config = dev->config;
-	int ret;
-
-	switch (action) {
-	case PM_DEVICE_ACTION_RESUME:
-		ret = vl53l4cd_init(dev); /* Resume Sensor. */
-		LOG_ERR("[%s] (temp) Success: resume sensor.", dev->name);
-		if (ret < 0) {
-			LOG_ERR("[%s] Unable to resume sensor.", dev->name);
-			return ret;
-		}
-		break;
-	case PM_DEVICE_ACTION_SUSPEND: /* HW Standby Mode. */
-		ret = vl53l4cd_sensor_power(dev, VL53L4CD_XSHUT_OFF);
-		LOG_ERR("[%s] (temp) Success: suspend sensor.", dev->name);
-		if (ret < 0) {
-			LOG_ERR("[%s] Unable to suspend sensor.", dev->name);
-			return ret;
-		}
-		break;
-	default:
-		ret = -ENOTSUP;
-		break;
-	}
-
-	return ret;
-}
-#endif
-
 #define VL53L4CD_INIT(inst)								\
 	struct vl53l4cd_data vl53l4cd_data_##inst = {					\
 	};										\
@@ -380,12 +347,10 @@ static int vl53l4cd_pm_action(const struct device *dev, enum pm_device_action ac
 		)									\
 	};										\
 											\
-	PM_DEVICE_DT_INST_DEFINE(inst, vl53l4cd_pm_action);				\
-											\
 	SENSOR_DEVICE_DT_INST_DEFINE(							\
 		inst,									\
 		vl53l4cd_init,								\
-		PM_DEVICE_DT_INST_GET(inst),						\
+		NULL,						\
 		&vl53l4cd_data_##inst,							\
 		&vl53l4cd_config_##inst,						\
 		POST_KERNEL,								\

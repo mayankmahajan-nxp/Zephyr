@@ -41,6 +41,7 @@ config VL53L4CD_PROXIMITY_THRESHOLD
 config VL53L4CD_RECONFIGURE_ADDRESS
 	bool "Support reconfigurable sensor address"
 	depends on VL53L4CD
+	depends on VL53L4CD_XSHUT
 	help
 	  Enable support for reconfiguring the sensor address at runtime.
 	  When this option is enabled, all sensors declared on the same i2c bus in the device tree

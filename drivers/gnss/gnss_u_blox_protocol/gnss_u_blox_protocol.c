@@ -15,6 +15,7 @@ const uint32_t ubx_baudrate[UBX_BAUDRATE_COUNT] = {
 	115200,
 	230400,
 	460800,
+	921600,
 };
 
 static inline int ubx_validate_payload_size_ack(uint8_t msg_id, uint16_t payload_size)

@@ -37,10 +37,14 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 #define UBX_FRM_BUF_SZ			UBX_FRM_SZ_MAX
 
 #define MODEM_UBX_SCRIPT_TIMEOUT_MS	1000
-#define RETRY_DEFAULT			10
+#define UBX_M10_SCRIPT_RETRY_DEFAULT	10
 
 #define UBX_M10_GNSS_SYS_CNT		8
 #define UBX_M10_GNSS_SUPP_SYS_CNT	6
+/* The datasheet of the device doesn't specify boot time. But 1 sec helped significantly. */
+#define UBX_M10_BOOT_TIME_MS		1000
+
+#define TEMP_MACRO	57600
 
 enum MODEM_MODULE {
 	MODEM_MODULE_CHAT = 0,
@@ -249,7 +253,7 @@ static void ubx_m10_modem_ubx_script_fill(const struct device *dev)
 	data->script.request = (ubx_frame_t *) data->request_buf;
 	data->script.response = (ubx_frame_t *) data->response_buf;
 	data->script.match = (ubx_frame_t *) data->match_buf;
-	data->script.retry_count = RETRY_DEFAULT;
+	data->script.retry_count = UBX_M10_SCRIPT_RETRY_DEFAULT;
 	data->script.timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS);
 }
 
@@ -330,8 +334,8 @@ static int ubx_m10_ubx_cfg_prt_set(const struct device *dev, uint32_t target_bau
 	data->script.retry_count = retry;
 	/* Returns failure if "target_baudrate" is different than device's currently set baudrate,
 	 * because the device will change its baudrate and respond with UBX-ACK with new baudrate,
-	 * which we will miss. Hence, we need to change uart's baudrate after sending the frame,
-	 * which we are not doing right now.
+	 * which we will miss. Hence, we need to change uart's baudrate after sending the frame
+	 * (in order to receive response as well), which we are not doing right now.
 	 */
 	ret = ubx_m10_modem_ubx_run_script(dev, &(data->script));
 	if (ret < 0) {
@@ -370,27 +374,26 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 		goto unlock;
 	}
 
-	if (reset_mode == UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP) {
-		k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
-	}
-
 unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
 }
 
-static int ubx_m10_get_uart_baudrate(const struct device *dev)
+static int ubx_m10_get_uart_baudrate(const struct device *dev, uint32_t *baudrate)
 {
-	const struct ubx_m10_config *cfg = dev->config;
+	int ret;
+	const struct ubx_m10_config *config = dev->config;
+	struct uart_config uart_config;
 
-	const struct uart_driver_api *uart_api = cfg->uart->api;
-	struct uart_config uart_cfg;
+	ret = uart_config_get(config->uart, &uart_config);
+	if (ret < 0) {
+		return ret;
+	}
 
-	uart_api->config_get(cfg->uart, &uart_cfg);
-	uint32_t baudrate = uart_cfg.baudrate;
+	*baudrate = uart_config.baudrate;
 
-	return baudrate;
+	return 0;
 }
 
 static int ubx_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate)
@@ -398,25 +401,30 @@ static int ubx_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate
 	int ret;
 	k_spinlock_key_t key;
 	struct ubx_m10_data *data = dev->data;
+	const struct ubx_m10_config *config = dev->config;
+	struct uart_config uart_config;
 
 	key = k_spin_lock(&data->lock);
-	const struct ubx_m10_config *cfg = dev->config;
-
-	const struct uart_driver_api *uart_api = cfg->uart->api;
-	struct uart_config uart_cfg;
 
 	ret = ubx_m10_turn_off(dev);
 	if (ret < 0) {
-		goto unlock;
+		goto reset_and_unlock;
 	}
 
-	uart_api->config_get(cfg->uart, &uart_cfg);
-	uart_cfg.baudrate = baudrate;
+	ret = uart_config_get(config->uart, &uart_config);
+	if (ret < 0) {
+		goto reset_and_unlock;
+	}
+	uart_config.baudrate = baudrate;
 
-	ret = uart_api->configure(cfg->uart, &uart_cfg);
+	ret = uart_configure(config->uart, &uart_config);
+	if (ret < 0) {
+		goto reset_and_unlock;
+	}
 
+reset_and_unlock:
 	ubx_m10_init_pipe(dev);
-	ret = ubx_m10_resume(dev);
+	ret |= ubx_m10_resume(dev);
 	if (ret < 0) {
 		goto unlock;
 	}
@@ -425,6 +433,17 @@ unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
+}
+
+static bool ubx_m10_validate_baudrate(const struct device *dev, uint32_t baudrate)
+{
+	for (int i = 0; i < UBX_BAUDRATE_COUNT; ++i) {
+		if (baudrate == ubx_baudrate[i]) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /* This function will return failure if "target_baudrate" != device's current baudrate.
@@ -434,8 +453,18 @@ static int ubx_m10_configure_gnss_device_baudrate_prerequisite(const struct devi
 {
 	/* Retry = 1 should be enough, but setting 2 just to be safe. */
 	int ret, retry = 2;
+	// uint32_t target_baudrate;
 
-	int target_baudrate = ubx_m10_get_uart_baudrate(dev);
+	// ret = ubx_m10_get_uart_baudrate(dev, &baudrate);
+	// if (ret < 0) {
+	// 	return ret;
+	// }
+	uint32_t target_baudrate = TEMP_MACRO;
+
+	ret = ubx_m10_validate_baudrate(dev, target_baudrate);
+	if (ret < 0) {
+		return ret;
+	}
 
 	/* Try communication with device with all possible baudrates, because initially we don't
 	 * know the currently set baudrate of the device. We will match the baudrate in one of the
@@ -467,10 +496,20 @@ static int ubx_m10_configure_gnss_device_baudrate_prerequisite(const struct devi
 static int ubx_m10_configure_gnss_device_baudrate(const struct device *dev)
 {
 	int ret;
+	// uint32_t target_baudrate;
 
-	int target_baudrate = ubx_m10_get_uart_baudrate(dev);
+	// ret = ubx_m10_get_uart_baudrate(dev, &baudrate);
+	// if (ret < 0) {
+	// 	return ret;
+	// }
+	uint32_t target_baudrate = TEMP_MACRO;
 
-	ret = ubx_m10_ubx_cfg_prt_set(dev, target_baudrate, RETRY_DEFAULT);
+	ret = ubx_m10_validate_baudrate(dev, target_baudrate);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = ubx_m10_ubx_cfg_prt_set(dev, target_baudrate, UBX_M10_SCRIPT_RETRY_DEFAULT);
 	if (ret < 0) {
 		return ret;
 	}
@@ -947,6 +986,7 @@ static int ubx_m10_configure(const struct device *dev)
 	/* The return value could be ignored. See function description for more details. */
 	(void)ubx_m10_configure_gnss_device_baudrate_prerequisite(dev);
 
+	/* Stopping GNSS messages for clearer communication while configuring the device. */
 	ret = ubx_m10_ubx_cfg_rst(dev, UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP);
 	if (ret < 0) {
 		goto reset;
@@ -982,6 +1022,8 @@ reset:
 static int ubx_m10_init(const struct device *dev)
 {
 	int ret;
+
+	k_sleep(K_MSEC(UBX_M10_BOOT_TIME_MS));
 
 	ret = ubx_m10_init_nmea0183_match(dev);
 	if (ret < 0) {
@@ -1022,7 +1064,7 @@ static int ubx_m10_init(const struct device *dev)
 		.script.request = (ubx_frame_t *)ubx_m10_data_##inst.request_buf,	\
 		.script.response = (ubx_frame_t *)ubx_m10_data_##inst.response_buf,	\
 		.script.match = (ubx_frame_t *)ubx_m10_data_##inst.match_buf,		\
-		.script.retry_count = RETRY_DEFAULT,					\
+		.script.retry_count = UBX_M10_SCRIPT_RETRY_DEFAULT,			\
 		.script.timeout = K_MSEC(MODEM_UBX_SCRIPT_TIMEOUT_MS),			\
 	};										\
 											\

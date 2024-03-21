@@ -16,6 +16,7 @@
 
 /* When a configuration frame is sent, the device requires some delay to reflect the changes. */
 /* TODO: check what is the precise waiting time for each message. */
+#define UBX_CFG_RST_WAIT_MS			6000
 #define UBX_CFG_GNSS_WAIT_MS			6000
 #define UBX_CFG_NAV5_WAIT_MS			6000
 

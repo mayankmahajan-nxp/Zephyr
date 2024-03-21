@@ -89,6 +89,7 @@ struct modem_ubx {
 
 struct modem_ubx_config {
 	void *user_data;
+
 	uint8_t *receive_buf;
 	uint16_t receive_buf_size;
 	uint8_t *work_buf;

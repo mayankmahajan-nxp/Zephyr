@@ -44,8 +44,6 @@ LOG_MODULE_REGISTER(ubx_m10, CONFIG_GNSS_LOG_LEVEL);
 /* The datasheet of the device doesn't specify boot time. But 1 sec helped significantly. */
 #define UBX_M10_BOOT_TIME_MS		1000
 
-#define TEMP_MACRO	57600
-
 enum MODEM_MODULE {
 	MODEM_MODULE_CHAT = 0,
 	MODEM_MODULE_UBX,
@@ -53,6 +51,7 @@ enum MODEM_MODULE {
 
 struct ubx_m10_config {
 	const struct device *uart;
+	const uint32_t uart_baudrate;
 };
 
 struct ubx_m10_data {
@@ -374,26 +373,14 @@ static int ubx_m10_ubx_cfg_rst(const struct device *dev, uint8_t reset_mode)
 		goto unlock;
 	}
 
+	if (reset_mode == UBX_CFG_RST_RESET_MODE_CONTROLLED_GNSS_STOP) {
+		k_sleep(K_MSEC(UBX_CFG_RST_WAIT_MS));
+	}
+
 unlock:
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
-}
-
-static int ubx_m10_get_uart_baudrate(const struct device *dev, uint32_t *baudrate)
-{
-	int ret;
-	const struct ubx_m10_config *config = dev->config;
-	struct uart_config uart_config;
-
-	ret = uart_config_get(config->uart, &uart_config);
-	if (ret < 0) {
-		return ret;
-	}
-
-	*baudrate = uart_config.baudrate;
-
-	return 0;
 }
 
 static int ubx_m10_set_uart_baudrate(const struct device *dev, uint32_t baudrate)
@@ -453,13 +440,8 @@ static int ubx_m10_configure_gnss_device_baudrate_prerequisite(const struct devi
 {
 	/* Retry = 1 should be enough, but setting 2 just to be safe. */
 	int ret, retry = 2;
-	// uint32_t target_baudrate;
-
-	// ret = ubx_m10_get_uart_baudrate(dev, &baudrate);
-	// if (ret < 0) {
-	// 	return ret;
-	// }
-	uint32_t target_baudrate = TEMP_MACRO;
+	const struct ubx_m10_config *config = dev->config;
+	uint32_t target_baudrate = config->uart_baudrate;
 
 	ret = ubx_m10_validate_baudrate(dev, target_baudrate);
 	if (ret < 0) {
@@ -496,13 +478,8 @@ static int ubx_m10_configure_gnss_device_baudrate_prerequisite(const struct devi
 static int ubx_m10_configure_gnss_device_baudrate(const struct device *dev)
 {
 	int ret;
-	// uint32_t target_baudrate;
-
-	// ret = ubx_m10_get_uart_baudrate(dev, &baudrate);
-	// if (ret < 0) {
-	// 	return ret;
-	// }
-	uint32_t target_baudrate = TEMP_MACRO;
+	const struct ubx_m10_config *config = dev->config;
+	uint32_t target_baudrate = config->uart_baudrate;
 
 	ret = ubx_m10_validate_baudrate(dev, target_baudrate);
 	if (ret < 0) {
@@ -1058,6 +1035,7 @@ static int ubx_m10_init(const struct device *dev)
 #define UBX_M10(inst)									\
 	static struct ubx_m10_config ubx_m10_cfg_##inst = {				\
 		.uart = DEVICE_DT_GET(DT_INST_BUS(inst)),				\
+		.uart_baudrate = DT_PROP(DT_DRV_INST(inst), uart_baudrate),		\
 	};										\
 											\
 	static struct ubx_m10_data ubx_m10_data_##inst = {				\

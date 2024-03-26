@@ -47,6 +47,7 @@ struct vl53l4cd_data {
 
 struct vl53l4cd_config {
 	const struct i2c_dt_spec i2c;
+	const struct device *i2c_dev;
 #ifdef CONFIG_VL53L4CD_XSHUT
 	struct gpio_dt_spec xshut;
 #endif
@@ -268,6 +269,9 @@ static int vl53l4cd_init(const struct device *dev)
 	int ret;
 	struct vl53l4cd_data *data = dev->data;
 	const struct vl53l4cd_config *config = dev->config;
+	const struct device *i2c_dev = config->i2c_dev;
+	LOG_DBG("%s", i2c_dev->name);
+
 
 	if (!device_is_ready(config->i2c.bus)) {
 		LOG_ERR("[%s] I2C bus is not ready. Exiting.", dev->name);
@@ -283,8 +287,13 @@ static int vl53l4cd_init(const struct device *dev)
 
 	/* Initialize device's data structure (struct vl53l4cd_data). */
 	data->started = false;
-	data->vl53l4cd.i2c_bus = config->i2c.bus;
+	// data->vl53l4cd.i2c_bus = config->i2c.bus;
+	data->vl53l4cd.i2c_bus = config->i2c_dev;
 	data->vl53l4cd.i2c_dev_addr = VL53L4CD_INITIAL_ADDR;
+
+	uint32_t val;
+	VL53L4CD_RdDWord(&(data->vl53l4cd), 0x0110, &val);
+	LOG_DBG("val = %x", val);
 
 #ifdef CONFIG_VL53L4CD_XSHUT
 	if (config->xshut.port) {
@@ -339,6 +348,7 @@ static int vl53l4cd_init(const struct device *dev)
 											\
 	struct vl53l4cd_config vl53l4cd_config_##inst = {				\
 		.i2c = I2C_DT_SPEC_INST_GET(inst),					\
+		.i2c_dev = DEVICE_DT_GET(DT_INST_BUS(inst))				\
 		IF_ENABLED(CONFIG_VL53L4CD_XSHUT, (					\
 			.xshut = GPIO_DT_SPEC_INST_GET_OR(inst, xshut_gpios, {0}),	\
 			)								\
@@ -352,7 +362,7 @@ static int vl53l4cd_init(const struct device *dev)
 	SENSOR_DEVICE_DT_INST_DEFINE(							\
 		inst,									\
 		vl53l4cd_init,								\
-		NULL,						\
+		NULL,									\
 		&vl53l4cd_data_##inst,							\
 		&vl53l4cd_config_##inst,						\
 		POST_KERNEL,								\

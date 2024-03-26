@@ -75,11 +75,26 @@ enum VL53L4CD_Error VL53L4CD_RdDWord(struct VL53L4CD_Dev *dev, uint16_t reg_addr
 {
 	int ret;
 	uint8_t register_addr_sz = sizeof(reg_addr), value_sz = sizeof(*value);
+	const struct i2c_driver_api *i2c_api = dev->i2c_bus->api;
 
 	reg_addr = BSWAP_16(reg_addr);
 
-	ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &reg_addr, register_addr_sz,
-			     value, value_sz);
+	struct i2c_msg message[2] = {
+		{
+			.buf = (uint8_t *)&reg_addr,
+			.len = register_addr_sz,
+			.flags = I2C_MSG_WRITE,
+		},
+		{
+			.buf = (uint8_t *)value,
+			.len = value_sz,
+			.flags = I2C_MSG_READ,
+		},
+	};
+	ret = i2c_api->transfer(dev->i2c_bus, &message[0], sizeof(message), dev->i2c_dev_addr);
+
+	// ret = i2c_write_read(dev->i2c_bus, dev->i2c_dev_addr, &reg_addr, register_addr_sz,
+	// 		     value, value_sz);
 	if (ret < 0) {
 		return VL53L4CD_ERROR_XTALK_FAILED;
 	}

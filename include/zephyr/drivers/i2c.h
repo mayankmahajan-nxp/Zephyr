@@ -1329,6 +1329,7 @@ static inline int i2c_write_read(const struct device *dev, uint16_t addr,
 	msg[1].len = num_read;
 	msg[1].flags = I2C_MSG_RESTART | I2C_MSG_READ | I2C_MSG_STOP;
 
+	printk("starting i2c transfer from i2c.h\n");
 	return i2c_transfer(dev, msg, 2, addr);
 }
 

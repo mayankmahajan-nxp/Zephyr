@@ -63,13 +63,11 @@ static int tca954x_set_channel(const struct device *dev, uint8_t select_mask)
 	/* Only select the channel if its different from the last channel */
 	if (data->selected_chan != select_mask) {
 		res = i2c_write_dt(&cfg->i2c, &select_mask, 1);
-		printk("i2c address = %x.\n", &cfg->i2c);
 		if (res == 0) {
 			data->selected_chan = select_mask;
 			printk("success tca954x_set_channel.\n");
 		} else {
 			LOG_DBG("tca954x: failed to set channel");
-			printk("failure tca954x_set_channel.\n");
 		}
 	}
 	return res;
@@ -91,18 +89,18 @@ static int tca954x_transfer(const struct device *dev,
 		return res;
 	}
 
-	printk("before tca954x_set_channel.\n");
 	res = tca954x_set_channel(down_cfg->root, down_cfg->chan_mask);
 	if (res != 0) {
 		goto end_trans;
 	}
-	printk("after tca954x_set_channel.\n");
 
-	printk("i2c address = %x.\n", &config->i2c);
-	res = i2c_transfer(config->i2c.bus, msgs, num_msgs, addr);
-	if (res < 0) {
-		printk("i2c_transfer res = %d.\n", res);
-	}
+	const struct tca954x_root_config *cfg = down_cfg->root->config;
+	printk("i2c address bus (dt) = %s num_msg = %d dev->name = %s %x.\n",
+		cfg->i2c.bus->name, num_msgs, dev->name, addr);
+
+	k_sleep(K_MSEC(6000));
+	res = i2c_transfer(cfg->i2c.bus, msgs, num_msgs, addr);
+	LOG_ERR("i2c_transfer res = %d.\n", res);
 
 end_trans:
 	k_mutex_unlock(&data->lock);

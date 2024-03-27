@@ -35,7 +35,7 @@ enum VL53L4CD_POWER_STATUS {
 struct vl53l4cd_data {
 	/* struct k_sem lock; */ /* TODO: implement spin lock for data structure. */
 	bool started;
-	struct VL53L4CD_Dev vl53l4cd;
+	struct VL53L4CD_Dev vl53l4cd; /* TODO: replace this with struct i2c_dt_spec. */
 	struct VL53L4CD_ResultsData result_data;
 
 #ifdef CONFIG_VL53L4CD_INTERRUPT_MODE
@@ -270,8 +270,6 @@ static int vl53l4cd_init(const struct device *dev)
 	struct vl53l4cd_data *data = dev->data;
 	const struct vl53l4cd_config *config = dev->config;
 	const struct device *i2c_dev = config->i2c_dev;
-	LOG_DBG("%s", i2c_dev->name);
-
 
 	if (!device_is_ready(config->i2c.bus)) {
 		LOG_ERR("[%s] I2C bus is not ready. Exiting.", dev->name);
@@ -291,9 +289,10 @@ static int vl53l4cd_init(const struct device *dev)
 	data->vl53l4cd.i2c_bus = config->i2c_dev;
 	data->vl53l4cd.i2c_dev_addr = VL53L4CD_INITIAL_ADDR;
 
-	uint32_t val;
+	uint32_t val = 0x9999;
 	VL53L4CD_RdDWord(&(data->vl53l4cd), 0x0110, &val);
-	LOG_DBG("val = %x", val);
+	LOG_DBG("val = %x config->i2c.bus = %s config->i2c_dev = %s",
+		val, config->i2c.bus->name, config->i2c_dev->name);
 
 #ifdef CONFIG_VL53L4CD_XSHUT
 	if (config->xshut.port) {

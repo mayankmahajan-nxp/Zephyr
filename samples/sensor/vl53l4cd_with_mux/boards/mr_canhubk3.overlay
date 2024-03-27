@@ -7,7 +7,7 @@
 &lpi2c1 {
 	status = "okay";
 
-	mux: tca9548a@77 {
+	mux: tca9548a@77 { /* Address depends on the hardware configuration. */
 		compatible = "ti,tca9548a";
 		reg = <0x77>;
 		status = "okay";

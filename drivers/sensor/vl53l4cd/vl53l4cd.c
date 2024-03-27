@@ -289,11 +289,6 @@ static int vl53l4cd_init(const struct device *dev)
 	data->vl53l4cd.i2c_bus = config->i2c_dev;
 	data->vl53l4cd.i2c_dev_addr = VL53L4CD_INITIAL_ADDR;
 
-	uint32_t val = 0x9999;
-	VL53L4CD_RdDWord(&(data->vl53l4cd), 0x0110, &val);
-	LOG_DBG("val = %x config->i2c.bus = %s config->i2c_dev = %s",
-		val, config->i2c.bus->name, config->i2c_dev->name);
-
 #ifdef CONFIG_VL53L4CD_XSHUT
 	if (config->xshut.port) {
 		ret = gpio_pin_configure_dt(&config->xshut, GPIO_OUTPUT_INACTIVE);

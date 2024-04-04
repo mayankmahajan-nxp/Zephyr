@@ -26,15 +26,21 @@ enum direction {
 
 int main(void)
 {
-	uint32_t pulse_width = min_pulse;
+	uint32_t pulse_width = servo.period * 0.8;
 	enum direction dir = UP;
 	int ret;
 
-	printk("Servomotor control\n");
+	printk("Servomotor control %d %d %d %d\n", servo.period, min_pulse, max_pulse, pulse_width);
 
 	if (!pwm_is_ready_dt(&servo)) {
 		printk("Error: PWM device %s is not ready\n", servo.dev->name);
 		return 0;
+	}
+
+	while (1) {
+		ret = pwm_set_pulse_dt(&servo, pulse_width);
+		printk("Servomotor control %d %d %d %d\n", servo.period, min_pulse, max_pulse, pulse_width);
+		k_sleep(K_SECONDS(1));
 	}
 
 	while (1) {

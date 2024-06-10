@@ -1,0 +1,12 @@
+# KW45 Series
+
+# Copyright 2023 NXP
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_SERIES_KINETIS_KW45
+	select ARM
+	select CPU_CORTEX_M33
+	select CPU_CORTEX_M_HAS_DWT
+	select HAS_MCUX
+	select PLATFORM_SPECIFIC_INIT
+	select CLOCK_CONTROL

@@ -39,3 +39,8 @@ properties:
     type: int
     required: true
     description: CAN engine clock source
+
+  sjw:
+    type: int
+    required: true
+    description: Resynchronization jump width (ISO 11898-1)

@@ -1,0 +1,38 @@
+# KW45 Series
+
+# Copyright 2023 NXP
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_SERIES_KINETIS_KW45
+	bool
+	select SOC_FAMILY_KINETIS
+
+config SOC_SERIES
+	default "kw45" if SOC_SERIES_KINETIS_KW45
+
+config SOC_MKW45
+	bool "SOC_MKW45"
+	select SOC_SERIES_KINETIS_KW45
+	select ARM_TRUSTZONE_M
+	select CPU_CORTEX_M_HAS_SYSTICK
+	select CPU_HAS_FPU
+	select CPU_HAS_ARM_SAU
+	select CPU_HAS_ARM_MPU
+
+config SOC
+	default "mkw45"
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default 96000000 if CORTEX_M_SYSTICK
+
+config SOC_PART_NUMBER_KW45B41Z83AFTA
+	bool
+
+config SOC_PART_NUMBER_KINETIS_KW45
+	string
+	default "KW45B41Z83AFTA" if SOC_PART_NUMBER_KW45B41Z83AFTA
+	help
+	    This string holds the full part number of the SOC.
+	    It is a hidden option that you should not set directly.
+	    The part number selection choice defines the
+	    default value for this string.

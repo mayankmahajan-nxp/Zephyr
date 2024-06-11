@@ -42,5 +42,5 @@ properties:
 
   sjw:
     type: int
-    required: true
+    # required: true
     description: Resynchronization jump width (ISO 11898-1)

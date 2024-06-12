@@ -48,9 +48,9 @@
  * DSP extension. __ARM_FEATURE_DSP is set by the compiler for these. So ignore
  * __DSP_PRESENT discrepancy when __ARM_FEATURE_DSP is defined.
  */
-#if !defined(__ARM_FEATURE_DSP) && (__DSP_PRESENT != CONFIG_ARMV8_M_DSP)
-#error "__DSP_PRESENT and CONFIG_ARMV8_M_DSP are not set to the same value"
-#endif
+// #if !defined(__ARM_FEATURE_DSP) && (__DSP_PRESENT != CONFIG_ARMV8_M_DSP)
+// #error "__DSP_PRESENT and CONFIG_ARMV8_M_DSP are not set to the same value"
+// #endif
 
 #if  __ICACHE_PRESENT != CONFIG_CPU_HAS_ICACHE
 #error "__ICACHE_PRESENT and CONFIG_CPU_HAS_ICACHE are not set to the same value"

@@ -18,7 +18,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/linker/sections.h>
 
-#include <aarch32/cortex_m/exc.h>
+#include <zephyr/arch/arm/cortex_m/exception.h>
 #include <soc.h>
 
 extern uint32_t SystemCoreClock;
@@ -189,7 +189,7 @@ static int nxp_kw45_init(void)
 	 * install default handler that simply resets the CPU
 	 * if configured in the kernel, NOP otherwise
 	 */
-	NMI_INIT();
+	// NMI_INIT();
 
 	/* restore interrupt state */
 	irq_unlock(oldLevel);

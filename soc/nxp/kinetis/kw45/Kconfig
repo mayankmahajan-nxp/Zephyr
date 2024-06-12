@@ -17,3 +17,5 @@ config SOC_KW45B41Z83
 	select CPU_HAS_FPU
 	select CPU_HAS_ARM_SAU
 	select CPU_HAS_ARM_MPU
+	select MCUX_HAS_driver_ccm32k
+	select MCUX_USE_driver_ccm32k

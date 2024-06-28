@@ -135,12 +135,17 @@ static void icm4268x_emul_get_accel_settings(const struct emul *target, int *fs_
 	icm4268x_emul_get_reg(target, REG_ACCEL_CONFIG0, &reg, 1);
 
 	switch ((reg & MASK_ACCEL_UI_FS_SEL) >> 5) {
-	case BIT_ACCEL_UI_FS_16:
-		fs_g_out = 16;
-		sensitivity_out = 2048;
+	case BIT_ACCEL_UI_FS_32:
+		fs_g_out = 32;
+		sensitivity_out = 1024;
 		/* shift is based on `fs_g * 9.8` since the final numbers will be in SI units of
 		 * m/s^2, not g's
 		 */
+		shift_out = 9;
+		break;
+	case BIT_ACCEL_UI_FS_16:
+		fs_g_out = 16;
+		sensitivity_out = 2048;
 		shift_out = 8;
 		break;
 	case BIT_ACCEL_UI_FS_8:
@@ -206,12 +211,17 @@ static void icm4268x_emul_get_gyro_settings(const struct emul *target, int *fs_m
 	icm4268x_emul_get_reg(target, REG_GYRO_CONFIG0, &reg, 1);
 
 	switch ((reg & MASK_GYRO_UI_FS_SEL) >> 5) {
-	case BIT_GYRO_UI_FS_2000:
+	case BIT_GYRO_UI_FS_4000:
 		/* Milli-degrees per second */
-		fs_mdps_out = 2000000;
+		fs_mdps_out = 4000000;
 		/* 10x LSBs/deg/s */
-		sensitivity_out = 164;
+		sensitivity_out = 82;
 		/* Shifts are based on rad/s: `(fs_mdps * pi / 180 / 1000)` */
+		shift_out = 7; /* +/- 69.81318 */
+		break;
+	case BIT_GYRO_UI_FS_2000:
+		fs_mdps_out = 2000000;
+		sensitivity_out = 164;
 		shift_out = 6; /* +/- 34.90659 */
 		break;
 	case BIT_GYRO_UI_FS_1000:

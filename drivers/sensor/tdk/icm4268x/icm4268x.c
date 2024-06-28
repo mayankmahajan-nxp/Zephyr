@@ -314,21 +314,21 @@ void icm4268x_unlock(const struct device *dev)
 		.interrupt1_fifo_full = false				\
 	}
 
-#define ICM4268X_DEFINE_DATA(inst, name, who_am_i_val)                                             \
+#define ICM4268X_DEFINE_DATA(inst, name)                                                           \
 	IF_ENABLED(CONFIG_ICM4268X_STREAM, (ICM4268X_RTIO_DEFINE(inst)));                          \
 	static struct icm4268x_dev_data name##_driver_##inst = {                                   \
 		.cfg = ICM4268X_DT_CONFIG_INIT(inst),                                              \
-		.who_am_i_value = who_am_i_val,                                                    \
 		IF_ENABLED(CONFIG_ICM4268X_STREAM, (.r = &name##_rtio_##inst,                      \
 						    .spi_iodev = &name##_spi_iodev_##inst,))       \
 	};
 
 #define ICM4268X_INIT(inst, name, who_am_i_val)                                                    \
-	ICM4268X_DEFINE_DATA(inst, name, who_am_i_val);                                            \
+	ICM4268X_DEFINE_DATA(inst, name);                                                          \
                                                                                                    \
 	static const struct icm4268x_dev_cfg name##_cfg_##inst = {                                 \
 		.spi = SPI_DT_SPEC_INST_GET(inst, ICM4268X_SPI_CFG, 0U),                           \
 		.gpio_int1 = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),                       \
+		.id = who_am_i_val,                                                                \
 	};                                                                                         \
                                                                                                    \
 	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm4268x_init, NULL, &name##_driver_##inst,             \

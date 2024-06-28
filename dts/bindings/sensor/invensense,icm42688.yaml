@@ -33,10 +33,10 @@ properties:
       Specify the accelerometer range in g.
       Default is power-up configuration.
     enum:
-      - 0 # ICM42688_DT_ACCEL_FS_16G
-      - 1 # ICM42688_DT_ACCEL_FS_8G
-      - 2 # ICM42688_DT_ACCEL_FS_4G
-      - 3 # ICM42688_DT_ACCEL_FS_2G
+      - 1 # ICM42688_DT_ACCEL_FS_16G
+      - 2 # ICM42688_DT_ACCEL_FS_8G
+      - 3 # ICM42688_DT_ACCEL_FS_4G
+      - 4 # ICM42688_DT_ACCEL_FS_2G
 
   gyro-fs:
     type: int
@@ -45,11 +45,11 @@ properties:
       Specify the gyro range in degrees per second.
       Default is power-up configuration.
     enum:
-      - 0 # ICM42688_DT_GYRO_FS_2000
-      - 1 # ICM42688_DT_GYRO_FS_1000
-      - 2 # ICM42688_DT_GYRO_FS_500
-      - 3 # ICM42688_DT_GYRO_FS_250
-      - 4 # ICM42688_DT_GYRO_FS_125
-      - 5 # ICM42688_DT_GYRO_FS_62_5
-      - 6 # ICM42688_DT_GYRO_FS_31_25
-      - 7 # ICM42688_DT_GYRO_FS_15_625
+      - 1 # ICM42688_DT_GYRO_FS_2000
+      - 2 # ICM42688_DT_GYRO_FS_1000
+      - 3 # ICM42688_DT_GYRO_FS_500
+      - 4 # ICM42688_DT_GYRO_FS_250
+      - 5 # ICM42688_DT_GYRO_FS_125
+      - 6 # ICM42688_DT_GYRO_FS_62_5
+      - 7 # ICM42688_DT_GYRO_FS_31_25
+      - 8 # ICM42688_DT_GYRO_FS_15_625

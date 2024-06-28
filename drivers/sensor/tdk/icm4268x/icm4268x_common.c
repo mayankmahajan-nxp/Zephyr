@@ -22,7 +22,6 @@ int icm4268x_reset(const struct device *dev)
 	int res;
 	uint8_t value;
 	const struct icm4268x_dev_cfg *dev_cfg = dev->config;
-	const struct icm4268x_dev_data *dev_data = dev->data;
 
 	/* start up time for register read/write after POR is 1ms and supply ramp time is 3ms */
 	k_msleep(3);
@@ -55,8 +54,8 @@ int icm4268x_reset(const struct device *dev)
 		return res;
 	}
 
-	if (value != dev_data->who_am_i_value) {
-		LOG_ERR("invalid WHO_AM_I value, was %i but expected %i", value, dev_data->who_am_i_value);
+	if (value != dev_cfg->id) {
+		LOG_ERR("invalid WHO_AM_I value, was %i but expected %i", value, dev_cfg->id);
 		return -EINVAL;
 	}
 

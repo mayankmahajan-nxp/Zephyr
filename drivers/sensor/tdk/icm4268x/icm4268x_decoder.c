@@ -34,6 +34,9 @@ static int icm4268x_get_shift(enum sensor_channel channel, int accel_fs, int gyr
 		case ICM4268X_DT_ACCEL_FS_16:
 			*shift = 8;
 			return 0;
+		case ICM4268X_DT_ACCEL_FS_32:
+			*shift = 9;
+			return 0;
 		default:
 			return -EINVAL;
 		}
@@ -65,6 +68,9 @@ static int icm4268x_get_shift(enum sensor_channel channel, int accel_fs, int gyr
 			return 0;
 		case ICM4268X_DT_GYRO_FS_2000:
 			*shift = 6;
+			return 0;
+		case ICM4268X_DT_GYRO_FS_4000:
+			*shift = 7;
 			return 0;
 		default:
 			return -EINVAL;
@@ -253,9 +259,15 @@ static int icm4268x_read_imu_from_packet(const uint8_t *pkt, bool is_accel, int 
 		case ICM4268X_DT_ACCEL_FS_16:
 			scale = INT64_C(16) * BIT(31 - 8) * 9.80665;
 			break;
+		case ICM4268X_DT_ACCEL_FS_32:
+			scale = INT64_C(32) * BIT(31 - 8) * 9.80665;
+			break;
 		}
 	} else {
 		switch (fs) {
+		case ICM4268X_DT_GYRO_FS_4000:
+			scale = 82;
+			break;
 		case ICM4268X_DT_GYRO_FS_2000:
 			scale = 164;
 			break;

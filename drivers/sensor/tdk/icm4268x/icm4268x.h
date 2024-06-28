@@ -16,7 +16,9 @@
 
 static inline uint8_t icm4268x_accel_fs_to_reg(uint8_t g)
 {
-	if (g >= 16) {
+	if (g >= 32) {
+		return ICM4268X_DT_ACCEL_FS_32;
+	} else if (g >= 16) {
 		return ICM4268X_DT_ACCEL_FS_16;
 	} else if (g >= 8) {
 		return ICM4268X_DT_ACCEL_FS_8;
@@ -30,6 +32,9 @@ static inline uint8_t icm4268x_accel_fs_to_reg(uint8_t g)
 static inline void icm4268x_accel_reg_to_fs(uint8_t fs, struct sensor_value *out)
 {
 	switch (fs) {
+	case ICM4268X_DT_ACCEL_FS_32:
+		sensor_g_to_ms2(32, out);
+		return;
 	case ICM4268X_DT_ACCEL_FS_16:
 		sensor_g_to_ms2(16, out);
 		return;
@@ -47,7 +52,9 @@ static inline void icm4268x_accel_reg_to_fs(uint8_t fs, struct sensor_value *out
 
 static inline uint8_t icm4268x_gyro_fs_to_reg(uint16_t dps)
 {
-	if (dps >= 2000) {
+	if (dps >= 4000) {
+		return ICM4268X_DT_GYRO_FS_4000;
+	} else if (dps >= 2000) {
 		return ICM4268X_DT_GYRO_FS_2000;
 	} else if (dps >= 1000) {
 		return ICM4268X_DT_GYRO_FS_1000;
@@ -69,6 +76,9 @@ static inline uint8_t icm4268x_gyro_fs_to_reg(uint16_t dps)
 static inline void icm4268x_gyro_reg_to_fs(uint8_t fs, struct sensor_value *out)
 {
 	switch (fs) {
+	case ICM4268X_DT_GYRO_FS_4000:
+		sensor_degrees_to_rad(4000, out);
+		return;
 	case ICM4268X_DT_GYRO_FS_2000:
 		sensor_degrees_to_rad(2000, out);
 		return;
@@ -320,7 +330,6 @@ struct icm4268x_trigger_entry {
  */
 struct icm4268x_dev_data {
 	struct icm4268x_cfg cfg;
-	const uint16_t who_am_i_value;
 #ifdef CONFIG_ICM4268X_TRIGGER
 #if defined(CONFIG_ICM4268X_TRIGGER_OWN_THREAD)
 	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ICM4268X_THREAD_STACK_SIZE);
@@ -352,6 +361,7 @@ struct icm4268x_dev_data {
  * @brief Device config (struct device)
  */
 struct icm4268x_dev_cfg {
+	const uint16_t id;
 	struct spi_dt_spec spi;
 	struct gpio_dt_spec gpio_int1;
 	struct gpio_dt_spec gpio_int2;
@@ -456,6 +466,9 @@ static inline void icm4268x_gyro_dps(const struct icm4268x_cfg *cfg, int32_t in,
 	int64_t sensitivity = 0; /* value equivalent for 10x gyro reading deg/s */
 
 	switch (cfg->gyro_fs) {
+	case ICM4268X_DT_GYRO_FS_4000:
+		sensitivity = 82;
+		break;
 	case ICM4268X_DT_GYRO_FS_2000:
 		sensitivity = 164;
 		break;
@@ -518,6 +531,9 @@ static inline void icm4268x_accel_ms(const struct icm4268x_cfg *cfg, int32_t in,
 	case ICM4268X_DT_ACCEL_FS_16:
 		sensitivity = 2048;
 		break;
+	case ICM4268X_DT_ACCEL_FS_32:
+		sensitivity = 1024;
+		break;
 	}
 
 	/* Convert to micrometers/s^2 */
@@ -544,6 +560,9 @@ static inline void icm4268x_gyro_rads(const struct icm4268x_cfg *cfg, int32_t in
 	int64_t sensitivity = 0; /* value equivalent for 10x gyro reading deg/s */
 
 	switch (cfg->gyro_fs) {
+	case ICM4268X_DT_GYRO_FS_4000:
+		sensitivity = 82;
+		break;
 	case ICM4268X_DT_GYRO_FS_2000:
 		sensitivity = 164;
 		break;

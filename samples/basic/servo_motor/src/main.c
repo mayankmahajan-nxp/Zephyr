@@ -29,6 +29,37 @@ enum direction {
 	UP,
 };
 
+static double vl53l4cd_sample_data_and_display_data(const struct device *const sensor)
+{
+	int ret;
+	struct sensor_value value;
+
+	/* If interrupt mode is used, then we don't need to call sensor_sample_fetch. */
+#ifndef CONFIG_VL53L4CD_INTERRUPT_MODE
+	ret = sensor_sample_fetch(sensor);
+	if (ret) {
+		printk("[%s] sensor_sample_fetch failed. Returned %d.\n", sensor->name, ret);
+		return ret;
+	}
+#endif
+
+	ret = sensor_channel_get(sensor, SENSOR_CHAN_PROX, &value);
+	if (ret) {
+		printk("[%s] sensor_channel_get failed. Returned %d.\n", sensor->name, ret);
+		return ret;
+	}
+	printk("[%s] proximity = %d\n", sensor->name, value.val1);
+
+	ret = sensor_channel_get(sensor, SENSOR_CHAN_DISTANCE, &value);
+	if (ret) {
+		printk("[%s] sensor_channel_get failed. Returned %d.\n", sensor->name, ret);
+		return ret;
+	}
+	printf("[%s] distance = %.3f m\n", sensor->name, sensor_value_to_double(&value));
+
+	return sensor_value_to_double(&value);
+}
+
 int main(void)
 {
 	uint32_t pulse_width = min_pulse;
@@ -42,19 +73,20 @@ int main(void)
 		return 0;
 	}
 
-	const struct device *const dev = DEVICE_DT_GET_ONE(st_vl53l4cd);
-	struct sensor_value value;
+	const struct device *const sensor_0 = DEVICE_DT_GET(DT_NODELABEL(st_vl53l4cd_0));
+	const struct device *const sensor_1 = DEVICE_DT_GET(DT_NODELABEL(st_vl53l4cd_1));
 
-	if (!device_is_ready(dev)) {
-		printk("[%s] sensor: device not ready.\n", dev->name);
+	if (!device_is_ready(sensor_0) || !device_is_ready(sensor_1)) {
+		printk("[%s, %s] sensor devices are not ready.\n", sensor_0->name, sensor_1->name);
 		return -ENODEV;
 	}
 
-	/* If CONFIG_VL53L4CD_RECONFIGURE_ADDRESS=y, sensor is started at the first transaction. */
+	/* If CONFIG_VL53L4CD_RECONFIGURE_ADDRESS=y, sensors are started at the first fetch. */
 #ifdef CONFIG_VL53L4CD_RECONFIGURE_ADDRESS
-	ret = sensor_sample_fetch(dev);
+	ret = sensor_sample_fetch(sensor_0) || sensor_sample_fetch(sensor_1);
 	if (ret) {
-		printk("[%s] sensor_channel_get failed. Returned %d.\n", dev->name, ret);
+		printk("[%s, %s] address reconfiguration failed. Returned %d.\n", sensor_0->name,
+		       sensor_1->name, ret);
 		return ret;
 	}
 #endif
@@ -101,34 +133,19 @@ int main(void)
 	k_sleep(K_SECONDS(4));
 
 	bool kill = false;
+	double dist = 0.0;
 
 	while (1) {
-		/* If interrupt mode is used, then we don't need to call sensor_sample_fetch. */
-#ifndef CONFIG_VL53L4CD_INTERRUPT_MODE
-		ret = sensor_sample_fetch(dev);
-		if (ret) {
-			printk("[%s] sensor_sample_fetch failed. Returned %d.\n", dev->name, ret);
-			return ret;
-		}
-#endif
-
-		ret = sensor_channel_get(dev, SENSOR_CHAN_PROX, &value);
-		if (ret) {
-			printk("[%s] sensor_channel_get failed. Returned %d.\n", dev->name, ret);
-			return ret;
-		}
-		printk("proximity = %d\n", value.val1);
-
-		ret = sensor_channel_get(dev, SENSOR_CHAN_DISTANCE, &value);
-		if (ret) {
-			printk("[%s] sensor_channel_get failed. Returned %d.\n", dev->name, ret);
-			return ret;
-		}
-		printf("distance = %.3f m\n", sensor_value_to_double(&value));
-
-		double dist = sensor_value_to_double(&value);
+		dist = vl53l4cd_sample_data_and_display_data(sensor_0);
 		kill = (dist < 0.2) ? false : true;
 
+		servo.channel = 5;
+		ret = (kill) ? pwm_set_pulse_dt(&servo, pulse_width * 1.1) : pwm_set_pulse_dt(&servo, min_pulse);
+
+		dist = vl53l4cd_sample_data_and_display_data(sensor_1);
+		kill = (dist < 0.2) ? false : true;
+
+		servo.channel = 0;
 		ret = (kill) ? pwm_set_pulse_dt(&servo, pulse_width) : pwm_set_pulse_dt(&servo, min_pulse);
 	}
 

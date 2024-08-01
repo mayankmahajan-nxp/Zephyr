@@ -5,10 +5,38 @@
 	pinctrl-0 = <&i2c0_default>;
 	pinctrl-names = "default";
 
-	st_vl53l4cd@29 {
-		compatible = "st,vl53l4cd";
-		reg = <0x29>;
+	mux: tca9546a@70 { /* Address depends on the hardware configuration. */
+		compatible = "ti,tca9546a";
+		reg = <0x70>;
 		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		mux_i2c@0 {
+			compatible = "ti,tca9546a-channel";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			st_vl53l4cd_0: st_vl53l4cd_0@29 {
+				compatible = "st,vl53l4cd";
+				reg = <0x29>;
+				status = "okay";
+			};
+		};
+
+		mux_i2c@1 {
+			compatible = "ti,tca9546a-channel";
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			st_vl53l4cd_1: st_vl53l4cd_1@29 {
+				compatible = "st,vl53l4cd";
+				reg = <0x29>;
+				status = "okay";
+			};
+		};
 	};
 };
 

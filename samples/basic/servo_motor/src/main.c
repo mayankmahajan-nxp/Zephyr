@@ -95,10 +95,10 @@ int main(void)
 	while (1) {
 		servo.channel = 0;
 		ret = pwm_set_pulse_dt(&servo, pulse_width);
-		servo.channel = 3;
-		ret = pwm_set_pulse_dt(&servo, pulse_width * 1.4);
-		servo.channel = 4;
-		ret = pwm_set_pulse_dt(&servo, pulse_width);
+		// servo.channel = 3;
+		// ret = pwm_set_pulse_dt(&servo, pulse_width * 1.5);
+		// servo.channel = 4;
+		// ret = pwm_set_pulse_dt(&servo, pulse_width);
 		servo.channel = 5;
 		ret = pwm_set_pulse_dt(&servo, pulse_width * 1.2);
 		if (i == 5) {
@@ -137,14 +137,12 @@ int main(void)
 
 	while (1) {
 		dist = vl53l4cd_sample_data_and_display_data(sensor_0);
-		kill = (dist < 0.2) ? false : true;
-
+		kill = (dist < 0.3 && dist > 0.01) ? false : true;
 		servo.channel = 5;
 		ret = (kill) ? pwm_set_pulse_dt(&servo, pulse_width * 1.1) : pwm_set_pulse_dt(&servo, min_pulse);
 
 		dist = vl53l4cd_sample_data_and_display_data(sensor_1);
-		kill = (dist < 0.2) ? false : true;
-
+		kill = (dist < 0.3 && dist > 0.01) ? false : true;
 		servo.channel = 0;
 		ret = (kill) ? pwm_set_pulse_dt(&servo, pulse_width) : pwm_set_pulse_dt(&servo, min_pulse);
 	}

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0
  * Copyright 2024 NXP
+ * Copyright (C) 2021, Soren Friis
  *
  * Referred from https://github.com/opendroneid/transmitter-linux
  */

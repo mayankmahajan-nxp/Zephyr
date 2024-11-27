@@ -14,25 +14,12 @@
 
 #include "opendroneid.h"
 
-// #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
-// #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
-
-// #define BT_LE_ADV_PARAM_NCONN BT_LE_ADV_PARAM(BT_LE_ADV_OPT_USE_IDENTITY, 0x20, 0x20, NULL)
-
 static uint8_t payload[4 + 3 + ODID_PACK_MAX_MESSAGES * ODID_MESSAGE_SIZE] = {
 	0xFA, 0xFF, /* 0xFFFA = ASTM International, ASTM Remote ID. */
 	0x0D,       /* AD Application Code within the ASTM address space = ODID. */
 	0x00,       /* message counter starting at 0x00 and wrapping around at 0xFF. */
 	0x00,       /* 3 + ODID_PACK_MAX_MESSAGES * ODID_MESSAGE_SIZE bytes. */
 };
-
-// static const struct bt_data ad[] = {
-// 	{
-// 		.type = BT_DATA_SVC_DATA16,
-// 		.data_len = ARRAY_SIZE(payload),
-// 		.data = payload,
-// 	},
-// };
 
 #define MINIMUM(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -127,98 +114,9 @@ static void fill_example_gps_data(struct ODID_UAS_Data *uasData)
 }
 
 static struct ODID_UAS_Data uasData;
-// static union ODID_Message_encoded encoded;
-// static uint8_t msg_counters[ODID_MSG_COUNTER_AMOUNT];
 ODID_MessagePack_data message_pack_data;
 ODID_MessagePack_encoded message_pack_encoded;
 
-// static void bt_ready(int err)
-// {
-// 	char addr_s[BT_ADDR_LE_STR_LEN];
-// 	bt_addr_le_t addr = {0};
-// 	size_t count = 1;
-
-// 	if (err) {
-// 		printf("Bluetooth init failed (err %d)\n", err);
-// 		return;
-// 	}
-
-// 	printf("Bluetooth initialized\n");
-
-// 	/* Start advertising */
-// 	err = bt_le_adv_start(BT_LE_ADV_PARAM_NCONN, ad, ARRAY_SIZE(ad), NULL, 0);
-// 	if (err) {
-// 		printf("Advertising failed to start (err %d)\n", err);
-// 		return;
-// 	}
-
-// 	bt_id_get(&addr, &count);
-// 	bt_addr_le_to_str(&addr, addr_s, sizeof(addr_s));
-
-// 	printf("ODID started, advertising as %s\n", addr_s);
-// }
-
-// static void update_payload(uint8_t turn)
-// {
-// 	int err = 0;
-
-// 	switch (turn) {
-// 	case 0: /* BasicID */
-// 		err = encodeBasicIDMessage((ODID_BasicID_encoded *)&encoded, &uasData.BasicID[0]);
-// 		if (err == ODID_SUCCESS) {
-// 			memcpy(&payload[4], &encoded, sizeof(ODID_BasicID_encoded));
-// 			memcpy(&payload[3], &msg_counters[ODID_MSG_COUNTER_BASIC_ID], 1);
-// 			++msg_counters[ODID_MSG_COUNTER_BASIC_ID];
-// 		}
-// 		break;
-// 	case 1: /* Location */
-// 		/* Updating location for checking whether messages are dropped or not. */
-// 		uasData.Location.Latitude = uasData.Location.Latitude - 0.01;
-// 		uasData.Location.Longitude = uasData.Location.Longitude + 0.01;
-// 		err = encodeLocationMessage((ODID_Location_encoded *)&encoded, &uasData.Location);
-// 		if (err == ODID_SUCCESS) {
-// 			memcpy(&payload[4], &encoded, sizeof(ODID_Location_encoded));
-// 			memcpy(&payload[3], &msg_counters[ODID_MSG_COUNTER_LOCATION], 1);
-// 			++msg_counters[ODID_MSG_COUNTER_LOCATION];
-// 		}
-// 		break;
-// 	case 2: /* Auth */
-// 		err = encodeAuthMessage((ODID_Auth_encoded *)&encoded, &uasData.Auth[0]);
-// 		if (err == ODID_SUCCESS) {
-// 			memcpy(&payload[4], &encoded, sizeof(ODID_Auth_encoded));
-// 			memcpy(&payload[3], &msg_counters[ODID_MSG_COUNTER_AUTH], 1);
-// 			++msg_counters[ODID_MSG_COUNTER_AUTH];
-// 		}
-// 		break;
-// 	case 3: /* SelfID */
-// 		err = encodeSelfIDMessage((ODID_SelfID_encoded *)&encoded, &uasData.SelfID);
-// 		if (err == ODID_SUCCESS) {
-// 			memcpy(&payload[4], &encoded, sizeof(ODID_SelfID_encoded));
-// 			memcpy(&payload[3], &msg_counters[ODID_MSG_COUNTER_SELF_ID], 1);
-// 			++msg_counters[ODID_MSG_COUNTER_SELF_ID];
-// 		}
-// 		break;
-// 	case 4: /* System */
-// 		err = encodeSystemMessage((ODID_System_encoded *)&encoded, &uasData.System);
-// 		if (err == ODID_SUCCESS) {
-// 			memcpy(&payload[4], &encoded, sizeof(ODID_System_encoded));
-// 			memcpy(&payload[3], &msg_counters[ODID_MSG_COUNTER_SYSTEM], 1);
-// 			++msg_counters[ODID_MSG_COUNTER_SYSTEM];
-// 		}
-// 		break;
-// 	case 5: /* OperatorID */
-// 		err = encodeOperatorIDMessage((ODID_OperatorID_encoded *)&encoded,
-// 					      &uasData.OperatorID);
-// 		if (err == ODID_SUCCESS) {
-// 			memcpy(&payload[4], &encoded, sizeof(ODID_OperatorID_encoded));
-// 			memcpy(&payload[3], &msg_counters[ODID_MSG_COUNTER_OPERATOR_ID], 1);
-// 			++msg_counters[ODID_MSG_COUNTER_OPERATOR_ID];
-// 		}
-// 		break;
-// 	default:
-// 		break;
-// 	}
-// }
 
 int main(void)
 {
@@ -231,10 +129,6 @@ int main(void)
 	odid_initUasData(&uasData);
 	fill_example_data(&uasData);
 	fill_example_gps_data(&uasData);
-	// memset(&encoded, 0, sizeof(union ODID_Message_encoded));
-	// for (int i = 0; i < ODID_MSG_COUNTER_AMOUNT; ++i) {
-	// 	msg_counters[i] = 0;
-	// }
 
 	odid_initMessagePackData(&message_pack_data);
 	message_pack_data.MsgPackSize = 6;
@@ -266,7 +160,7 @@ int main(void)
 		.id = BT_ID_DEFAULT,
 		.sid = 0,
 		.secondary_max_skip = 0,
-		.options = BT_LE_ADV_OPT_EXT_ADV,
+		.options = BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_USE_IDENTITY,
 		.interval_min = BT_GAP_ADV_FAST_INT_MIN_1,
 		.interval_max = BT_GAP_ADV_FAST_INT_MAX_1,
 		.peer = NULL,
@@ -286,16 +180,12 @@ int main(void)
 		k_sleep(K_MSEC(100));
 	}
 
-	memcpy(&payload[4], &message_pack_encoded, 3 + 6 * ODID_MESSAGE_SIZE);
-
-	for (int i = 0; i < 3 + 6 * ODID_MESSAGE_SIZE; ++i)
-		printk("%x", payload[4 + i]);
-	printk("\n");
+	memcpy(&payload[4], &message_pack_encoded, 3 + ODID_EXT_MESSAGE_COUNT * ODID_MESSAGE_SIZE);
 
 	static const struct bt_data ad[] = {
 		{
 			.type = BT_DATA_SVC_DATA16,
-			.data_len = 4 + 3 + 6 * ODID_MESSAGE_SIZE,
+			.data_len = 4 + 3 + ODID_EXT_MESSAGE_COUNT * ODID_MESSAGE_SIZE,
 			.data = payload,
 		},
 	};

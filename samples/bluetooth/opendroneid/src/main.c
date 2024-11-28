@@ -14,20 +14,58 @@
 
 #include "opendroneid.h"
 
-static uint8_t payload[4 + 3 + ODID_PACK_MAX_MESSAGES * ODID_MESSAGE_SIZE] = {
+#define ODID_PAYLOAD_LEN (4 + 3 + ODID_PACK_MAX_MESSAGES * ODID_MESSAGE_SIZE)
+
+static uint8_t payload[ODID_PAYLOAD_LEN] = {
 	0xFA, 0xFF, /* 0xFFFA = ASTM International, ASTM Remote ID. */
 	0x0D,       /* AD Application Code within the ASTM address space = ODID. */
 	0x00,       /* message counter starting at 0x00 and wrapping around at 0xFF. */
 	0x00,       /* 3 + ODID_PACK_MAX_MESSAGES * ODID_MESSAGE_SIZE bytes. */
 };
 
+static const struct bt_data ad[] = {
+	{
+		.type = BT_DATA_SVC_DATA16,
+		.data_len = ODID_PAYLOAD_LEN,
+		.data = payload,
+	},
+};
+
 #define MINIMUM(a, b) (((a) < (b)) ? (a) : (b))
 
 #define BASIC_ID_POS_ZERO 0
 #define BASIC_ID_POS_ONE  1
-#define ODID_EXT_MESSAGE_COUNT 6
 
-static void fill_example_data(struct ODID_UAS_Data *uasData)
+ODID_MessagePack_data message_pack_data;
+ODID_MessagePack_encoded message_pack_encoded;
+
+int odid_update_adv_data(struct bt_le_ext_adv *adv, ODID_MessagePack_encoded *message_pack_encoded);
+
+void odid_bt_data_sent_cb(struct bt_le_ext_adv *adv, struct bt_le_ext_adv_sent_info *info)
+{
+	int err;
+	static uint8_t num_sent_prev = 0;
+	uint8_t num_sent_curr = info->num_sent;
+
+	printk("num_sent_prev = %d, num_sent_curr = %d\n", num_sent_prev, num_sent_curr);
+	if (num_sent_prev < num_sent_curr || num_sent_curr == 0) {
+		err = odid_update_adv_data(adv, &message_pack_encoded);
+		if (err != 0) {
+			printf("Updating bluetooth advertising data failed. err = %d.\n", err);
+		};
+
+	}
+
+	num_sent_prev = num_sent_curr;
+
+	return;
+}
+
+const static struct bt_le_ext_adv_cb bt_le_cb = {
+	.sent = odid_bt_data_sent_cb,
+};
+
+static void odid_fill_example_data(struct ODID_UAS_Data *uasData)
 {
 	uasData->BasicID[BASIC_ID_POS_ZERO].UAType = ODID_UATYPE_HELICOPTER_OR_MULTIROTOR;
 	uasData->BasicID[BASIC_ID_POS_ZERO].IDType = ODID_IDTYPE_SERIAL_NUMBER;
@@ -93,7 +131,7 @@ static void fill_example_data(struct ODID_UAS_Data *uasData)
 		MINIMUM(sizeof(operatorId), sizeof(uasData->OperatorID.OperatorId)));
 }
 
-static void fill_example_gps_data(struct ODID_UAS_Data *uasData)
+static void odid_fill_example_gps_data(struct ODID_UAS_Data *uasData)
 {
 	uasData->Location.Status = ODID_STATUS_AIRBORNE;
 	uasData->Location.Direction = 361.f;
@@ -113,42 +151,35 @@ static void fill_example_gps_data(struct ODID_UAS_Data *uasData)
 	uasData->Location.TimeStamp = 360.52f;
 }
 
-static struct ODID_UAS_Data uasData;
-ODID_MessagePack_data message_pack_data;
-ODID_MessagePack_encoded message_pack_encoded;
-
-
-int main(void)
+int odid_message_pack_data_init(ODID_MessagePack_data *message_pack_data)
 {
-	int err;
-	struct bt_le_ext_adv *adv;
-
-	printf("Starting ODID Demo\n");
+	struct ODID_UAS_Data uasData;
 
 	/* Initialize UAS data. */
 	odid_initUasData(&uasData);
-	fill_example_data(&uasData);
-	fill_example_gps_data(&uasData);
+	odid_fill_example_data(&uasData);
+	odid_fill_example_gps_data(&uasData);
 
-	odid_initMessagePackData(&message_pack_data);
-	message_pack_data.MsgPackSize = 6;
+	odid_initMessagePackData(message_pack_data);
+	message_pack_data->MsgPackSize = 6;
 
-	encodeBasicIDMessage((ODID_BasicID_encoded *)&message_pack_data.Messages[0],
-		&uasData.BasicID[0]);
-	encodeLocationMessage((ODID_Location_encoded *)&message_pack_data.Messages[1],
-		&uasData.Location);
-	encodeAuthMessage((ODID_Auth_encoded *)&message_pack_data.Messages[2],
-		&uasData.Auth[0]);
-	encodeSelfIDMessage((ODID_SelfID_encoded *)&message_pack_data.Messages[3],
-		&uasData.SelfID);
-	encodeSystemMessage((ODID_System_encoded *)&message_pack_data.Messages[4],
-		&uasData.System);
-	encodeOperatorIDMessage((ODID_OperatorID_encoded *)&message_pack_data.Messages[5],
-		&uasData.OperatorID);
+	encodeBasicIDMessage((ODID_BasicID_encoded *)&message_pack_data->Messages[0], &uasData.BasicID[0]);
+	encodeBasicIDMessage((ODID_BasicID_encoded *)&message_pack_data->Messages[1], &uasData.BasicID[1]);
+	encodeLocationMessage((ODID_Location_encoded *)&message_pack_data->Messages[2], &uasData.Location);
+	encodeAuthMessage((ODID_Auth_encoded *)&message_pack_data->Messages[3], &uasData.Auth[0]);
+	encodeAuthMessage((ODID_Auth_encoded *)&message_pack_data->Messages[4], &uasData.Auth[1]);
+	encodeAuthMessage((ODID_Auth_encoded *)&message_pack_data->Messages[5], &uasData.Auth[2]);
+	encodeSelfIDMessage((ODID_SelfID_encoded *)&message_pack_data->Messages[6], &uasData.SelfID);
+	encodeSystemMessage((ODID_System_encoded *)&message_pack_data->Messages[7], &uasData.System);
+	encodeOperatorIDMessage((ODID_OperatorID_encoded *)&message_pack_data->Messages[8], &uasData.OperatorID);
 
-	encodeMessagePack(&message_pack_encoded, &message_pack_data);
+	return 0;
+}
 
-	/* Initialize the Bluetooth Subsystem */
+int odid_bt_le_ext_adv_init(struct bt_le_ext_adv *adv)
+{
+	int err;
+
 	err = bt_enable(NULL);
 	if (err) {
 		printf("Bluetooth init failed (err %d)\n", err);
@@ -165,10 +196,10 @@ int main(void)
 		.interval_max = BT_GAP_ADV_FAST_INT_MAX_1,
 		.peer = NULL,
 	};
-	err = bt_le_ext_adv_create(&param, NULL, &adv);
+	err = bt_le_ext_adv_create(&param, &bt_le_cb, &adv);
 	if (err) {
 		printk("Failed to create advertising set (err %d)\n", err);
-		return 0;
+		return -1;
 	}
 
 	while (true) {
@@ -180,30 +211,61 @@ int main(void)
 		k_sleep(K_MSEC(100));
 	}
 
-	memcpy(&payload[4], &message_pack_encoded, 3 + ODID_EXT_MESSAGE_COUNT * ODID_MESSAGE_SIZE);
+	return 0;
+}
 
-	static const struct bt_data ad[] = {
-		{
-			.type = BT_DATA_SVC_DATA16,
-			.data_len = 4 + 3 + ODID_EXT_MESSAGE_COUNT * ODID_MESSAGE_SIZE,
-			.data = payload,
-		},
+int odid_update_adv_data(struct bt_le_ext_adv *adv, ODID_MessagePack_encoded *message_pack_encoded)
+{
+	int err;
+
+	memcpy(&payload[4], message_pack_encoded, 3 + ODID_PACK_MAX_MESSAGES * ODID_MESSAGE_SIZE);
+
+	err = bt_le_ext_adv_set_data(adv, ad, ARRAY_SIZE(ad), NULL, 0);
+	if (err != 0) {
+		printk("Failed to set extended advertising data (err %d)\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
+int main(void)
+{
+	int err;
+	struct bt_le_ext_adv *adv = NULL;
+
+	printf("Starting ODID Demo\n");
+
+	err = odid_message_pack_data_init(&message_pack_data);
+	if (err != ODID_SUCCESS) {
+		printf("Initializing message pack data failed. err = %d.\n", err);
+		return -1;
+	}
+
+	err = encodeMessagePack(&message_pack_encoded, &message_pack_data);
+	if (err != ODID_SUCCESS) {
+		printf("Encoding message pack data failed. err = %d.\n", err);
+		return -1;
+	}
+
+	/* Initialize the Bluetooth Subsystem. */
+	err = odid_bt_le_ext_adv_init(adv);
+	if (err != 0) {
+		printf("Initializing bluetooth extended advertising failed. err = %d.\n", err);
+		return -1;
 	};
 
-	/* Set advertising data to have complete local name set */
-	err = bt_le_ext_adv_set_data(adv, ad, ARRAY_SIZE(ad), NULL, 0);
-	if (err) {
-		printk("Failed to set extended advertising data (err %d)\n", err);
-		return 0;
-	}
+	err = odid_update_adv_data(adv, &message_pack_encoded);
+	if (err != 0) {
+		printf("Updating bluetooth advertising data failed. err = %d.\n", err);
+		return -1;
+	};
 
 	err = bt_le_ext_adv_start(adv, BT_LE_EXT_ADV_START_DEFAULT);
 	if (err) {
 		printk("Failed to start extended advertising (err %d)\n", err);
 		return 0;
 	}
-
-	printk("done\n");
 
 	return 0;
 }

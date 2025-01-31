@@ -51,24 +51,6 @@ static struct ODID_UAS_Data uasData;
 ODID_MessagePack_data message_pack_data;
 ODID_MessagePack_encoded message_pack_encoded;
 
-static uint8_t num_sent_prev = 0;
-static uint8_t num_sent_curr = 0;
-
-void odid_bt_data_sent_cb(struct bt_le_ext_adv *adv, struct bt_le_ext_adv_sent_info *info)
-{
-	num_sent_curr = info->num_sent;
-	printk("odid_bt_data_sent_cb callback !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-	k_sleep(K_MSEC(1000));
-
-	return;
-}
-
-const static struct bt_le_ext_adv_cb bt_le_cb = {
-	.sent = odid_bt_data_sent_cb,
-	.connected = NULL,
-	.scanned = NULL,
-};
-
 static void odid_fill_example_data(struct ODID_UAS_Data *uasData)
 {
 	uasData->BasicID[BASIC_ID_POS_ZERO].UAType = ODID_UATYPE_HELICOPTER_OR_MULTIROTOR;
@@ -272,7 +254,7 @@ int main(void)
 	}
 
 	/* Create a non-connectable advertising set */
-	err = bt_le_ext_adv_create(&bt_adv_param, &bt_le_cb, &adv);
+	err = bt_le_ext_adv_create(&bt_adv_param, NULL, &adv);
 	if (err) {
 		printk("Failed to create advertising set (err %d)\n", err);
 		return 0;
@@ -302,8 +284,6 @@ int main(void)
 	}
 
 	while (true) {
-		printk("num_sent_prev = %d, num_sent_curr = %d\n", num_sent_prev, num_sent_curr);
-
 		odid_update_message_pack_encoded(&message_pack_encoded);
 
 		err = bt_le_ext_adv_set_data(adv, ad, ARRAY_SIZE(ad), NULL, 0);
